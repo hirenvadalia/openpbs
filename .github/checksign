@@ -75,7 +75,17 @@ commits.each do |commit|
     end
 end
 
+comment_already_added = false
 unless is_verified
+    comments = client.issue_comments(ENV['TRAVIS_REPO_SLUG'], ENV['TRAVIS_PULL_REQUEST'])
+    comments.each do |comment|
+        unless comment[:body] != ENV['COMMENT_DATA']
+            comment_already_added = true
+        end
+    end
+end
+
+unless comment_already_added
     client.add_comment(ENV['TRAVIS_REPO_SLUG'], ENV['TRAVIS_PULL_REQUEST'], ENV['COMMENT_DATA'])
     exit 1
 end

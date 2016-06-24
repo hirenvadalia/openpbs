@@ -3,6 +3,9 @@ sudo: required
 services:
     - docker
 env:
+  global:
+    - GH_TOKEN=ff02ee6da70660c6dc0d5d2387bdf6372ab4c084
+  matrix:
     - OS_TYPE=centos:7
     - OS_TYPE=opensuse:13.2
 before_install:
