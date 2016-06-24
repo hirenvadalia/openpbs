@@ -55,12 +55,14 @@ do
         errors_fails=$((errors_fails + 1))
         continue
     fi
-    ${checkdir}/${check} >/dev/null 2>/dev/null
+    ${checkdir}/${check} >out 2>err
     if [ $? -ne 0 ]; then
         echo "FAILED"
+        cat err
         errors_fails=$((errors_fails + 1))
     else
         echo "OK"
+        cat out
     fi
 done
 

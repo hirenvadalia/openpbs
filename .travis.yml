@@ -9,6 +9,7 @@ env:
   global:
     secure: WoA8zIUe84QvZIWo0QFKJFdoeXmMnrBErcgYKQJSHwUj9mtzZECVb7vfTiRBBTkBjaJ/6rX4Pt4XN+QkxbahHd93yTCUpdgRIYWVtlhJ0Fr1CjmGDRQT+NUw6eGeC5oc9ksoBASWblS7kdvISEGcD0Riq23H79K7m1a4kNmbnzfsKK0BxT6EVhtgmXnosobv56ykJyc04kaKhgcGapSOB9fyatrjoSX/enNIrQrzf9r37ZVBatKDgChQ/J6n/ugV65HOw0MWN4TeNwLNEkX0zS7e2c9eBITJpZYk1gG4RVPh4WxPdT4JsFv3tuOb+0bh7YHmKFnYRAq3IhkQ7viQ5YMjHCJPxFrrV/Lg0RzkeVI6ZZ6SbLMQcKHRuu2SdEUyYvHMbiWTNTnd/kWtFsmHQInSkFzvShQTxvKsOFO0eHMBxnvkeCYMXeeuWKHcjpg64TiRyDJQaQItWiFdbnVg+MHZD8adB8+F59FwmpuJ4xMYYVVXPJSh4B4RN/1VbTuGUsPao/M1tvvMkT/MFmEExGkvcKrF2WXUSHbrM9/T0cUVv85Nf/IosoSrmUoGTDC2gTcSCJFjF9UT3xvJfQtBCYmZNGYVPJEc50mtP1q/SWawI/E4m3sFLfmBP9vyUU5akBZryjquvA3xu+ZopQcYNwhat1iWHh5KdX2sCP0MbqQ=
 before_install:
+    - gem install octokit
     - .github/runchecks
     - docker pull ${OS_TYPE}
     - docker run -it -d -h testdev.pbspro.com --name testdev -v `pwd`:`pwd` --privileged -w `pwd` ${OS_TYPE} /bin/bash
