@@ -62,6 +62,7 @@ COMMENT_DATA="Hi @${contributor}, thanks for choosing to contribute to pbspro.
 In order to ensure the integrity of the repository, kindly sign your commit.
 Please follow the instructions mentioned [here](https://pbspro.atlassian.net/wiki/display/DG/Signing+Your+Git+Commits)
 "
+export COMMENT_DATA
 
 cat >check_sign.rb <<-EOF
 require 'octokit'
