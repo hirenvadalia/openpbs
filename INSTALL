@@ -186,3 +186,4 @@ Note 4: The openSUSE rpm package expands %_libexecdir to /opt/pbs/lib
   install scripts. Providing the --libexecdir value to configure 
   overrides this behavior.
 
+test
