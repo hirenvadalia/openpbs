@@ -92,7 +92,7 @@ extern struct attribute_def	que_attr_def[];
  */
 static svrattrl *
 make_attr(char *attr_name, char *attr_resc,
-	char *attr_value, int attr_flags)
+	char *attr_value, int attr_flags...
 {
 	int tsize;
 	char *p;
