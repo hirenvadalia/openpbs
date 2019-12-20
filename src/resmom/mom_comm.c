@@ -80,7 +80,7 @@
 #include	"pbs_error.h"
 #include	"log.h"
 #include	"net_connect.h"
-#include	"rpp.h"
+#include	"tpp.h"
 #include	"dis.h"
 #include	"mom_func.h"
 #include	"credential.h"
@@ -97,6 +97,7 @@
 #ifdef PMIX
 #include	"mom_pmix.h"
 #endif
+
 
 /* Global Data Items */
 
@@ -312,7 +313,7 @@ event_dup(eventent *ep, job *pjob, hnodent *pnode)
 	append_link(&pnode->hn_events, &nep->ee_next, nep);
 
 	if (pnode->hn_stream == -1)
-		pnode->hn_stream = rpp_open(pnode->hn_host, pnode->hn_port);
+		pnode->hn_stream = tpp_open(pnode->hn_host, pnode->hn_port);
 
 	return nep;
 }
@@ -394,7 +395,7 @@ check:
 	append_link(&pnode->hn_events, &ep->ee_next, ep);
 
 	if (pnode->hn_stream == -1)
-		pnode->hn_stream = rpp_open(pnode->hn_host, pnode->hn_port);
+		pnode->hn_stream = tpp_open(pnode->hn_host, pnode->hn_port);
 
 	return ep;
 }
@@ -763,7 +764,7 @@ im_compose(int stream, char *jobid, char *cookie, int command,
 
 	if (stream < 0)
 		return DIS_EOF;
-	DIS_rpp_funcs();
+	DIS_tpp_funcs();
 
 	ret = diswsi(stream, IM_PROTOCOL);
 	if (ret != DIS_SUCCESS)
@@ -810,7 +811,7 @@ close_sisters_mcast(job *pjob)
 	for (i = 0; i < pjob->ji_numnodes; i++) {
 		hnodent *np = &pjob->ji_hosts[i];
 		if (np->hn_stream != -1) {
-			rpp_close(np->hn_stream);
+			tpp_close(np->hn_stream);
 			np->hn_stream = -1;
 		}
 	}
@@ -831,10 +832,6 @@ close_sisters_mcast(job *pjob)
 int
 is_comm_up(int maturity_time)
 {
-	/* if pbs is not using tpp, communication is deemed as up */
-	if (pbs_conf.pbs_use_tcp == 0)
-		return 1;
-
 	if ((mom_net_up == 1) && ((time_now - mom_net_up_time) > maturity_time))
 		return 1;
 
@@ -1122,10 +1119,10 @@ send_sisters_job_update(job *pjob)
 			continue;
 		}
 		if (np->hn_stream == -1)
-			np->hn_stream = rpp_open(np->hn_host, np->hn_port);
+			np->hn_stream = tpp_open(np->hn_host, np->hn_port);
 		if (np->hn_stream < 0) {
 			snprintf(log_buffer, sizeof(log_buffer),
-				"rpp_open failed on %s:%d", np->hn_host, np->hn_port);
+				"tpp_open failed on %s:%d", np->hn_host, np->hn_port);
 			log_err(errno, __func__, log_buffer);
 			free_attrlist(&phead);
 			if (pbs_conf.pbs_use_mcast == 1)
@@ -1146,7 +1143,7 @@ send_sisters_job_update(job *pjob)
 				"failed to create event for %s",
 					 np->hn_host?np->hn_host:"node");
 			log_err(errno, __func__, log_buffer);
-			rpp_close(np->hn_stream);
+			tpp_close(np->hn_stream);
 			np->hn_stream = -1;
 			if (pbs_conf.pbs_use_mcast == 1)
 				tpp_mcast_close(mtfd);
@@ -1154,14 +1151,14 @@ send_sisters_job_update(job *pjob)
 			return (-1);
 		}
 		if (pbs_conf.pbs_use_mcast == 1) {
-			/* add each of the rpp streams to the tpp mcast channel */
+			/* add each of the tpp streams to the tpp mcast channel */
 			if ((tpp_mcast_add_strm(mtfd, np->hn_stream)) == -1) {
 				snprintf(log_buffer,
 					sizeof(log_buffer),
 					"mcast add to %s failed",
 					 np->hn_host?np->hn_host:"node");
 				log_err(errno, __func__, log_buffer);
-				rpp_close(np->hn_stream);
+				tpp_close(np->hn_stream);
 				np->hn_stream = -1;
 				tpp_mcast_close(mtfd);
 				free_attrlist(&phead);
@@ -1183,7 +1180,7 @@ send_sisters_job_update(job *pjob)
 			}
 			(void)encode_DIS_svrattrl(np->hn_stream,
 							psatl);
-			(void)rpp_flush(np->hn_stream);
+			(void)dis_flush(np->hn_stream);
 		}
 		num++;
 
@@ -1203,7 +1200,7 @@ send_sisters_job_update(job *pjob)
 			}
 			(void)encode_DIS_svrattrl(mtfd, psatl);
 
-			ret = rpp_flush(mtfd);
+			ret = dis_flush(mtfd);
 			if (ret != DIS_SUCCESS) {
 				log_err(errno, __func__, "flush mcast stream failed");
 				tpp_mcast_close(mtfd);
@@ -1562,15 +1559,15 @@ send_sisters_mcast_inner(job *pjob, int com, pbs_jobndstm_t command_func,
 		}
 
 		if (np->hn_stream == -1)
-			np->hn_stream = rpp_open(np->hn_host, np->hn_port);
+			np->hn_stream = tpp_open(np->hn_host, np->hn_port);
 		np->hn_sister = SISTER_EOF;
 
 		if (np->hn_stream == -1)
 			continue;
 
-		/* add each of the rpp streams to the tpp mcast channel */
+		/* add each of the tpp streams to the tpp mcast channel */
 		if ((tpp_mcast_add_strm(mtfd, np->hn_stream)) == -1) {
-			rpp_close(np->hn_stream);
+			tpp_close(np->hn_stream);
 			np->hn_stream = -1;
 			continue;
 		}
@@ -1616,7 +1613,7 @@ send_sisters_mcast_inner(job *pjob, int com, pbs_jobndstm_t command_func,
 				return 0;
 			}
 		}
-		ret = rpp_flush(mtfd);
+		ret = dis_flush(mtfd);
 		if (ret != DIS_SUCCESS) {
 			close_sisters_mcast(pjob);
 			tpp_mcast_close(mtfd);
@@ -1715,7 +1712,7 @@ send_sisters_inner(job *pjob, int com, pbs_jobndstm_t command_func,
 		}
 
 		if (np->hn_stream == -1)
-			np->hn_stream = rpp_open(np->hn_host, np->hn_port);
+			np->hn_stream = tpp_open(np->hn_host, np->hn_port);
 
 		if (np->hn_stream == -1)
 			continue;
@@ -1750,7 +1747,7 @@ send_sisters_inner(job *pjob, int com, pbs_jobndstm_t command_func,
 			if (ret != DIS_SUCCESS)
 				continue;
 		}
-		ret = rpp_flush(np->hn_stream);
+		ret = dis_flush(np->hn_stream);
 		if (ret == -1)
 			continue;
 
@@ -1819,15 +1816,15 @@ find_node(job *pjob, int stream, tm_node_id vnodeid)
 	}
 
 	hp = vp->vn_host;	/* host for virtual node */
-	node_addr = rpp_getaddr(hp->hn_stream);
-	stream_addr = rpp_getaddr(stream);
+	node_addr = tpp_getaddr(hp->hn_stream);
+	stream_addr = tpp_getaddr(stream);
 
 	if (stream_addr == NULL) {	/* caller didn't have a stream */
 		/*
 		 ** If node is not me and no stream open, open one
 		 */
 		if (pjob->ji_nodeid != hp->hn_node && node_addr == NULL)
-			hp->hn_stream = rpp_open(hp->hn_host, hp->hn_port);
+			hp->hn_stream = tpp_open(hp->hn_host, hp->hn_port);
 		return hp;
 	}
 
@@ -2114,7 +2111,7 @@ node_bailout(job *pjob, hnodent *np)
 				DBPRT(("%s: JOIN_JOB %s jjretry %d old stream %d\n", __func__, pjob->ji_qs.ji_jobid, ep->ee_retry, np->hn_stream))
 				if (ep->ee_retry == 0) {
 					/* first failure, try to reopen and resend */
-					np->hn_stream = rpp_open(np->hn_host,
+					np->hn_stream = tpp_open(np->hn_host,
 						np->hn_port);
 					if (np->hn_stream < 0) {
 						/* reopen failed - fatal */
@@ -2382,11 +2379,11 @@ im_eof(int stream, int ret)
 	hnodent			*np;
 	struct	sockaddr_in	*addr;
 
-	addr = rpp_getaddr(stream);
+	addr = tpp_getaddr(stream);
 	sprintf(log_buffer, "%s from addr %s on stream %d",
 		dis_emsg[ret], netaddr(addr), stream);
 	log_err(-1, __func__, log_buffer);
-	rpp_close(stream);
+	tpp_close(stream);
 
 	if (stream == server_stream) {
 		sprintf(log_buffer, "Server closed connection.");
@@ -2498,23 +2495,13 @@ check_ms(int stream, job *pjob)
 	struct	sockaddr_in	*addr;
 	hnodent			*np;
 
-	addr = rpp_getaddr(stream);
-	if (pbs_conf.pbs_use_tcp == 0) {
-		if (ntohs(addr->sin_port) >= IPPORT_RESERVED) {
-			sprintf(log_buffer,
-				"non-privileged connection from %s", netaddr(addr));
-			log_joberr(-1, __func__, log_buffer, pjob->ji_qs.ji_jobid);
-			rpp_close(stream);
-			return TRUE;
-		}
-	}
 	if (pjob == NULL)
 		return FALSE;
-
+	addr = tpp_getaddr(stream);
 	if (pjob->ji_qs.ji_svrflags & JOB_SVFLG_HERE) {
 		log_joberr(-1, __func__, "Mother Superior talking to herself",
 			pjob->ji_qs.ji_jobid);
-		rpp_eom(stream);
+		tpp_eom(stream);
 		return TRUE;
 	}
 
@@ -2991,7 +2978,7 @@ pre_finish_exec(job *pjob, int do_job_setup_send)
 
 /**
  * @brief
- *      Input is coming from another MOM over a DIS rpp stream.
+ *      Input is coming from another MOM over a DIS tpp stream.
  *      Read the stream to get a Inter-MOM request.
  *
  *	request (
@@ -3005,7 +2992,7 @@ pre_finish_exec(job *pjob, int do_job_setup_send)
  *	Format the reply and write it back.
  *
  *
- * @param[in]       stream	inter-MOM stream on which RPP I/O is done
+ * @param[in]       stream	inter-MOM stream on which TPP I/O is done
  * @param[in]       version	inter-MOM protocol version;  only IM_PROTOCOL_VER is
  *			currently supported
  * @return		void
@@ -3071,16 +3058,16 @@ im_request(int stream, int version)
 	if ((version != IM_PROTOCOL_VER) && (version != IM_OLD_PROTOCOL_VER)) {
 		sprintf(log_buffer, "protocol version %d unknown", version);
 		log_err(-1, __func__, log_buffer);
-		rpp_close(stream);
+		tpp_close(stream);
 		return;
 	}
 
 	/* check that machine is known */
-	addr = rpp_getaddr(stream);
+	addr = tpp_getaddr(stream);
 	if (addr == NULL) {
 		sprintf(log_buffer, "Sender unknown");
 		log_err(-1, __func__, log_buffer);
-		rpp_close(stream);
+		tpp_close(stream);
 		return;
 	}
 	ipaddr = ntohl(addr->sin_addr.s_addr);
@@ -3503,18 +3490,18 @@ im_request(int stream, int version)
 					goto join_err;
 			}
 
-			if (rpp_eom(stream) == -1)
+			if (tpp_eom(stream) == -1)
 				goto join_err;
 
-			if (rpp_flush(stream) == -1)
+			if (dis_flush(stream) == -1)
 				goto join_err;
 
 			goto fini;
 
 join_err:
-			log_err(errno, __func__, "rpp_write");
+			log_err(errno, __func__, "dis_flush");
 			(void)mom_process_hooks(HOOK_EVENT_EXECJOB_ABORT, PBS_MOM_SERVICE_NAME, mom_host, &hook_input, &hook_output, hook_msg, sizeof(hook_msg), 1);
-			rpp_close(stream);
+			tpp_close(stream);
 			mom_deljob(pjob);
 			goto fini;
 
@@ -4781,7 +4768,7 @@ join_err:
 					(void)tm_reply(efd, ptask->ti_protover,
 						TM_OKAY, event_client);
 					for (;;) {
-						DIS_rpp_funcs();
+						DIS_tpp_funcs();
 						taskid = disrui(stream, &ret);
 						if (ret != DIS_SUCCESS) {
 							if (ret == DIS_EOD)
@@ -5496,13 +5483,13 @@ join_err:
 	}
 
 done:
-	rpp_eom(stream);
+	tpp_eom(stream);
 	if (reply) {	/* check if write worked */
 		if (ret != DIS_SUCCESS ||
-			rpp_flush(stream) == -1) {
+			dis_flush(stream) == -1) {
 			if (errno != 0)
-				log_err(errno, __func__, "rpp_flush");
-			rpp_close(stream);
+				log_err(errno, __func__, "dis_flush");
+			tpp_close(stream);
 			if (np != NULL && np->hn_stream == stream)
 				np->hn_stream = -1;
 		}
@@ -6266,7 +6253,7 @@ aterr:
 				ret = diswui(phost->hn_stream, tvnodeid);
 				if (ret != DIS_SUCCESS)
 					goto done;
-				ret = (rpp_flush(phost->hn_stream) == -1) ?
+				ret = (dis_flush(phost->hn_stream) == -1) ?
 					DIS_NOCOMMIT : DIS_SUCCESS;
 				if (ret != DIS_SUCCESS)
 					goto done;
@@ -6464,7 +6451,7 @@ aterr:
 					goto done;
 				}
 			}
-			ret = (rpp_flush(phost->hn_stream) == -1) ?
+			ret = (dis_flush(phost->hn_stream) == -1) ?
 				DIS_NOCOMMIT : DIS_SUCCESS;
 			if (ret != DIS_SUCCESS) {
 				arrayfree(argv);
@@ -6511,7 +6498,7 @@ aterr:
 				ret = diswsi(phost->hn_stream, signum);
 				if (ret != DIS_SUCCESS)
 					goto done;
-				ret = (rpp_flush(phost->hn_stream) == -1) ?
+				ret = (dis_flush(phost->hn_stream) == -1) ?
 					DIS_NOCOMMIT : DIS_SUCCESS;
 				if (ret != DIS_SUCCESS)
 					goto done;
@@ -6561,7 +6548,7 @@ aterr:
 				ret = diswui(phost->hn_stream, taskid);
 				if (ret != DIS_SUCCESS)
 					goto done;
-				ret = (rpp_flush(phost->hn_stream) == -1) ?
+				ret = (dis_flush(phost->hn_stream) == -1) ?
 					DIS_NOCOMMIT : DIS_SUCCESS;
 				if (ret != DIS_SUCCESS)
 					goto done;
@@ -6634,7 +6621,7 @@ aterr:
 				free(name);
 				if (ret != DIS_SUCCESS)
 					goto done;
-				ret = (rpp_flush(phost->hn_stream) == -1) ?
+				ret = (dis_flush(phost->hn_stream) == -1) ?
 					DIS_NOCOMMIT : DIS_SUCCESS;
 				if (ret != DIS_SUCCESS)
 					goto done;
@@ -6678,7 +6665,7 @@ aterr:
 				ret = diswui(phost->hn_stream, myvnodeid);
 				if (ret != DIS_SUCCESS)
 					goto done;
-				ret = (rpp_flush(phost->hn_stream) == -1) ?
+				ret = (dis_flush(phost->hn_stream) == -1) ?
 					DIS_NOCOMMIT : DIS_SUCCESS;
 				if (ret != DIS_SUCCESS)
 					goto done;
@@ -6801,7 +6788,7 @@ send_join_job_restart(int com, eventent *ep, int nth, job *pjob, pbs_list_head *
 		psatl = (svrattrl *)GET_NEXT(*phead);
 		(void)encode_DIS_svrattrl(stream, psatl);
 	}
-	rpp_flush(stream);
+	dis_flush(stream);
 }
 
 /**
@@ -6868,5 +6855,5 @@ send_join_job_restart_mcast(int mtfd, int com, eventent *ep, int nth, job *pjob,
 		psatl = (svrattrl *)GET_NEXT(*phead);
 		(void)encode_DIS_svrattrl(stream, psatl);
 	}
-	rpp_flush(stream);
+	dis_flush(stream);
 }

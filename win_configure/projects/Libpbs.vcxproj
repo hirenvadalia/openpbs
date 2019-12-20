@@ -57,7 +57,7 @@
     </PreBuildEvent>
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>..\..\src\include;..\include;..\..\..\binaries\openssl_debug\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\..\binaries\zlib;..\..\src\include;..\include;..\..\..\binaries\openssl_debug\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;_USE_32BIT_TIME_T ;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -76,9 +76,9 @@
       <Culture>0x0409</Culture>
     </ResourceCompile>
     <Lib>
-      <AdditionalDependencies>Libpbspthread.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>zlib.lib;Libpbspthread.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>..\..\..\win_build\src\lib\Libpbs\Debug\Libpbs.lib</OutputFile>
-      <AdditionalLibraryDirectories>..\..\..\win_build\src\lib\Liblog\Debug;..\..\..\win_build\src\lib\Libpbspthread\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\..\..\binaries\zlib;..\..\..\win_build\src\lib\Liblog\Debug;..\..\..\win_build\src\lib\Libpbspthread\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <SuppressStartupBanner>true</SuppressStartupBanner>
     </Lib>
   </ItemDefinitionGroup>
@@ -89,7 +89,7 @@
     <ClCompile>
       <Optimization>MaxSpeed</Optimization>
       <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
-      <AdditionalIncludeDirectories>..\..\src\include;..\include;..\..\..\binaries\openssl\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\..\binaries\zlib;..\..\src\include;..\include;..\..\..\binaries\openssl\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;_USE_32BIT_TIME_T ;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
@@ -108,9 +108,9 @@
       <Culture>0x0409</Culture>
     </ResourceCompile>
     <Lib>
-      <AdditionalDependencies>Libpbspthread.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>zlib.lib;Libpbspthread.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>..\..\..\win_build\src\lib\Libpbs\Release\Libpbs.lib</OutputFile>
-      <AdditionalLibraryDirectories>..\..\..\win_build\src\lib\Liblog\Release;..\..\..\win_build\src\lib\Libpbspthread\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\..\..\binaries\zlib;..\..\..\win_build\src\lib\Liblog\Release;..\..\..\win_build\src\lib\Libpbspthread\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <SuppressStartupBanner>true</SuppressStartupBanner>
     </Lib>
   </ItemDefinitionGroup>
@@ -754,11 +754,6 @@
       <BasicRuntimeChecks Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">EnableFastChecks</BasicRuntimeChecks>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">MaxSpeed</Optimization>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\Libifl\get_hostname.c">
-      <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Disabled</Optimization>
-      <BasicRuntimeChecks Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">EnableFastChecks</BasicRuntimeChecks>
-      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">MaxSpeed</Optimization>
-    </ClCompile>
     <ClCompile Include="..\..\src\lib\Libifl\get_svrport.c">
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Disabled</Optimization>
       <BasicRuntimeChecks Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">EnableFastChecks</BasicRuntimeChecks>
@@ -1069,11 +1064,6 @@
       <BasicRuntimeChecks Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">EnableFastChecks</BasicRuntimeChecks>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">MaxSpeed</Optimization>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\Libifl\rpp.c">
-      <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Disabled</Optimization>
-      <BasicRuntimeChecks Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">EnableFastChecks</BasicRuntimeChecks>
-      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">MaxSpeed</Optimization>
-    </ClCompile>
     <ClCompile Include="..\..\src\lib\Libifl\strsep.c">
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Disabled</Optimization>
       <BasicRuntimeChecks Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">EnableFastChecks</BasicRuntimeChecks>
@@ -1114,6 +1104,10 @@
     </ProjectReference>
     <ProjectReference Include="Libnet.vcxproj">
       <Project>{5885bb13-6d58-4ee3-94c8-a8928f1eab00}</Project>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+    <ProjectReference Include="Libtpp.vcxproj">
+      <Project>{6009cf00-ef0f-44ca-9995-33328f067904}</Project>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>
     <ProjectReference Include="libpbspthread.vcxproj">

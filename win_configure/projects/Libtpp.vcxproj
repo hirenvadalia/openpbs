@@ -116,10 +116,6 @@
     <ClCompile Include="..\..\src\lib\Libtpp\tpp_util.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\src\lib\Libtpp\tpp_common.h" />
-    <ClInclude Include="..\..\src\lib\Libtpp\tpp_platform.h" />
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="libpbspthread.vcxproj">
       <Project>{4f776873-f1fb-4299-b3d5-394af05baa73}</Project>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>

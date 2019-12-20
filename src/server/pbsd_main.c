@@ -45,13 +45,11 @@
  * 	net_down_handler()
  * 	go_to_background()
  * 	decrypt_pwd()
- * 	do_rpp()
- * 	rpp_request()
+ * 	do_tpp()
+ * 	tpp_request()
  * 	build_path()
  * 	pbs_close_stdfiles()
  * 	clear_exec_vnode()
- * 	log_rppfail()
- * 	log_tppmsg()
  * 	make_server_auto_restart()
  * 	reap_child()
  * 	can_schedule()
@@ -121,7 +119,7 @@
 #include "tracking.h"
 #include "acct.h"
 #include "sched_cmds.h"
-#include "rpp.h"
+#include "tpp.h"
 #include "dis.h"
 #include "libsec.h"
 #include "pbs_version.h"
@@ -134,6 +132,7 @@
 #include "pbs_share.h"
 #include <pbs_python.h>  /* for python interpreter */
 #include "pbs_undolr.h"
+
 
 /* External functions called */
 
@@ -170,7 +169,6 @@ static int db_oper_failed_times = 0;
 static int last_rc = -1; /* we need to reset db_oper_failed_times for each state change of the db */
 static int db_delay = 0;
 static int touch_db_stop_file(void);
-static void log_tppmsg(int level, const char *objname, char *mess);
 #define MAX_DB_RETRIES			5
 #define MAX_DB_LOOP_DELAY		10
 #define HOT_START_PING_RATE		15
@@ -337,7 +335,7 @@ int tpp_network_up = 0;
 void
 net_restore_handler(void *data)
 {
-	log_tppmsg(LOG_INFO, NULL, "net restore handler called");
+	tpp_log_func(LOG_INFO, NULL, "net restore handler called");
 	tpp_network_up = 1;
 	ping_nodes(NULL);
 }
@@ -357,7 +355,7 @@ net_down_handler(void *data)
 	if (tpp_network_up == 1) {
 		tpp_network_up = 0;
 		/* now loop and set all nodes to down */
-		log_tppmsg(LOG_CRIT, NULL, "marking all nodes unknown");
+		tpp_log_func(LOG_CRIT, NULL, "marking all nodes unknown");
 		mark_nodes_unknown(1);
 	}
 }
@@ -405,21 +403,21 @@ go_to_background()
 
 /**
  * @brief
- * 		Read a RPP message from a stream.  Only one kind of message
+ * 		Read a TPP message from a stream.  Only one kind of message
  * 		is expected -- Inter Server requests from MOM's.
  *
- * @param[in]	stream	- sream from which RPP message is read.
+ * @param[in]	stream	- sream from which TPP message is read.
  *
  * @return	void
  */
 void
-do_rpp(int stream)
+do_tpp(int stream)
 {
 	int			ret, proto, version;
 	void			is_request(int, int);
 	void			stream_eof(int, int, char *);
 
-	DIS_rpp_funcs();
+	DIS_tpp_funcs();
 	proto = disrsi(stream, &ret);
 	if (ret != DIS_SUCCESS) {
 		stream_eof(stream, ret, NULL);
@@ -449,22 +447,22 @@ do_rpp(int stream)
 
 /**
  * @brief
- * 		Read the stream using rpp_poll and invoke do_rpp using that stream.
+ * 		Read the stream using tpp_poll and invoke do_tpp using that stream.
  *
  * @param[in]	fd	- not used.
  *
  * @return	void
  */
 void
-rpp_request(int fd)
+tpp_request(int fd)
 {
 	int	iloop;
 	int	rpp_max_pkt_check = RPP_MAX_PKT_CHECK_DEFAULT;
 
 	/*
-	 * Interleave RPP processing with batch request processing.
+	 * Interleave TPP processing with batch request processing.
 	 * Certain things like hook/short-job propagation can generate a
-	 * huge amount of RPP traffic that can make batch processing
+	 * huge amount of TPP traffic that can make batch processing
 	 * appear sluggish if not interleaved.
 	 *
 	 */
@@ -474,13 +472,13 @@ rpp_request(int fd)
 	for (iloop = 0; iloop < rpp_max_pkt_check; iloop++) {
 		int	stream;
 
-		if ((stream = rpp_poll()) == -1) {
-			log_err(errno, __func__, "rpp_poll");
+		if ((stream = tpp_poll()) == -1) {
+			log_err(errno, __func__, "tpp_poll");
 			break;
 		}
 		if (stream == -2)
 			break;
-		do_rpp(stream);
+		do_tpp(stream);
 	}
 	return;
 }
@@ -604,48 +602,6 @@ clear_exec_vnode()
 		}
 	}
 }
-/**
- * @brief
- *		log details in case of an rpp failure
- *
- * @param[in]	mess    - The log message
- *
- */
-void
-log_rppfail(char *mess)
-{
-	log_event(PBSEVENT_DEBUG, LOG_DEBUG,
-		PBS_EVENTCLASS_SERVER, "rpp", mess);
-}
-
-/**
- * @brief
- *		This is the log handler for tpp implemented in the daemon. The pointer to
- *		this function is used by the Libtpp layer when it needs to log something to
- *		the daemon logs
- *
- * @param[in]	level   - Logging level
- * @param[in]	objname - Name of the object about which logging is being done
- * @param[in]	mess    - The log message
- *
- */
-static void
-log_tppmsg(int level, const char *objname, char *mess)
-{
-	char id[2*PBS_MAXHOSTNAME];
-	int thrd_index;
-	int etype = log_level_2_etype(level);
-
-	thrd_index = tpp_get_thrd_index();
-	if (thrd_index == -1)
-		snprintf(id, sizeof(id), "%s(Main Thread)", (objname != NULL) ? objname : msg_daemonname);
-	else
-		snprintf(id, sizeof(id), "%s(Thread %d)", (objname != NULL) ? objname : msg_daemonname, thrd_index);
-
-	log_event(etype, PBS_EVENTCLASS_TPP, level, id, mess);
-	DBPRT((mess));
-	DBPRT(("\n"));
-}
 
 /**
  * @brief
@@ -720,13 +676,11 @@ can_schedule()
 int
 main(int argc, char **argv)
 {
-
+	char *nodename = NULL;
 	int			are_primary;
 	int			c, rc;
 	int			i;
-	int			rppfd;		/* fd to receive is HELLO's */
-	int			privfd;		/* fd to send is messages */
-	uint			tryport;
+	int			tppfd;		/* fd to receive is HELLO's */
 	struct			tpp_config tpp_conf;
 	char			lockfile[MAXPATHLEN+1];
 	char			**origevp;
@@ -1488,94 +1442,61 @@ try_db_again:
 		stop_db();
 		return (3);
 	}
+	sprintf(log_buffer, "Out of memory");
+	if (pbs_conf.pbs_leaf_name) {
+		char *p;
+		nodename = strdup(pbs_conf.pbs_leaf_name);
 
-	if (pbs_conf.pbs_use_tcp == 1) {
-		char *nodename = NULL;
-
-		sprintf(log_buffer, "Out of memory");
-		if (pbs_conf.pbs_leaf_name) {
-			char *p;
-			nodename = strdup(pbs_conf.pbs_leaf_name);
-
-			/* reset pbs_leaf_name to only the first leaf name with port */
-			p = strchr(pbs_conf.pbs_leaf_name, ','); /* keep only the first leaf name */
-			if (p)
-				*p = '\0';
-			p = strchr(pbs_conf.pbs_leaf_name, ':'); /* cut out the port */
-			if (p)
-				*p = '\0';
-		} else {
-			char *host = NULL;
-			if (pbs_conf.pbs_primary)
-				if (!pbs_failover_active)
-					host = pbs_conf.pbs_primary;
-				else
-					host = pbs_conf.pbs_secondary;
-			else if (pbs_conf.pbs_server_host_name)
-				host = pbs_conf.pbs_server_host_name;
-			else if (pbs_conf.pbs_server_name)
-				host = pbs_conf.pbs_server_name;
-
-			/* since pbs_leaf_name was not specified, determine all IPs */
-			nodename = get_all_ips(host, log_buffer, sizeof(log_buffer) - 1);
-		}
-
-		if (!nodename) {
-			log_err(-1, "pbsd_main", log_buffer);
-			fprintf(stderr, "%s\n", "Unable to determine TPP node name");
-			stop_db();
-			return (1);
-		}
-
-		/* set tpp function pointers */
-		set_tpp_funcs(log_tppmsg);
-		rc = set_tpp_config(&pbs_conf, &tpp_conf, nodename, pbs_server_port_dis, pbs_conf.pbs_leaf_routers);
-		free(nodename);
-		if (rc == -1) {
-			(void) sprintf(log_buffer, "Error setting TPP config");
-			fprintf(stderr, "%s", log_buffer);
-			stop_db();
-			return (3);
-		}
-
-		tpp_set_app_net_handler(net_down_handler, net_restore_handler);
-		tpp_conf.node_type = TPP_LEAF_NODE_LISTEN; /* server needs to know about all CTL LEAVE messages */
-
-		if ((rppfd = tpp_init(&tpp_conf)) == -1) {
-			log_err(-1, msg_daemonname, "tpp_init failed");
-			fprintf(stderr, "%s", log_buffer);
-			stop_db();
-			return (3);
-		}
-
-		(void)add_conn(rppfd,  RppComm, (pbs_net_t)0, 0, NULL, rpp_request);
+		/* reset pbs_leaf_name to only the first leaf name with port */
+		p = strchr(pbs_conf.pbs_leaf_name, ','); /* keep only the first leaf name */
+		if (p)
+			*p = '\0';
+		p = strchr(pbs_conf.pbs_leaf_name, ':'); /* cut out the port */
+		if (p)
+			*p = '\0';
 	} else {
-		/* set rpp function pointers */
-		set_rpp_funcs(log_rppfail);
+		char *host = NULL;
+		if (pbs_conf.pbs_primary)
+			if (!pbs_failover_active)
+				host = pbs_conf.pbs_primary;
+			else
+				host = pbs_conf.pbs_secondary;
+		else if (pbs_conf.pbs_server_host_name)
+			host = pbs_conf.pbs_server_host_name;
+		else if (pbs_conf.pbs_server_name)
+			host = pbs_conf.pbs_server_name;
 
-		if ((rppfd = rpp_bind(pbs_server_port_dis)) == -1) {
-			log_err(errno, msg_daemonname, "rpp_bind");
-			stop_db();
-			return (1);
-		}
-		rpp_fd = -1;		/* force rpp_bind() to get another socket */
-		tryport = IPPORT_RESERVED;
-		while (--tryport > 0) {
-			if ((privfd = rpp_bind(tryport)) != -1)
-				break;
-
-			if ((errno != EADDRINUSE) && (errno != EADDRNOTAVAIL))
-				break;
-		}
-		if (privfd == -1) {
-			log_err(errno, msg_daemonname, "no privileged ports");
-			stop_db();
-			return (1);
-		}
-
-		(void)add_conn(rppfd,  RppComm, (pbs_net_t)0, 0, NULL, rpp_request);
-		(void)add_conn(privfd, RppComm, (pbs_net_t)0, 0, NULL, rpp_request);
+		/* since pbs_leaf_name was not specified, determine all IPs */
+		nodename = get_all_ips(host, log_buffer, sizeof(log_buffer) - 1);
 	}
+
+	if (!nodename) {
+		log_err(-1, "pbsd_main", log_buffer);
+		fprintf(stderr, "%s\n", "Unable to determine TPP node name");
+		stop_db();
+		return (1);
+	}
+
+	rc = set_tpp_config(NULL, &pbs_conf, &tpp_conf, nodename, pbs_server_port_dis, pbs_conf.pbs_leaf_routers);
+	free(nodename);
+	if (rc == -1) {
+		(void) sprintf(log_buffer, "Error setting TPP config");
+		fprintf(stderr, "%s", log_buffer);
+		stop_db();
+		return (3);
+	}
+
+	tpp_set_app_net_handler(net_down_handler, net_restore_handler);
+	tpp_conf.node_type = TPP_LEAF_NODE_LISTEN; /* server needs to know about all CTL LEAVE messages */
+
+	if ((tppfd = tpp_init(&tpp_conf)) == -1) {
+		log_err(-1, msg_daemonname, "tpp_init failed");
+		fprintf(stderr, "%s", log_buffer);
+		stop_db();
+		return (3);
+	}
+
+	(void)add_conn(tppfd,  TppComm, (pbs_net_t)0, 0, NULL, tpp_request);
 
 	/* record the fact that the Secondary is up and active (running) */
 
@@ -1811,11 +1732,6 @@ try_db_again:
 			pque = (pbs_queue *)GET_NEXT(pque->qu_link);
 		}
 
-		if (pbs_conf.pbs_use_tcp == 0) {
-			/* touch the rpp streams that need to send, not required for TCP */
-			rpp_request(42);
-		}
-
 		if (reap_child_flag)
 			reap_child();
 
@@ -1885,14 +1801,6 @@ try_db_again:
 	if ((*state != SV_STATE_SECIDLE) && (shutdown_who & SHUT_WHO_MOM))
 		shutdown_nodes();
 
-	if (pbs_conf.pbs_use_tcp == 0) {
-		/* try just a little bit to get the packets to all the Moms, not for TCP */
-		for (i=0; i<2; ++i) {
-			rpp_request(42);
-			sleep(1);
-		}
-	}
-
 	/* if brought up the DB, take it down */
 	stop_db();
 
@@ -1934,7 +1842,7 @@ try_db_again:
 
 	shutdown_ack();
 	net_close(-1);		/* close all network connections */
-	rpp_shutdown();
+	tpp_shutdown();
 
 	/*
 	 * SERVER is going to be shutdown, delete AVL tree using

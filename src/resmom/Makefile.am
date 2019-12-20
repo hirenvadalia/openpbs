@@ -127,4 +127,3 @@ EXTRA_DIST = \
 	darwin/mom_mach.h \
 	darwin/mom_start.c \
 	darwin/pe_input.c
-

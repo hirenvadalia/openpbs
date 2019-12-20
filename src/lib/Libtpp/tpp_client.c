@@ -52,11 +52,11 @@
  *		This is the client side (referred to as leaf) in the tpp network
  *		topology. This compiles into the overall tpp library, and is
  *		linked to the PBS daemons. This code file implements the
- *		rpp_ interface functions that the daemons use to communicate
+ *		tpp_ interface functions that the daemons use to communicate
  *		with other daemons.
  *
  *		The code is driven by 2 threads. The Application thread (from
- *		the daemons) calls the main interfaces (rpp/tpp_xxx functions).
+ *		the daemons) calls the main interfaces (tpp_xxx functions).
  *		When a piece of data is to be transmitted, its queued to a
  *		stream, and another independent thread drives the actual IO of
  *		the data. We refer to these two threads in the comments as
@@ -94,9 +94,28 @@
 
 #include "avltree.h"
 
-#include "rpp.h"
+#include "tpp.h"
 #include "dis.h"
-#include "tpp_common.h"
+
+/* definitions of pointer functions for global use */
+void (*pfn_rpp_add_close_func)(int, void (*func)(int));
+
+/**
+ *	Current file descriptor.  Any call to tpp_open will use this
+ *	for the returned stream.
+ */
+int tpp_fd = -1;
+
+/**
+ *	Number of retrys to for each packet.
+ */
+int rpp_retry = RPP_RETRY;
+
+/**
+ *	Number of packets to send before gettin an ACK.
+ */
+int rpp_highwater = RPP_HIGHWATER;
+
 
 /*
  * app_mbox is the "monitoring mechanism" for the application
@@ -327,7 +346,7 @@ static void queue_strm_free(unsigned int sd);
 static void act_strm(time_t now, int force);
 static int send_app_strm_close(stream_t *strm, int cmd, int error);
 static int shelve_pkt(tpp_packet_t *pkt, tpp_packet_t *data_pkt, time_t retry_time);
-static int shelve_mcast_pkt(tpp_mcast_pkt_hdr_t *mcast_hdr, int tfd, int seq, tpp_packet_t *pkt);
+static int shelve_mcast_pkt(tpp_mcast_pkt_hdr_t *mcast_hdr, int sd, int seq, tpp_packet_t *pkt);
 static int queue_ack(stream_t *strm, unsigned char type, unsigned int seq_no_recvd);
 static int send_ack_packet(ack_info_t *ack);
 static int send_retry_packet(tpp_packet_t *pkt);
@@ -345,7 +364,7 @@ static int leaf_send_ctl_join(int tfd, void *data, void *c, void *extra);
 int leaf_pkt_postsend_handler(int tfd, tpp_packet_t *pkt, void *extra);
 int leaf_pkt_presend_handler(int tfd, tpp_packet_t *pkt, void *extra);
 int leaf_pkt_handler(int tfd, void *data, int len, void *ctx, void *extra);
-int leaf_close_handler(int tfd, int error, void *ctx, void *extra);
+int leaf_close_handler(int tfd, int error, void *c, void *extra);
 int leaf_timer_handler(time_t now);
 int leaf_post_connect_handler(int tfd, void *data, void *c, void *extra);
 
@@ -1287,7 +1306,7 @@ tpp_poll(void)
  *	It advances the "current position" in the data packet, so subsequent
  *	reads on this stream reads the next bytes from the data packet.
  *	It never advances the "current position" past the end of the data
- *	packet. To move to the next packet, the APP must call "rpp_eom/tpp_eom".
+ *	packet. To move to the next packet, the APP must call "tpp_eom/tpp_eom".
  *
  * @param[in]  sd   - The stream descriptor to which to read data
  * @param[out] data - Pointer to the buffer to read data into
@@ -1659,20 +1678,6 @@ tpp_terminate()
 	tpp_transport_terminate();
 
 	tpp_mbox_destroy(&app_mbox, 0);
-}
-
-/* NULL definitions for some unimplemented functions */
-int
-tpp_bind(unsigned int port)
-{
-	return 0;
-}
-
-/* NULL definitions for some unimplemented functions */
-int
-tpp_io(void)
-{
-	return 0;
 }
 
 /**

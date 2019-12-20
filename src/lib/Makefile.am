@@ -47,4 +47,3 @@ SUBDIRS = \
 	Libsec \
 	Libtpp \
 	Libutil
-

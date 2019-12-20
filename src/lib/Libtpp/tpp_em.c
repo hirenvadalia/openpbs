@@ -70,9 +70,7 @@
 #include <netdb.h>
 #include <signal.h>
 
-#include "rpp.h"
-#include "tpp_common.h"
-#include "tpp_platform.h"
+#include "tpp.h"
 
 #ifdef HAVE_SYS_EVENTFD_H
 #include <sys/eventfd.h>

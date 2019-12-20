@@ -73,7 +73,7 @@
 #include "work_task.h"
 #include "pbs_nodes.h"
 #include "svrfunc.h"
-#include "rpp.h"
+#include "tpp.h"
 
 
 /* External Globals */
@@ -90,7 +90,7 @@ char   *resc_in_err = NULL;
 
 extern struct pbs_err_to_txt pbs_err_to_txt[];
 extern int pbs_tcp_errno;
-extern int rpp_flush(int index);
+extern int dis_flush(int index);
 
 void reply_free(struct batch_reply *prep);
 
@@ -176,8 +176,8 @@ dis_reply_write(int sfds, struct batch_request *preq)
 	int rc;
 	struct batch_reply *preply = &preq->rq_reply;
 
-	if (preq->isrpp) {
-		rc = encode_DIS_replyRPP(sfds, preq->rppcmd_msgid, preply);
+	if (preq->istpp) {
+		rc = encode_DIS_replyTPP(sfds, preq->tppcmd_msgid, preply);
 	} else {
 		/*
 		 * clear pbs_tcp_errno - set on error in dis_flush when called
@@ -320,7 +320,7 @@ reply_ack(struct batch_request *preq)
 	if (preq == NULL)
 		return;
 
-	if (preq->isrpp && (preq->rpp_ack == 0)) {
+	if (preq->istpp && (preq->tpp_tck == 0)) {
 		free_br(preq);
 		return;
 	}

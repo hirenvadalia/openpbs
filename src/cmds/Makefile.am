@@ -88,13 +88,18 @@ dist_bin_SCRIPTS = \
 
 common_cflags = \
 	-I$(top_srcdir)/src/include \
-	@KRB5_CFLAGS@
+	@KRB5_CFLAGS@ \
+	@libz_inc@
 
 common_libs = \
 	$(top_builddir)/src/lib/Libpbs/.libs/libpbs.a \
+	$(top_builddir)/src/lib/Libtpp/libtpp.a \
+	$(top_builddir)/src/lib/Liblog/liblog.a \
+	$(top_builddir)/src/lib/Libutil/libutil.a \
 	$(top_builddir)/src/lib/Libnet/libnet.a \
 	$(top_builddir)/src/lib/Libsec/libsec.a \
 	-lpthread \
+	@libz_lib@ \
 	@socket_lib@ \
 	@KRB5_LIBS@
 
@@ -117,6 +122,7 @@ pbs_demux_SOURCES = pbs_demux.c
 pbs_ds_password_bin_CPPFLAGS = \
 	${common_cflags} \
 	@database_inc@
+
 pbs_ds_password_bin_LDADD = \
 	$(top_builddir)/src/lib/Libdb/libdb.a \
 	${common_libs} \
@@ -181,9 +187,11 @@ qhold_SOURCES = qhold.c
 qmgr_CPPFLAGS = \
 	${common_cflags} \
 	@editline_inc@
+
 qmgr_LDADD = \
 	${common_libs} \
 	@editline_lib@
+
 qmgr_SOURCES = qmgr.c cmds_common.c
 
 qmove_CPPFLAGS = ${common_cflags}

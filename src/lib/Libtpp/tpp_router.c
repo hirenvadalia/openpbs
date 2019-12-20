@@ -73,14 +73,9 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <netdb.h>
-#ifdef PBS_COMPRESSION_ENABLED
-#include <zlib.h>
-#endif
-
 #include "avltree.h"
+#include "tpp.h"
 
-#include "rpp.h"
-#include "tpp_common.h"
 
 #define RLIST_INC 100
 #define TPP_MAX_ROUTERS 5000
@@ -103,8 +98,8 @@ time_t router_last_leaf_joined = 0;
 static int router_send_ctl_join(int tfd, void *data, void *c, void *extra);
 
 /* forward declarations */
-static int router_pkt_handler(int phy_fd, void *data, int len, void *c, void *extra);
-static int router_close_handler(int phy_con, int error, void *c, void *extra);
+static int router_pkt_handler(int tfd, void *data, int len, void *c, void *extra);
+static int router_close_handler(int tfd, int error, void *c, void *extra);
 static int send_leaves_to_router(tpp_router_t *parent, tpp_router_t *target);
 static tpp_router_t *get_preferred_router(tpp_leaf_t *l, tpp_router_t *this_router, int *fd);
 static int add_route_to_leaf(tpp_leaf_t *l, tpp_router_t *r, int index);

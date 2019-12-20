@@ -71,9 +71,7 @@
 #include <sys/time.h>
 #include <signal.h>
 
-#include "rpp.h"
-#include "tpp_common.h"
-#include "tpp_platform.h"
+#include "tpp.h"
 #if defined(PBS_SECURITY) && (PBS_SECURITY == KRB5)
 #include "pbs_gss.h"
 #endif

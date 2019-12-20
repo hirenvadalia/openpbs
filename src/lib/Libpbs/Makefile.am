@@ -201,7 +201,6 @@ libpbs_la_SOURCES = \
 	../Libifl/enc_PreemptJobs.c \
 	../Libifl/enc_svrattrl.c \
 	../Libifl/entlim_parse.c \
-	../Libifl/get_hostname.c \
 	../Libifl/get_svrport.c \
 	../Libifl/grunt_parse.c \
 	../Libifl/int_hook.c \
@@ -266,7 +265,6 @@ libpbs_la_SOURCES = \
 	../Libifl/pbsD_Preempt_Jobs.c \
 	../Libifl/ifl_impl.c \
 	../Libifl/ifl_pointers.c \
-	../Libifl/rpp.c \
 	../Libifl/strsep.c \
 	../Libifl/tcp_dis_gss.c \
 	../Libifl/tcp_dis.c \

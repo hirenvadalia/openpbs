@@ -46,6 +46,7 @@ libutil_a_CPPFLAGS = \
 	@libundolr_inc@
 
 libutil_a_SOURCES = \
+	get_hostname.c \
 	execvnode_seq_util.c \
 	pbs_ical.c \
 	misc_utils.c \
