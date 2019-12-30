@@ -167,7 +167,7 @@ tcp_recv(int fd, void *data, int len)
 			break;
 #endif
 	}
-	return i;
+	return ((i == 0) ? -2 : i);
 }
 
 /**

@@ -485,7 +485,7 @@ __transport_read(int fd)
 			}
 		}
 	}
-	return ((i == 0) ? -2 : i);
+	return i;
 }
 
 /**
