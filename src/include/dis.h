@@ -245,6 +245,7 @@ void dis_destroy_chan(int);
 
 pbs_tcp_chan_t * (*pfn_transport_get_chan)(int);
 int (*pfn_transport_set_chan)(int, pbs_tcp_chan_t *);
+void (*pfn_transport_chan_free_extra)(void *);
 int (*pfn_transport_recv)(int, void *, int);
 int (*pfn_transport_send)(int, void *, int);
 
@@ -252,6 +253,12 @@ int (*pfn_transport_send)(int, void *, int);
 #define transport_send(x, y, z) (*pfn_transport_send)(x, y, z)
 #define transport_get_chan(x) (*pfn_transport_get_chan)(x)
 #define transport_set_chan(x, y) (*pfn_transport_set_chan)(x, y)
+#define transport_chan_free_extra(x) \
+	do { \
+		if (pfn_transport_chan_free_extra != NULL) { \
+			(*pfn_transport_chan_free_extra)(x); \
+		} \
+	} while(0)
 
 #ifdef	__cplusplus
 }

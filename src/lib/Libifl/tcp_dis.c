@@ -50,6 +50,7 @@
 #endif
 #include "libpbs.h"
 #include "dis.h"
+#include "pbs_gss.h"
 
 static int tcp_recv(int, void *, int);
 static int tcp_send(int, void *, int);
@@ -82,6 +83,16 @@ tcp_get_chan(int fd)
 		}
 	}
 	return chan;
+}
+
+void
+tcp_chan_free_extra(void *extra)
+{
+	if (extra != NULL) {
+#if defined(PBS_SECURITY) && (PBS_SECURITY == KRB5)
+		pbs_gss_free_gss_extra((pbs_gss_extra_t *)extra);
+#endif
+	}
 }
 
 /**
@@ -245,6 +256,7 @@ DIS_tcp_funcs()
 {
 	pfn_transport_get_chan = tcp_get_chan;
 	pfn_transport_set_chan = set_conn_chan;
+	pfn_transport_chan_free_extra = tcp_chan_free_extra;
 	pfn_transport_recv = tcp_recv;
 	pfn_transport_send = tcp_send;
 }

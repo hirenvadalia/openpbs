@@ -729,6 +729,10 @@ dis_destroy_chan(int fd)
 {
 	pbs_tcp_chan_t *chan = transport_get_chan(fd);
 	if (chan != NULL) {
+		if (chan->extra) {
+			transport_chan_free_extra(chan->extra);
+			chan->extra = NULL;
+		}
 		if (chan->readbuf.tdis_thebuf) {
 			free(chan->readbuf.tdis_thebuf);
 			chan->readbuf.tdis_thebuf = NULL;

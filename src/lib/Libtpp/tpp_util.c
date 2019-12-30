@@ -148,6 +148,7 @@ DIS_tpp_funcs()
 {
 	pfn_transport_get_chan = tppdis_get_user_data;
 	pfn_transport_set_chan = (int (*)(int, pbs_tcp_chan_t *)) &tpp_set_user_data;
+	pfn_transport_chan_free_extra = NULL;
 	pfn_transport_recv = tpp_recv;
 	pfn_transport_send = tpp_send;
 }
