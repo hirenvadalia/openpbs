@@ -40,7 +40,8 @@ noinst_LIBRARIES = libutil.a
 
 libutil_a_CPPFLAGS = \
 	-I$(top_srcdir)/src/include \
-	@libical_inc@ @KRB5_CFLAGS@ \
+	@libical_inc@ \
+	@KRB5_CFLAGS@ \
 	@libundolr_inc@
 
 libutil_a_SOURCES = \
@@ -62,4 +63,3 @@ libutil_a_SOURCES = \
 if UNDOLR_ENABLED
 libutil_a_SOURCES += undolr.c
 endif
-

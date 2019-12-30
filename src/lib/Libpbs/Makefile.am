@@ -38,7 +38,9 @@
 
 lib_LTLIBRARIES = libpbs.la
 
-libpbs_la_CPPFLAGS = -I$(top_srcdir)/src/include @KRB5_CFLAGS@
+libpbs_la_CPPFLAGS = \
+	-I$(top_srcdir)/src/include \
+	@KRB5_CFLAGS@
 
 #
 # There are specific rules that must be followed when updating the library
