@@ -77,6 +77,10 @@
 #include <zlib.h>
 #endif
 
+#if defined(PBS_SECURITY) && (PBS_SECURITY == KRB5)
+#include "pbs_gss.h"
+#endif
+
 /*
  *	Global Variables
  */
@@ -303,11 +307,33 @@ set_tpp_config(struct pbs_config *pbs_conf, struct tpp_config *tpp_conf, char *n
 	tpp_conf->numthreads = 1;
 
 	/* set authentication method and routines */
-	tpp_conf->auth_type = pbs_conf->auth_method != AUTH_MUNGE ? TPP_AUTH_RESV_PORT : TPP_AUTH_EXTERNAL;
-	tpp_conf->get_ext_auth_data = pbs_conf->auth_method == AUTH_MUNGE ? get_ext_auth_data : NULL;
-	tpp_conf->validate_ext_auth_data = pbs_conf->auth_method == AUTH_MUNGE ? validate_ext_auth_data : NULL;
+	tpp_conf->auth_type = pbs_conf->auth_method;
+	tpp_conf->alloc_auth_extra = NULL;
+	tpp_conf->free_auth_extra = NULL;
+	tpp_conf->establish_auth_context = NULL;
+	tpp_conf->decrypt_data = NULL;
+	tpp_conf->encrypt_data = NULL;
 
-	if (tpp_conf->auth_type == TPP_AUTH_RESV_PORT) {
+#ifndef WIN32
+	if (tpp_conf->auth_type == AUTH_MUNGE) {
+		tpp_conf->alloc_auth_extra = NULL;
+		tpp_conf->free_auth_extra = NULL;
+		tpp_conf->establish_auth_context = establish_munge_context;
+		tpp_conf->decrypt_data = NULL;
+		tpp_conf->encrypt_data = NULL;
+	}
+#if defined(PBS_SECURITY) && (PBS_SECURITY == KRB5)
+	else if (tpp_conf->auth_type == AUTH_GSS) {
+		tpp_conf->alloc_auth_extra = pbs_gss_alloc_gss_extra;
+		tpp_conf->free_auth_extra = pbs_gss_free_gss_extra;
+		tpp_conf->establish_auth_context = pbs_gss_establish_context;
+		tpp_conf->decrypt_data = pbs_gss_unwrap;
+		tpp_conf->encrypt_data = pbs_gss_wrap;
+	}
+#endif
+#endif
+
+	if (tpp_conf->auth_type == AUTH_RESV_PORT) {
 		snprintf(log_buffer, TPP_LOGBUF_SZ, "TPP set to use reserved port authentication");
 	} else {
 		snprintf(log_buffer, TPP_LOGBUF_SZ, "TPP set to use external authentication");
@@ -1821,7 +1847,11 @@ tpp_validate_hdr(int tfd, char *pkt_start)
 	type = *((unsigned char *) data);
 
 	if ((data_len < 0 || type >= TPP_LAST_MSG) ||
-		(data_len > TPP_SEND_SIZE && type != TPP_DATA && type != TPP_MCAST_DATA && type != TPP_ENCRYPTED_DATA)) {
+		(data_len > TPP_SEND_SIZE &&
+			type != TPP_DATA &&
+			type != TPP_MCAST_DATA &&
+			type != TPP_ENCRYPTED_DATA &&
+			type != TPP_AUTH_CTX)) {
 		snprintf(tpp_get_logbuf(), TPP_LOGBUF_SZ,
 				 "tfd=%d, Received invalid packet type with type=%d? data_len=%d", tfd, type, data_len);
 		tpp_log_func(LOG_CRIT, __func__, tpp_get_logbuf());
@@ -2238,5 +2268,121 @@ print_packet_hdr(const char *fnc, void *data, int len)
 		printf("%s message arrived from src_host = %s\n", str_types[type - 1], tpp_netaddr(&hdr->src_addr));
 	}
 	fflush(stdout);
+}
+#endif
+
+#if defined(PBS_SECURITY) && (PBS_SECURITY == KRB5)
+/**
+ * @brief
+ * 	-tpp_gss_logerror - logs the provided error
+ *
+ * @param[in] func_name - function name that invokes the error
+ * @param[in] msg - error message
+ */
+void
+tpp_gss_logerror(const char *func_name, const char* msg)
+{
+	tpp_log_func(LOG_ERR, func_name, (char*) msg);
+}
+
+/**
+ * @brief
+ * 	-tpp_gss_logdebug - logs the provided debug message
+ *
+ * @param[in] func_name - function name that invokes the message
+ * @param[in] msg - error message
+ */
+void
+tpp_gss_logdebug(const char *func_name, const char* msg)
+{
+	tpp_log_func(LOG_DEBUG, func_name, (char*) msg);
+}
+
+/**
+ * @brief
+ * 	-tpp_gss_set_extra_host - allocates the hostname to gss_extra structure.
+ *	The hostname is supposed to be the hostname of the GSS server.
+ *	For GSS client, the parameter 'hostname' conveys the GSS server hostname
+ *	and it is used. For GSS server, the parameter 'hostname' is not used
+ *	because it is set to the GSS client hostname.
+ *	The server hostname is retrieved by gethostname() in this case.
+ *
+ * @param[in] extra - gss extra structure as void*
+ * @param[in] hostname - hostname
+ *
+ * @return	int
+ * @retval	PBS_GSS_OK on success
+ * @retval	!= PBS_GSS_OK on error
+ */
+int
+tpp_gss_set_extra_host(void *extra, char *hostname)
+{
+	pbs_gss_extra_t *gss_extra = (pbs_gss_extra_t*) extra;
+	char *hn;
+
+	if (gss_extra == NULL)
+		return PBS_GSS_OK;
+
+	if (gss_extra->hostname)
+		return PBS_GSS_OK;
+
+	if (gss_extra->role == PBS_GSS_SERVER) {
+		if ((hn = malloc(PBS_MAXHOSTNAME + 1)) == NULL) {
+			tpp_log_func(LOG_CRIT, __func__, "malloc failure");
+			return PBS_GSS_ERR_INTERNAL;
+		}
+		gethostname(hn, PBS_MAXHOSTNAME + 1);
+		gss_extra->hostname = hn;
+	} else {
+		gss_extra->init_client_ccache = 1;
+		gss_extra->hostname = strdup(hostname);
+		if (gss_extra->hostname == NULL) {
+			tpp_log_func(LOG_CRIT, __func__, "malloc failure");
+			return PBS_GSS_ERR_INTERNAL;
+		}
+	}
+
+	return PBS_GSS_OK;
+}
+
+
+/**
+ * @brief
+ *	Log GSS-API messages associated with maj_stat or min_stat
+ *
+ * @param[in] m - error message followed by GSS maj or min message
+ * @param[in] code - gss error code
+ * @param[in] type - type of gss error code
+ */
+static void
+tpp_log_status_1(const char *m, OM_uint32 code, int type)
+{
+	OM_uint32 min_stat;
+	gss_buffer_desc msg;
+	OM_uint32 msg_ctx;
+	msg_ctx = 0;
+
+	do {
+		gss_display_status(&min_stat, code, type, GSS_C_NULL_OID, &msg_ctx, &msg);
+		snprintf(log_buffer, LOG_BUF_SIZE, "%s : %.*s\n", m, (int)msg.length, (char *)msg.value);
+		tpp_log_func(LOG_CRIT, "TPP GSS", log_buffer);
+		(void) gss_release_buffer(&min_stat, &msg);
+	} while (msg_ctx != 0);
+}
+
+/**
+ * @brief
+ *	The GSS-API messages associated with maj_stat and min_stat are
+ *	logged, each preceeded by "GSS-API error <msg>: ".
+ *
+ * @param[in] msg - a error string to be displayed with the message
+ * @param[in] maj_stat - the GSS-API major status code
+ * @param[in] min_stat - the GSS-API minor status code
+ */
+void
+tpp_gss_log_status(const char *msg, OM_uint32 maj_stat, OM_uint32 min_stat)
+{
+	tpp_log_status_1(msg, maj_stat, GSS_C_GSS_CODE);
+	tpp_log_status_1(msg, min_stat, GSS_C_MECH_CODE);
 }
 #endif

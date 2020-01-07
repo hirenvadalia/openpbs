@@ -339,6 +339,7 @@ static int tpp_send_inner(int sd, void *data, int len, int full_len, int cmprsd_
 static int send_spl_packet(stream_t *strm, int type);
 static void flush_acks(stream_t *strm);
 static void tpp_clr_retry(tpp_packet_t *pkt, stream_t *strm);
+static int leaf_send_ctl_join(int tfd, void *data, void *c, void *extra);
 
 /* externally called functions */
 int leaf_pkt_postsend_handler(int tfd, tpp_packet_t *pkt, void *extra);
@@ -469,34 +470,8 @@ tpp_set_app_net_handler(void (*app_net_down_handler)(void *data), void (*app_net
 	the_app_net_restore_handler = app_net_restore_handler;
 }
 
-/**
- * @brief
- *	The leaf post connect handler
- *
- * @par Functionality
- *	When the connection between this leaf and another is dropped, the IO
- *	thread continuously attempts to reconnect to it. If the connection is
- *	restored, then this prior registered function is called.
- *
- * @param[in] tfd - The actual IO connection on which data was about to be
- *			sent (unused)
- * @param[in] data - Any data the IO thread might want to pass to this function.
- *		     (unused)
- * @param[in] c - Context associated with this connection, points us to the
- *                router being connected to
- *
- * @return Error code
- * @retval 0 - Success
- * @retval -1 - Failure
- *
- * @par Side Effects:
- *	None
- *
- * @par MT-safe: No
- *
- */
-int
-leaf_post_connect_handler(int tfd, void *data, void *c, void *extra)
+static int
+leaf_send_ctl_join(int tfd, void *data, void *c, void *extra)
 {
 	tpp_context_t *ctx = (tpp_context_t *) c;
 	tpp_router_t *r;
@@ -512,45 +487,6 @@ leaf_post_connect_handler(int tfd, void *data, void *c, void *extra)
 
 		r = (tpp_router_t *) ctx->ptr;
 		r->state = TPP_ROUTER_STATE_CONNECTING;
-
-		if (tpp_conf->auth_type == TPP_AUTH_EXTERNAL) {
-			char ebuf[TPP_LOGBUF_SZ];
-			tpp_auth_pkt_hdr_t ahdr;
-			void *adata;
-			int alen;
-
-			/* send a TPP_CTL_AUTH message */
-			memset(&ahdr, 0, sizeof(tpp_auth_pkt_hdr_t)); /* only to satisfy valgrind */
-			ahdr.type = TPP_CTL_AUTH;
-			ahdr.auth_type = tpp_conf->auth_type;
-			if (tpp_conf->get_ext_auth_data == NULL) {
-				tpp_log_func(LOG_CRIT, __func__, "External authentication handler not installed");
-				return -1;
-			}
-
-			if ((adata = tpp_conf->get_ext_auth_data(tpp_conf->auth_type, &alen, ebuf, sizeof(ebuf))) == NULL) {
-				char *msgbuf;
-
-				pbs_asprintf(&msgbuf, "Authentication failed: %s", ebuf);
-				tpp_log_func(LOG_CRIT, __func__, msgbuf);
-				free(msgbuf);
-				return -1;
-			}
-
-			chunks[0].data = &ahdr;
-			chunks[0].len = sizeof(tpp_auth_pkt_hdr_t);
-
-			chunks[1].data = adata;
-			chunks[1].len = alen;
-
-			if (tpp_transport_vsend(r->conn_fd, chunks, 2) != 0) {
-				snprintf(tpp_get_logbuf(), TPP_LOGBUF_SZ, "tpp_transport_vsend failed, err=%d", errno);
-				tpp_log_func(LOG_CRIT, __func__, tpp_get_logbuf());
-				free(adata);
-				return -1;
-			}
-			free(adata);
-		}
 
 		/* send a TPP_CTL_JOIN message */
 		memset(&hdr, 0, sizeof(tpp_join_pkt_hdr_t)); /* only to satisfy valgrind */
@@ -581,6 +517,124 @@ leaf_post_connect_handler(int tfd, void *data, void *c, void *extra)
 	}
 
 	return 0;
+}
+
+/**
+ * @brief
+ *	The leaf post connect handler
+ *
+ * @par Functionality
+ *	When the connection between this leaf and another is dropped, the IO
+ *	thread continuously attempts to reconnect to it. If the connection is
+ *	restored, then this prior registered function is called.
+ *
+ * @param[in] tfd - The actual IO connection on which data was about to be
+ *			sent (unused)
+ * @param[in] data - Any data the IO thread might want to pass to this function.
+ *		     (unused)
+ * @param[in] c - Context associated with this connection, points us to the
+ *                router being connected to
+ *
+ * @return Error code
+ * @retval 0 - Success
+ * @retval -1 - Failure
+ *
+ * @par Side Effects:
+ *	None
+ *
+ * @par MT-safe: No
+ *
+ */
+int
+leaf_post_connect_handler(int tfd, void *data, void *c, void *extra)
+{
+	tpp_context_t *ctx = (tpp_context_t *) c;
+
+	if (!ctx)
+		return 0;
+
+	if (ctx->type != TPP_ROUTER_NODE)
+		return 0;
+
+	if (tpp_conf->auth_type != AUTH_RESV_PORT) {
+		char ebuf[TPP_LOGBUF_SZ] = {'\0'};
+		char *msgbuf = NULL;
+		void *data_out = NULL;
+		int len_out = 0;
+		int established = 0;
+
+		if (tpp_conf->establish_auth_context == NULL) {
+			tpp_log_func(LOG_CRIT, __func__, "External authentication handlers not installed");
+			return -1;
+		}
+
+		if (extra == NULL && tpp_conf->alloc_auth_extra != NULL) {
+			extra = tpp_conf->alloc_auth_extra(TPP_AUTH_CLIENT);
+			if (extra == NULL) {
+				tpp_log_func(LOG_CRIT, __func__, "Failed to alloc client auth extra");
+				return -1;
+			}
+			tpp_transport_set_conn_extra(tfd, extra);
+		}
+
+		if (tpp_conf->establish_auth_context(extra, NULL, 0, &data_out, &len_out, &established, ebuf, sizeof(ebuf)) != 0) {
+			pbs_asprintf(&msgbuf, "establish_auth_context failed for %d: %s", tfd, ebuf);
+			tpp_log_func(LOG_CRIT, __func__, msgbuf);
+			free(msgbuf);
+			return -1;
+		}
+
+		if (ebuf[0] != '\0') {
+			pbs_asprintf(&msgbuf, "%s", ebuf);
+			tpp_log_func(LOG_DEBUG, __func__, msgbuf);
+			free(msgbuf);
+		}
+
+		if (len_out > 0) {
+			tpp_auth_pkt_hdr_t ahdr = {0};
+			tpp_chunk_t chunks[2] = {{0}};
+			int fd = ((tpp_router_t *) ctx->ptr)->conn_fd;
+
+			ahdr.type = TPP_AUTH_CTX;
+			ahdr.auth_type = tpp_conf->auth_type;
+
+			chunks[0].data = &ahdr;
+			chunks[0].len = sizeof(tpp_auth_pkt_hdr_t);
+
+			chunks[1].data = data_out;
+			chunks[1].len = len_out;
+
+			if (tpp_transport_vsend(fd, chunks, 2) != 0) {
+				snprintf(tpp_get_logbuf(), TPP_LOGBUF_SZ, "tpp_transport_vsend failed, err=%d", errno);
+				tpp_log_func(LOG_CRIT, __func__, tpp_get_logbuf());
+				free(data_out);
+				return -1;
+			}
+			free(data_out);
+		}
+
+		/*
+		 * We didn't send any auth context
+		 * and auth context is not established
+		 * so error out as we should send some auth context
+		 * or auth context should be established
+		 */
+		if (!established && len_out == 0) {
+			tpp_log_func(LOG_CRIT, __func__, "Failed to establish auth context");
+			return -1;
+		}
+
+		if (!established) {
+			return 0;
+		}
+
+		/*
+		 * Since we are in post conntect handler
+		 * and we have established auth context
+		 * so send TPP_CTL_JOIN
+		 */
+	}
+	return leaf_send_ctl_join(tfd, data, c, extra);
 }
 
 /**
@@ -720,15 +774,6 @@ tpp_init(struct tpp_config *cnf)
 	 * first register handlers with the transport, so these functions are called
 	 * from the IO thread from the transport layer
 	 */
-#if defined(PBS_SECURITY) && (PBS_SECURITY == KRB5)
-	gss_transport_set_handlers(leaf_pkt_presend_handler, /* called before sending pkt */
-		leaf_pkt_postsend_handler, /* called after sending a packet */
-		leaf_pkt_handler, /* called when a packet arrives */
-		leaf_close_handler, /* called when a connection closes */
-		leaf_post_connect_handler, /* called when connection restores */
-		leaf_timer_handler /* called after amt of time from previous handler */
-		);
-#else
 	tpp_transport_set_handlers(leaf_pkt_presend_handler, /* called before sending pkt */
 		leaf_pkt_postsend_handler, /* called after sending a packet */
 		leaf_pkt_handler, /* called when a packet arrives */
@@ -736,7 +781,6 @@ tpp_init(struct tpp_config *cnf)
 		leaf_post_connect_handler, /* called when connection restores */
 		leaf_timer_handler /* called after amt of time from previous handler */
 		);
-#endif
 
 	/* initialize the tpp transport layer */
 	if ((rc = tpp_transport_init(tpp_conf)) == -1)
@@ -3845,8 +3889,11 @@ leaf_pkt_presend_handler(int tfd, tpp_packet_t *pkt, void *extra)
 	unsigned char type = data->type;
 	int len = *((int *)(pkt->data));
 	stream_t *strm;
-
 	time_t now = time(0);
+
+	/* never encrypt auth context data */
+	if (type == TPP_AUTH_CTX)
+		return 0;
 
 	len = ntohl(len) - sizeof(tpp_data_pkt_hdr_t);
 
@@ -3921,6 +3968,66 @@ leaf_pkt_presend_handler(int tfd, tpp_packet_t *pkt, void *extra)
 			return -1;
 		}
 	}
+
+	/*
+	 * if presend handler is called from handle_disconnect()
+	 * then extra will be NULL and this is just a sending simulation
+	 * so no encryption needed
+	 */
+	if (extra == NULL)
+		return 0;
+
+	if (tpp_conf->encrypt_data != NULL) {
+		char ebuf[TPP_LOGBUF_SZ] = {'\0'};
+		char *msgbuf = NULL;
+		void *data_out = NULL;
+		int len_out = 0;
+		int newpktlen = 0;
+		char *pktdata = NULL;
+		int npktlen = 0;
+
+		/* encrypt_data must store pkt->data in extra for postsend */
+		if (tpp_conf->encrypt_data(extra, pkt->data, pkt->len, &data_out, &len_out, ebuf, sizeof(ebuf)) != 0) {
+			pbs_asprintf(&msgbuf, "encrypt_data failed for %d: %s", tfd, ebuf);
+			tpp_log_func(LOG_CRIT, __func__, msgbuf);
+			free(msgbuf);
+			return -1;
+		}
+
+		if (pkt->len > 0 && len_out <= 0) {
+			pbs_asprintf(&msgbuf, "invalid encrypted data len: %d, pktlen: %d", len_out, pkt->len);
+			tpp_log_func(LOG_CRIT, __func__, msgbuf);
+			free(msgbuf);
+			return -1;
+		}
+
+		/* + sizeof(int) for npktlen and + 1 for TPP_ENCRYPTED_DATA */
+		newpktlen = len_out + sizeof(int) + 1;
+		pktdata = malloc(newpktlen);
+		if (pktdata != NULL) {
+			free(pkt->data);
+			pkt->data = pktdata;
+		} else {
+			free(data_out);
+			tpp_log_func(LOG_CRIT, __func__, "malloc failure");
+			return -1;
+		}
+
+		pkt->pos = pkt->data;
+
+		npktlen = htonl(len_out + 1);
+		memcpy(pkt->pos, &npktlen, sizeof(int));
+		pkt->pos = pkt->pos + sizeof(int);
+
+		*pkt->pos = (char)TPP_ENCRYPTED_DATA;
+		pkt->pos++;
+		memcpy(pkt->pos, data_out, len_out);
+
+		pkt->pos = pkt->data;
+		pkt->len = newpktlen;
+
+		free(data_out);
+	}
 	return 0;
 }
 
@@ -3955,6 +4062,41 @@ leaf_pkt_postsend_handler(int tfd, tpp_packet_t *pkt, void *extra)
 	tpp_packet_t *shlvd_pkt = NULL;
 	stream_t *strm;
 
+	/*
+	 * if postsend handler is called from handle_disconnect()
+	 * then extra will be NULL and this is just a sending simulation
+	 * so no decryption needed
+	 */
+	if (extra) {
+		if (type == TPP_AUTH_CTX) {
+			tpp_free_pkt(pkt);
+			return 0;
+		}
+		if (type == TPP_ENCRYPTED_DATA) {
+			void *data_out = NULL;
+			int len_out = 0;
+
+			/*
+			 * here data_in is NULL means decrypt_data will return saved pkt->data
+			 * from presend handler, see leaf_pkt_presend_handler
+			 */
+			if (tpp_conf->decrypt_data(extra, NULL, 0, &data_out, &len_out, NULL, 0) != 0) {
+				snprintf(tpp_get_logbuf(), TPP_LOGBUF_SZ, "Failed to retrive decrypted data in postsend");
+				tpp_log_func(LOG_CRIT, __func__, tpp_get_logbuf());
+				return -1;
+			}
+			free(pkt->data);
+			pkt->data = data_out;
+			pkt->len = len_out;
+			pkt->pos = pkt->data;
+
+			/* re-calculate data, len and type as pkt changed */
+			data = (tpp_data_pkt_hdr_t *)(pkt->data + sizeof(int));
+			type = data->type;
+			len = *((int *)(pkt->data));
+		}
+	}
+
 	len = ntohl(len) - sizeof(tpp_data_pkt_hdr_t);
 
 	/*
@@ -3969,7 +4111,7 @@ leaf_pkt_postsend_handler(int tfd, tpp_packet_t *pkt, void *extra)
 				routers[i]->delay = 0; /* reset connection retry time to 0 */
 				routers[i]->conn_time = time(0); /* record connect time */
 				snprintf(tpp_get_logbuf(), TPP_LOGBUF_SZ, "Connected to pbs_comm %s", routers[i]->router_name);
-				tpp_log_func(LOG_CRIT, NULL, tpp_get_logbuf());
+				tpp_log_func(LOG_CRIT, __func__, tpp_get_logbuf());
 				break;
 			}
 		}
@@ -3979,6 +4121,7 @@ leaf_pkt_postsend_handler(int tfd, tpp_packet_t *pkt, void *extra)
 			TPP_DBPRT(("Sending cmd to call App net restore handler"));
 			if (tpp_mbox_post(&app_mbox, UNINITIALIZED_INT, TPP_CMD_NET_RESTORE, NULL) != 0) {
 				tpp_log_func(LOG_CRIT, __func__, "Error writing to app mbox");
+				tpp_free_pkt(pkt);
 				return -1;
 			}
 			no_active_router = 0;
@@ -4190,6 +4333,103 @@ leaf_pkt_handler(int tfd, void *data, int len, void *ctx, void *extra)
 
 	type = *((char *) data);
 	errno = 0;
+
+	if (type == TPP_AUTH_CTX) {
+		char ebuf[TPP_LOGBUF_SZ] = {'\0'};
+		tpp_auth_pkt_hdr_t ahdr = {0};
+		char *msgbuf = NULL;
+		void *data_out = NULL;
+		int len_out = 0;
+		int len_in = 0;
+		void *data_in = NULL;
+		int rc = 0;
+		int established = 0;
+
+		if (tpp_conf->establish_auth_context == NULL) {
+			tpp_log_func(LOG_CRIT, __func__, "External authentication handlers not installed");
+			return -1;
+		}
+
+		if (extra == NULL && tpp_conf->alloc_auth_extra != NULL) {
+			tpp_log_func(LOG_CRIT, __func__, "No client auth extra");
+			return -1;
+		}
+
+		memcpy(&ahdr, data, sizeof(tpp_auth_pkt_hdr_t));
+		if (ahdr.auth_type != tpp_conf->auth_type) {
+			snprintf(tpp_get_logbuf(), TPP_LOGBUF_SZ, "tfd=%d, Authentication method mismatch in connection", tfd);
+			tpp_log_func(LOG_CRIT, __func__, tpp_get_logbuf());
+			return 0; /* let connection be alive, so we can send error */
+		}
+
+		len_in = len - sizeof(tpp_auth_pkt_hdr_t);
+		data_in = calloc(1, len_in);
+		if (data_in == NULL) {
+			tpp_log_func(LOG_CRIT, __func__, "Out of memory allocating authdata credential");
+			return -1;
+		}
+		memcpy(data_in, (char *)data + sizeof(tpp_auth_pkt_hdr_t), len_in);
+
+		rc = tpp_conf->establish_auth_context(extra, data_in, len_in, &data_out, &len_out, &established, ebuf, sizeof(ebuf));
+		if (rc != 0) {
+			pbs_asprintf(&msgbuf, "establish_auth_context failed for %d: %s", tfd, ebuf);
+			tpp_log_func(LOG_CRIT, __func__, msgbuf);
+			free(msgbuf);
+			free(data_in);
+			return -1;
+		}
+
+		if (ebuf[0] != '\0') {
+			pbs_asprintf(&msgbuf, "%s", ebuf);
+			tpp_log_func(LOG_DEBUG, __func__, msgbuf);
+			free(msgbuf);
+		}
+
+		if (len_out > 0) {
+			tpp_auth_pkt_hdr_t ahdr = {0};
+			tpp_chunk_t chunks[2] = {{0}};
+			int fd = ((tpp_router_t *) ((tpp_context_t *)ctx)->ptr)->conn_fd;
+
+			ahdr.type = TPP_AUTH_CTX;
+			ahdr.auth_type = tpp_conf->auth_type;
+
+			chunks[0].data = &ahdr;
+			chunks[0].len = sizeof(tpp_auth_pkt_hdr_t);
+
+			chunks[1].data = data_out;
+			chunks[1].len = len_out;
+
+			if (tpp_transport_vsend(fd, chunks, 2) != 0) {
+				snprintf(tpp_get_logbuf(), TPP_LOGBUF_SZ, "tpp_transport_vsend failed, err=%d", errno);
+				tpp_log_func(LOG_CRIT, __func__, tpp_get_logbuf());
+				free(data_out);
+				free(data_in);
+				return -1;
+			}
+			free(data_in);
+			free(data_out);
+		}
+
+		if (established) {
+			return leaf_send_ctl_join(tfd, data, ctx, extra);
+		}
+		return (len_out == 0 ? -1 : 0);
+	} else if (type == TPP_ENCRYPTED_DATA) {
+		void *data_out = NULL;
+		int len_out = 0;
+
+		if (tpp_conf->decrypt_data(extra, (char *)data + 1, len - 1, &data_out, &len_out, NULL, 0) != 0) {
+			snprintf(tpp_get_logbuf(), TPP_LOGBUF_SZ, "Failed to retrive decrypted data in postsend");
+			tpp_log_func(LOG_CRIT, __func__, tpp_get_logbuf());
+			return -1;
+		}
+		free(data);
+		data = (char *)data_out + sizeof(int);
+		len = len_out - sizeof(int);
+
+		/* re-calculate type as data changed */
+		type = *((char *) data);
+	}
 
 	/* analyze data and see what message it is
 	 * it could be a ctl message (node join/leave)
@@ -4562,6 +4802,11 @@ leaf_close_handler(int tfd, int error, void *c, void *extra)
 	tpp_context_t *ctx = (tpp_context_t *) c;
 	tpp_router_t *r;
 	int last_state;
+
+	if (extra && tpp_conf->free_auth_extra != NULL) {
+		tpp_conf->free_auth_extra(extra);
+		tpp_transport_set_conn_extra(tfd, NULL);
+	}
 
 	if (tpp_going_down == 1)
 		return -1; /* while we are doing shutdown don't try to reconnect etc */

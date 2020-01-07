@@ -53,8 +53,8 @@ extern "C" {
 
 enum PBS_GSS_ROLE {
 	PBS_GSS_ROLE_UNKNOWN = 0,
-	PBS_GSS_CLIENT,
-	PBS_GSS_SERVER,
+	PBS_GSS_CLIENT, /* must match with TPP_AUTH_CLIENT */
+	PBS_GSS_SERVER, /* must match with TPP_AUTH_SERVER */
 	PBS_GSS_ROLE_LAST
 };
 
@@ -100,15 +100,20 @@ enum PBS_GSS_ERRORS {
 };
 
 int pbs_gss_can_get_creds();
-pbs_gss_extra_t* pbs_gss_alloc_gss_extra();
-void pbs_gss_free_gss_extra(pbs_gss_extra_t *gss_extra);
-int pbs_gss_establish_context(pbs_gss_extra_t *gss_extra, char *target_host, char *data_in, int len_in, char **data_out, int *len_out);
-int pbs_gss_wrap(pbs_gss_extra_t *gss_extra, char *data_in, int len_in, char **data_out, int *len_out);
-int pbs_gss_unwrap(pbs_gss_extra_t *gss_extra, char *data_in, int len_in, char **data_out, int *len_out);
+void* pbs_gss_alloc_gss_extra(int mode);
+void pbs_gss_free_gss_extra(void *extra);
+int pbs_gss_establish_context(void *extra, void *data_in, int len_in, void **data_out, int *len_out, int *established, char *ebuf, int ebufsz);
+int pbs_gss_wrap(void *extra, void *data_in, int len_in, void **data_out, int *len_out, char *ebuf, int ebufsz);
+int pbs_gss_unwrap(void *extra, void *data_in, int len_in, void **data_out, int *len_out, char *ebuf, int ebufsz);
 
 void pbs_gss_set_log_handlers(void (*log_gss_status)(const char *msg, OM_uint32 maj_stat, OM_uint32 min_stat),
 	void (*logerror)(const char *func_name, const char* msg),
 	void (*logdebug)(const char *func_name, const char* msg));
+
+void tpp_gss_logerror(const char *func_name, const char* msg);
+void tpp_gss_logdebug(const char *func_name, const char* msg);
+void tpp_gss_log_status(const char *msg, OM_uint32 maj_stat, OM_uint32 min_stat);
+int tpp_gss_set_extra_host(void *extra, char *hostname);
 
 /* TCP related */
 int tcp_gss_client_authenticate(int sock, char *hostname, char *ebuf, int ebufsz);

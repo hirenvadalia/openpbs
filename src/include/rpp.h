@@ -62,9 +62,8 @@ extern "C" {
 /* TPP specific definitions and structures */
 #define TPP_DEF_ROUTER_PORT 17001
 
-/* TPP authentication types */
-#define TPP_AUTH_RESV_PORT	1
-#define TPP_AUTH_EXTERNAL	2
+#define TPP_AUTH_CLIENT 1
+#define TPP_AUTH_SERVER 2
 
 struct tpp_config {
 	int    node_type; /* leaf, proxy */
@@ -72,8 +71,11 @@ struct tpp_config {
 	int    numthreads;
 	char   *node_name; /* list of comma separated node names */
 	char   auth_type;
-	void * (*get_ext_auth_data)(int auth_type, int *data_len, char *ebuf, int ebufsz);
-	int    (*validate_ext_auth_data) (int auth_type, void *data, int data_len, char *ebuf, int ebufsz);
+	void * (*alloc_auth_extra)(int mode);
+	void   (*free_auth_extra)(void *extra);
+	int    (*establish_auth_context)(void *extra, void *data_in, int len_in, void **data_out, int *len_out, int *established, char *ebuf, int ebufsz);
+	int    (*encrypt_data)(void *extra, void *data_in, int len_in, void **data_out, int *len_out, char *ebuf, int ebufsz);
+	int    (*decrypt_data)(void *extra, void *data_in, int len_in, void **data_out, int *len_out, char *ebuf, int ebufsz);
 	int    compress;
 	int    tcp_keepalive; /* use keepalive? */
 	int    tcp_keep_idle;

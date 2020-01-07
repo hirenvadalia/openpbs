@@ -140,7 +140,7 @@ req_gss_auth(struct batch_request *preq)
 	conn = get_conn(sock);
 
 	if ((gss_extra = (pbs_gss_extra_t *)transport_chan_get_extra(sock)) == NULL){
-		gss_extra = pbs_gss_alloc_gss_extra();
+		gss_extra = pbs_gss_alloc_gss_extra(PBS_GSS_SERVER);
 		if (!gss_extra)
 			return 1;
 		transport_chan_set_extra(sock, gss_extra);

@@ -40,6 +40,7 @@ lib_LTLIBRARIES = libpbs.la
 
 libpbs_la_CPPFLAGS = \
 	-I$(top_srcdir)/src/include \
+	-I$(top_srcdir)/src/lib/Libtpp \
 	@KRB5_CFLAGS@
 
 #

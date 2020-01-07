@@ -246,16 +246,15 @@ typedef struct {
 
 /* tpp internal message header types */
 enum TPP_MSG_TYPES {
-	TPP_CTL_AUTH = 0,
-        TPP_CTL_JOIN ,
-        TPP_CTL_LEAVE,
-        TPP_DATA,
-        TPP_CTL_MSG,
-        TPP_CLOSE_STRM,
-        TPP_MCAST_DATA,
-        TPP_AUTH_CTX,
-        TPP_ENCRYPTED_DATA,
-        TPP_LAST_MSG
+	TPP_CTL_JOIN = 1,
+	TPP_CTL_LEAVE,
+	TPP_DATA,
+	TPP_CTL_MSG,
+	TPP_CLOSE_STRM,
+	TPP_MCAST_DATA,
+	TPP_AUTH_CTX,
+	TPP_ENCRYPTED_DATA,
+	TPP_LAST_MSG
 };
 
 #define TPP_MSG_NOROUTE         1
@@ -689,16 +688,6 @@ void print_packet_hdr(const char *fnc, void *data, int len);
 #define		TPP_DBPRT(x)
 #define		PRTPKTHDR(id, data, len)
 
-#endif
-
-#if defined(PBS_SECURITY) && (PBS_SECURITY == KRB5)
-void
-gss_transport_set_handlers(int (*pkt_presend_handler)(int phy_con, tpp_packet_t *pkt, void *extra),
-	int (*pkt_postsend_handler)(int phy_con, tpp_packet_t *pkt, void *extra),
-	int (*pkt_handler)(int, void *data, int len, void *, void *extra),
-	int (*close_handler)(int, int, void *, void *extra),
-	int (*post_connect_handler)(int sd, void *data, void *ctx, void *extra),
-	int (*timer_handler)(time_t now));
 #endif
 
 #endif

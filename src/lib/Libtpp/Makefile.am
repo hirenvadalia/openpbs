@@ -50,5 +50,4 @@ libtpp_a_SOURCES = \
 	tpp_platform.h \
 	tpp_router.c \
 	tpp_transport.c \
-	tpp_util.c \
-	tpp_gss.c
+	tpp_util.c

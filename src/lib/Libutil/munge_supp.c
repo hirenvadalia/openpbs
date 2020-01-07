@@ -264,4 +264,32 @@ err:
 	free(recv_payload);
 	return rc;
 }
+
+int
+establish_munge_context(void *extra, void *data_in, int len_in, void **data_out, int *len_out, int *established, char *ebuf, int ebufsz)
+{
+	int fromsvr = 0;
+	int rc = -1;
+
+	*len_out = 0;
+	*data_out = NULL;
+	*established = 0;
+
+	if (len_in > 0) {
+		rc = pbs_munge_validate(data_in, &fromsvr, ebuf, ebufsz);
+		if (rc == 0 && fromsvr == 1) {
+			*established = 1;
+			return 0;
+		}
+	} else {
+		*data_out = pbs_get_munge_auth_data(1, ebuf, ebufsz);
+		if (*data_out) {
+			*len_out = strlen(*data_out);
+			*established = 1;
+			return 0;
+		}
+	}
+
+	return -1;
+}
 #endif

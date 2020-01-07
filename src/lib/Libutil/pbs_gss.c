@@ -45,7 +45,10 @@
 #include <string.h>
 #include <gssapi.h>
 #include <time.h>
+#include <unistd.h>
 
+#include "libutil.h"
+#include "pbs_ifl.h"
 #include "log.h"
 #include "pbs_gss.h"
 #include "pbs_krb5.h"
@@ -84,9 +87,10 @@ pbs_gss_oidset_mech(gss_OID_set *oidset)
 	if (*oidset == GSS_C_NULL_OID_SET) {
 		maj_stat = gss_create_empty_oid_set(&min_stat, oidset);
 		if (maj_stat != GSS_S_COMPLETE) {
-			sprintf(gss_log_buffer, gss_err_msg, __func__, "gss_create_empty_oid_set");
-			if (pbs_gss_log_gss_status)
+			if (pbs_gss_log_gss_status) {
+				snprintf(gss_log_buffer, LOG_BUF_SIZE, gss_err_msg, __func__, "gss_create_empty_oid_set");
 				pbs_gss_log_gss_status(gss_log_buffer, maj_stat, min_stat);
+			}
 
 			return PBS_GSS_ERR_OID;
 		}
@@ -94,9 +98,10 @@ pbs_gss_oidset_mech(gss_OID_set *oidset)
 
 	maj_stat = gss_add_oid_set_member(&min_stat, PBS_GSS_MECH_OID, oidset);
 	if (maj_stat != GSS_S_COMPLETE) {
-		sprintf(gss_log_buffer, gss_err_msg, __func__, "gss_add_oid_set_member");
-		if (pbs_gss_log_gss_status)
+		if (pbs_gss_log_gss_status) {
+			snprintf(gss_log_buffer, LOG_BUF_SIZE, gss_err_msg, __func__, "gss_add_oid_set_member");
 			pbs_gss_log_gss_status(gss_log_buffer, maj_stat, min_stat);
+		}
 
 		return PBS_GSS_ERR_OID;
 	}
@@ -117,9 +122,10 @@ pbs_gss_release_oidset(gss_OID_set *oidset)
 
 	maj_stat = gss_release_oid_set(&min_stat, oidset);
 	if (maj_stat != GSS_S_COMPLETE) {
-		sprintf(gss_log_buffer, gss_err_msg, __func__, "gss_release_oid_set");
-		if (pbs_gss_log_gss_status)
+		if (pbs_gss_log_gss_status) {
+			snprintf(gss_log_buffer, LOG_BUF_SIZE, gss_err_msg, __func__, "gss_release_oid_set");
 			pbs_gss_log_gss_status(gss_log_buffer, maj_stat, min_stat);
+		}
 	}
 }
 
@@ -160,8 +166,8 @@ pbs_gss_can_get_creds()
  * @retval	structure on success
  * @retval	NULL on error
  */
-pbs_gss_extra_t *
-pbs_gss_alloc_gss_extra()
+void *
+pbs_gss_alloc_gss_extra(int mode)
 {
 	pbs_gss_extra_t *gss_extra = calloc(1, sizeof(pbs_gss_extra_t));
 	if (!gss_extra) {
@@ -174,7 +180,7 @@ pbs_gss_alloc_gss_extra()
 	gss_extra->gssctx_established = 0;
 	gss_extra->ready = 0;
 	gss_extra->confidential = 0;
-	gss_extra->role = PBS_GSS_ROLE_UNKNOWN;
+	gss_extra->role = mode;
 	gss_extra->hostname = NULL;
 	gss_extra->init_client_ccache = 0;
 	gss_extra->clientname = NULL;
@@ -191,8 +197,9 @@ pbs_gss_alloc_gss_extra()
  * @param[in] gss_extra - The structure with GSS data
  */
 void
-pbs_gss_free_gss_extra(pbs_gss_extra_t *gss_extra)
+pbs_gss_free_gss_extra(void *extra)
 {
+	pbs_gss_extra_t *gss_extra = (pbs_gss_extra_t *)extra;
 	OM_uint32 min_stat = 0;
 
 	if (gss_extra == NULL)
@@ -265,9 +272,10 @@ pbs_gss_server_acquire_creds(char *service_name, gss_cred_id_t* server_creds)
 	maj_stat = gss_import_name(&min_stat, &name_buf, GSS_NT_SERVICE_NAME, &server_name);
 
 	if (maj_stat != GSS_S_COMPLETE) {
-		sprintf(gss_log_buffer, gss_err_msg, __func__, "gss_import_name");
-		if (pbs_gss_log_gss_status)
+		if (pbs_gss_log_gss_status) {
+			snprintf(gss_log_buffer, LOG_BUF_SIZE, gss_err_msg, __func__, "gss_import_name");
 			pbs_gss_log_gss_status(gss_log_buffer, maj_stat, min_stat);
+		}
 
 		return PBS_GSS_ERR_IMPORT_NAME;
 	}
@@ -280,14 +288,16 @@ pbs_gss_server_acquire_creds(char *service_name, gss_cred_id_t* server_creds)
 	pbs_gss_release_oidset(&oidset);
 
 	if (maj_stat != GSS_S_COMPLETE) {
-		sprintf(gss_log_buffer, gss_err_msg, __func__, "gss_acquire_cred");
-		if (pbs_gss_log_gss_status)
+		if (pbs_gss_log_gss_status) {
+			snprintf(gss_log_buffer, LOG_BUF_SIZE, gss_err_msg, __func__, "gss_acquire_cred");
 			pbs_gss_log_gss_status(gss_log_buffer, maj_stat, min_stat);
+		}
 
 		if (gss_release_name(&min_stat, &server_name) != GSS_S_COMPLETE) {
-			sprintf(gss_log_buffer, gss_err_msg, __func__, "gss_release_name");
-			if (pbs_gss_log_gss_status)
+			if (pbs_gss_log_gss_status) {
+				snprintf(gss_log_buffer, LOG_BUF_SIZE, gss_err_msg, __func__, "gss_release_name");
 				pbs_gss_log_gss_status(gss_log_buffer, maj_stat, min_stat);
+			}
 
 			return PBS_GSS_ERR_INTERNAL;
 		}
@@ -297,9 +307,10 @@ pbs_gss_server_acquire_creds(char *service_name, gss_cred_id_t* server_creds)
 
 	maj_stat = gss_release_name(&min_stat, &server_name);
 	if (maj_stat != GSS_S_COMPLETE) {
-		sprintf(gss_log_buffer, gss_err_msg, __func__, "gss_release_name");
-		if (pbs_gss_log_gss_status)
+		if (pbs_gss_log_gss_status) {
+			snprintf(gss_log_buffer, LOG_BUF_SIZE, gss_err_msg, __func__, "gss_release_name");
 			pbs_gss_log_gss_status(gss_log_buffer, maj_stat, min_stat);
+		}
 
 		return PBS_GSS_ERR_INTERNAL;
 	}
@@ -341,9 +352,10 @@ pbs_gss_client_establish_context(char *service_name, gss_cred_id_t creds, gss_OI
 	send_tok.length = strlen(service_name) ;
 	maj_stat = gss_import_name(&min_stat, &send_tok, GSS_NT_SERVICE_NAME, &target_name);
 	if (maj_stat != GSS_S_COMPLETE) {
-		sprintf(gss_log_buffer, gss_err_msg, __func__, "gss_import_name");
-		if (pbs_gss_log_gss_status)
+		if (pbs_gss_log_gss_status) {
+			snprintf(gss_log_buffer, LOG_BUF_SIZE, gss_err_msg, __func__, "gss_import_name");
 			pbs_gss_log_gss_status(gss_log_buffer, maj_stat, min_stat);
+		}
 
 		return PBS_GSS_ERR_IMPORT_NAME;
 	}
@@ -366,9 +378,10 @@ pbs_gss_client_establish_context(char *service_name, gss_cred_id_t creds, gss_OI
 
 		maj_stat = gss_release_buffer(&min_stat, &send_tok);
 		if (maj_stat != GSS_S_COMPLETE) {
-			sprintf(gss_log_buffer, gss_err_msg, __func__, "gss_release_buffer");
-			if (pbs_gss_log_gss_status)
+			if (pbs_gss_log_gss_status) {
+				snprintf(gss_log_buffer, LOG_BUF_SIZE, gss_err_msg, __func__, "gss_release_buffer");
 				pbs_gss_log_gss_status(gss_log_buffer, maj_stat, min_stat);
+			}
 
 			return PBS_GSS_ERR_INTERNAL;
 		}
@@ -376,24 +389,27 @@ pbs_gss_client_establish_context(char *service_name, gss_cred_id_t creds, gss_OI
 
 	maj_stat = gss_release_name(&min_stat, &target_name);
 	if (maj_stat != GSS_S_COMPLETE) {
-		sprintf(gss_log_buffer, gss_err_msg, __func__, "gss_release_name");
-		if (pbs_gss_log_gss_status)
+		if (pbs_gss_log_gss_status) {
+			snprintf(gss_log_buffer, LOG_BUF_SIZE, gss_err_msg, __func__, "gss_release_name");
 			pbs_gss_log_gss_status(gss_log_buffer, maj_stat, min_stat);
+		}
 
 		return PBS_GSS_ERR_INTERNAL;
 	}
 
 	if (init_sec_maj_stat != GSS_S_COMPLETE && init_sec_maj_stat != GSS_S_CONTINUE_NEEDED) {
-		sprintf(gss_log_buffer, gss_err_msg, __func__, "gss_init_sec_context");
-		if (pbs_gss_log_gss_status)
+		if (pbs_gss_log_gss_status) {
+			snprintf(gss_log_buffer, LOG_BUF_SIZE, gss_err_msg, __func__, "gss_init_sec_context");
 			pbs_gss_log_gss_status(gss_log_buffer, init_sec_maj_stat, init_sec_min_stat);
+		}
 
 		if (*gss_context != GSS_C_NO_CONTEXT) {
 			maj_stat = gss_delete_sec_context(&min_stat, gss_context, GSS_C_NO_BUFFER);
 			if (maj_stat != GSS_S_COMPLETE) {
-				sprintf(gss_log_buffer, gss_err_msg, __func__, "gss_delete_sec_context");
-				if (pbs_gss_log_gss_status)
+				if (pbs_gss_log_gss_status) {
+					snprintf(gss_log_buffer, LOG_BUF_SIZE, gss_err_msg, __func__, "gss_delete_sec_context");
 					pbs_gss_log_gss_status(gss_log_buffer, maj_stat, min_stat);
+				}
 
 				return PBS_GSS_ERR_CONTEXT_DELETE;
 			}
@@ -441,9 +457,10 @@ pbs_gss_server_establish_context(gss_cred_id_t server_creds, gss_cred_id_t* clie
 	recv_tok.length = len_in;
 
 	if (recv_tok.length == 0) {
-		sprintf(gss_log_buffer, "Establishing gss context failed. Failed to receive gss token.");
-		if (pbs_gss_logerror)
+		if (pbs_gss_logerror) {
+			snprintf(gss_log_buffer, LOG_BUF_SIZE, "Establishing gss context failed. Failed to receive gss token.");
 			pbs_gss_logerror(__func__, gss_log_buffer);
+		}
 
 		return PBS_GSS_ERR_RECVTOKEN;
 	}
@@ -455,24 +472,27 @@ pbs_gss_server_establish_context(gss_cred_id_t server_creds, gss_cred_id_t* clie
 
 		maj_stat = gss_release_buffer(&min_stat, &send_tok);
 		if (maj_stat != GSS_S_COMPLETE) {
-			sprintf(gss_log_buffer, gss_err_msg, __func__, "gss_release_buffer");
-			if (pbs_gss_log_gss_status)
+			if (pbs_gss_log_gss_status) {
+				snprintf(gss_log_buffer, LOG_BUF_SIZE, gss_err_msg, __func__, "gss_release_buffer");
 				pbs_gss_log_gss_status(gss_log_buffer, maj_stat, min_stat);
+			}
 
 			return PBS_GSS_ERR_INTERNAL;
 		}
 	}
 
 	if (acc_sec_maj_stat != GSS_S_COMPLETE && acc_sec_maj_stat != GSS_S_CONTINUE_NEEDED) {
-		sprintf(gss_log_buffer, gss_err_msg, __func__, "gss_accept_sec_context");
-		if (pbs_gss_log_gss_status)
+		if (pbs_gss_log_gss_status) {
+			snprintf(gss_log_buffer, LOG_BUF_SIZE, gss_err_msg, __func__, "gss_accept_sec_context");
 			pbs_gss_log_gss_status(gss_log_buffer, acc_sec_maj_stat, acc_sec_min_stat);
+		}
 
 		if (*gss_context != GSS_C_NO_CONTEXT) {
 			if ((maj_stat = gss_delete_sec_context(&min_stat, gss_context, GSS_C_NO_BUFFER)) != GSS_S_COMPLETE) {
-				sprintf(gss_log_buffer, gss_err_msg, __func__, "gss_delete_sec_context");
-				if (pbs_gss_log_gss_status)
+				if (pbs_gss_log_gss_status) {
+					snprintf(gss_log_buffer, LOG_BUF_SIZE, gss_err_msg, __func__, "gss_delete_sec_context");
 					pbs_gss_log_gss_status(gss_log_buffer, maj_stat, min_stat);
+				}
 
 				return PBS_GSS_ERR_CONTEXT_DELETE;
 			}
@@ -483,18 +503,20 @@ pbs_gss_server_establish_context(gss_cred_id_t server_creds, gss_cred_id_t* clie
 
 	maj_stat = gss_display_name(&min_stat, client, client_name, &doid);
 	if (maj_stat != GSS_S_COMPLETE) {
-		sprintf(gss_log_buffer, gss_err_msg, __func__, "gss_display_name");
-		if (pbs_gss_log_gss_status)
+		if (pbs_gss_log_gss_status) {
+			snprintf(gss_log_buffer, LOG_BUF_SIZE, gss_err_msg, __func__, "gss_display_name");
 			pbs_gss_log_gss_status(gss_log_buffer, maj_stat, min_stat);
+		}
 
 		return PBS_GSS_ERR_NAME_CONVERT;
 	}
 
 	maj_stat = gss_release_name(&min_stat, &client);
 	if (maj_stat != GSS_S_COMPLETE) {
-		sprintf(gss_log_buffer, gss_err_msg, __func__, "gss_release_name");
-		if (pbs_gss_log_gss_status)
+		if (pbs_gss_log_gss_status) {
+			snprintf(gss_log_buffer, LOG_BUF_SIZE, gss_err_msg, __func__, "gss_release_name");
 			pbs_gss_log_gss_status(gss_log_buffer, maj_stat, min_stat);
+		}
 
 		return PBS_GSS_ERR_INTERNAL;
 	}
@@ -521,7 +543,7 @@ pbs_gss_server_establish_context(gss_cred_id_t server_creds, gss_cred_id_t* clie
  * @return
  */
 int
-pbs_gss_establish_context(pbs_gss_extra_t *gss_extra, char *server_host, char *data_in, int len_in, char **data_out, int *len_out)
+__pbs_gss_establish_context(pbs_gss_extra_t *gss_extra, void *data_in, int len_in, void **data_out, int *len_out, char *ebuf, int ebufsz)
 {
 	OM_uint32 maj_stat;
 	OM_uint32 min_stat = 0;
@@ -548,17 +570,20 @@ pbs_gss_establish_context(pbs_gss_extra_t *gss_extra, char *server_host, char *d
 	if (gss_extra->role == PBS_GSS_ROLE_UNKNOWN)
 		return PBS_GSS_ERR_INTERNAL;
 
+	if (gss_extra->hostname == NULL)
+		return PBS_GSS_ERR_INTERNAL;
+
 	gss_context = gss_extra->gssctx;
 
 	if (service_name == NULL) {
-		service_name = (char *) malloc(strlen(PBS_KRB5_SERVICE_NAME) + 1 + strlen(server_host) + 1);
+		service_name = (char *) malloc(strlen(PBS_KRB5_SERVICE_NAME) + 1 + strlen(gss_extra->hostname) + 1);
 		if (service_name == NULL) {
 			if (pbs_gss_logerror)
 				pbs_gss_logerror(__func__, "malloc failure");
 
 			return PBS_GSS_ERR_INTERNAL;
 		}
-		sprintf(service_name, "%s@%s", PBS_KRB5_SERVICE_NAME, server_host);
+		sprintf(service_name, "%s@%s", PBS_KRB5_SERVICE_NAME, gss_extra->hostname);
 	}
 
 	switch(gss_extra->role) {
@@ -579,9 +604,10 @@ pbs_gss_establish_context(pbs_gss_extra_t *gss_extra, char *server_host, char *d
 			pbs_gss_release_oidset(&oidset);
 
 			if (maj_stat != GSS_S_COMPLETE) {
-				sprintf(gss_log_buffer, gss_err_msg, __func__, "gss_acquire_cred");
-				if (pbs_gss_log_gss_status)
+				if (pbs_gss_log_gss_status) {
+					snprintf(gss_log_buffer, LOG_BUF_SIZE, gss_err_msg, __func__, "gss_acquire_cred");
 					pbs_gss_log_gss_status(gss_log_buffer, maj_stat, min_stat);
+				}
 
 				return PBS_GSS_ERR_ACQUIRE_CREDS;
 			}
@@ -589,7 +615,7 @@ pbs_gss_establish_context(pbs_gss_extra_t *gss_extra, char *server_host, char *d
 			gss_flags = GSS_C_MUTUAL_FLAG | GSS_C_DELEG_FLAG | GSS_C_INTEG_FLAG | GSS_C_CONF_FLAG;
 			oid = PBS_GSS_MECH_OID;
 
-			ret = pbs_gss_client_establish_context(service_name, creds, oid, gss_flags, &gss_context, &ret_flags, data_in, len_in, data_out, len_out);
+			ret = pbs_gss_client_establish_context(service_name, creds, oid, gss_flags, &gss_context, &ret_flags, data_in, len_in, (char **)data_out, len_out);
 
 			if (gss_extra->init_client_ccache)
 				clear_pbs_ccache_env();
@@ -597,9 +623,10 @@ pbs_gss_establish_context(pbs_gss_extra_t *gss_extra, char *server_host, char *d
 			if (creds != GSS_C_NO_CREDENTIAL) {
 				maj_stat = gss_release_cred(&min_stat, &creds);
 				if (maj_stat != GSS_S_COMPLETE) {
-					sprintf(gss_log_buffer, gss_err_msg, __func__, "gss_release_cred");
-					if (pbs_gss_log_gss_status)
+					if (pbs_gss_log_gss_status) {
+						snprintf(gss_log_buffer, LOG_BUF_SIZE, gss_err_msg, __func__, "gss_release_cred");
 						pbs_gss_log_gss_status(gss_log_buffer, maj_stat, min_stat);
+					}
 
 					return PBS_GSS_ERR_INTERNAL;
 				}
@@ -615,24 +642,27 @@ pbs_gss_establish_context(pbs_gss_extra_t *gss_extra, char *server_host, char *d
 				gss_cred_id_t new_server_creds = GSS_C_NO_CREDENTIAL;
 
 				if (pbs_gss_server_acquire_creds(service_name, &new_server_creds) != PBS_GSS_OK) {
-					sprintf(gss_log_buffer, "Failed to acquire server credentials for %s", service_name);
-					if (pbs_gss_logerror)
+					if (pbs_gss_logerror) {
+						snprintf(gss_log_buffer, LOG_BUF_SIZE, "Failed to acquire server credentials for %s", service_name);
 						pbs_gss_logerror(__func__, gss_log_buffer);
+					}
 
 					/* try again in 2 minutes */
 					lastcredstime = now + 120;
 				} else {
 					lastcredstime = now;
-					snprintf(gss_log_buffer, LOG_BUF_SIZE, "Refreshing server credentials at %ld\n", (long)now);
-					if (pbs_gss_logdebug)
+					if (pbs_gss_logdebug) {
+						snprintf(gss_log_buffer, LOG_BUF_SIZE, "Refreshing server credentials at %ld", (long)now);
 						pbs_gss_logdebug(__func__, gss_log_buffer);
+					}
 
 					if (server_creds != GSS_C_NO_CREDENTIAL) {
 						maj_stat = gss_release_cred(&min_stat, &server_creds);
 						if (maj_stat != GSS_S_COMPLETE) {
-							sprintf(gss_log_buffer, gss_err_msg, __func__, "gss_release_cred");
-							if (pbs_gss_log_gss_status)
+							if (pbs_gss_log_gss_status) {
+								snprintf(gss_log_buffer, LOG_BUF_SIZE, gss_err_msg, __func__, "gss_release_cred");
 								pbs_gss_log_gss_status(gss_log_buffer, maj_stat, min_stat);
+							}
 
 							return PBS_GSS_ERR_INTERNAL;
 						}
@@ -644,13 +674,15 @@ pbs_gss_establish_context(pbs_gss_extra_t *gss_extra, char *server_host, char *d
 					if (gss_inquire_cred(&ret_flags, server_creds, NULL, &lifetime, NULL, NULL) == GSS_S_COMPLETE) {
 						if (lifetime == GSS_C_INDEFINITE) {
 							credlifetime = DEFAULT_CREDENTIAL_LIFETIME;
-							snprintf(gss_log_buffer, LOG_BUF_SIZE, "Server credentials renewed with indefinite lifetime, using %d.\n", DEFAULT_CREDENTIAL_LIFETIME);
-							if (pbs_gss_logdebug)
+							if (pbs_gss_logdebug) {
+								snprintf(gss_log_buffer, LOG_BUF_SIZE, "Server credentials renewed with indefinite lifetime, using %d.", DEFAULT_CREDENTIAL_LIFETIME);
 								pbs_gss_logdebug(__func__, gss_log_buffer);
+							}
 						} else {
-							snprintf(gss_log_buffer, LOG_BUF_SIZE, "Server credentials renewed with lifetime as %u.\n", lifetime);
-							if (pbs_gss_logdebug)
+							if (pbs_gss_logdebug) {
+								snprintf(gss_log_buffer, LOG_BUF_SIZE, "Server credentials renewed with lifetime as %u.", lifetime);
 								pbs_gss_logdebug(__func__, gss_log_buffer);
+							}
 							credlifetime = lifetime;
 						}
 					} else {
@@ -660,7 +692,7 @@ pbs_gss_establish_context(pbs_gss_extra_t *gss_extra, char *server_host, char *d
 				}
 			}
 
-			ret = pbs_gss_server_establish_context(server_creds, NULL, &gss_context, &(gss_extra->client_name), &ret_flags, data_in, len_in, data_out, len_out);
+			ret = pbs_gss_server_establish_context(server_creds, NULL, &gss_context, &(gss_extra->client_name), &ret_flags, data_in, len_in, (char **)data_out, len_out);
 
 			break;
 
@@ -672,9 +704,10 @@ pbs_gss_establish_context(pbs_gss_extra_t *gss_extra, char *server_host, char *d
 		free(service_name);
 
 	if (gss_context == GSS_C_NO_CONTEXT) {
-		sprintf(gss_log_buffer,"Failed to establish gss context");
-		if (pbs_gss_logerror)
+		if (pbs_gss_logerror) {
+			snprintf(gss_log_buffer, LOG_BUF_SIZE, "Failed to establish gss context");
 			pbs_gss_logerror(__func__, gss_log_buffer);
+		}
 
 		return PBS_GSS_ERR_CONTEXT_ESTABLISH;
 	}
@@ -701,30 +734,66 @@ pbs_gss_establish_context(pbs_gss_extra_t *gss_extra, char *server_host, char *d
 	if (ret == PBS_GSS_OK) {
 		gss_extra->gssctx_established = 1;
 		gss_extra->confidential = (ret_flags & GSS_C_CONF_FLAG);
-
-		if (gss_extra->role == PBS_GSS_SERVER) {
-			sprintf(gss_log_buffer, "GSS context established with client %s", gss_extra->clientname);
-		} else {
-			sprintf(gss_log_buffer, "GSS context established with server %s", server_host);
-		}
-		if (pbs_gss_logdebug)
+		if (pbs_gss_logdebug) {
+			if (gss_extra->role == PBS_GSS_SERVER) {
+				snprintf(gss_log_buffer, LOG_BUF_SIZE, "GSS context established with client %s", gss_extra->clientname);
+			} else {
+				snprintf(gss_log_buffer, LOG_BUF_SIZE, "GSS context established with server %s", gss_extra->hostname);
+			}
 			pbs_gss_logdebug(__func__, gss_log_buffer);
-	} else {
-		if (gss_extra->role == PBS_GSS_SERVER) {
-			if (gss_extra->clientname)
-				sprintf(gss_log_buffer, "Failed to establish GSS context with client %s", gss_extra->clientname);
-			else
-				sprintf(gss_log_buffer, "Failed to establish GSS context with client");
-		} else {
-			sprintf(gss_log_buffer, "Failed to establish GSS context with server %s", server_host);
 		}
-		if (pbs_gss_logerror)
+	} else {
+		if (pbs_gss_logerror) {
+			if (gss_extra->role == PBS_GSS_SERVER) {
+				if (gss_extra->clientname)
+					snprintf(gss_log_buffer, LOG_BUF_SIZE, "Failed to establish GSS context with client %s", gss_extra->clientname);
+				else
+					snprintf(gss_log_buffer, LOG_BUF_SIZE, "Failed to establish GSS context with client");
+			} else {
+				snprintf(gss_log_buffer, LOG_BUF_SIZE, "Failed to establish GSS context with server %s", gss_extra->hostname);
+			}
 			pbs_gss_logerror(__func__, gss_log_buffer);
+		}
 
 		return PBS_GSS_ERR_CONTEXT_ESTABLISH;
 	}
 
 	return PBS_GSS_OK;
+}
+
+int
+pbs_gss_establish_context(void *extra, void *data_in, int len_in, void **data_out, int *len_out, int *established, char *ebuf, int ebufsz)
+{
+	pbs_gss_extra_t *gss_extra = (pbs_gss_extra_t *) extra;
+	int rc = 0;
+
+	if (gss_extra->gssctx_established) {
+		snprintf(ebuf, ebufsz, "GSS context already established");
+		return -1;
+	}
+
+	rc = __pbs_gss_establish_context(gss_extra, data_in, len_in, data_out, len_out, ebuf, ebufsz);
+	if (rc != PBS_GSS_OK)
+		*established = 0;
+
+	if (gss_extra->gssctx_established) {
+		gss_extra->ready = 1;
+		*established = 1;
+
+		if (gss_extra->role == PBS_GSS_SERVER) {
+			if (pbs_gss_logdebug) {
+				snprintf(gss_log_buffer, LOG_BUF_SIZE, "Entered encrypted communication with client %s", gss_extra->clientname);
+				pbs_gss_logdebug(__func__, gss_log_buffer);
+			}
+		} else {
+			if (pbs_gss_logdebug) {
+				snprintf(gss_log_buffer, LOG_BUF_SIZE, "Entered encrypted communication with server %s", gss_extra->hostname);
+				pbs_gss_logdebug(__func__, gss_log_buffer);
+			}
+		}
+	}
+
+	return rc;
 }
 
 /* @brief
@@ -739,13 +808,35 @@ pbs_gss_establish_context(pbs_gss_extra_t *gss_extra, char *server_host, char *d
  * @return
  */
 int
-pbs_gss_wrap(pbs_gss_extra_t *gss_extra, char *data_in, int len_in, char **data_out, int *len_out)
+pbs_gss_wrap(void *extra, void *data_in, int len_in, void **data_out, int *len_out, char *ebuf, int ebufsz)
 {
+	pbs_gss_extra_t *gss_extra = (pbs_gss_extra_t *)extra;
 	OM_uint32 maj_stat;
 	OM_uint32 min_stat = 0;
 	gss_buffer_desc unwrapped;
 	gss_buffer_desc wrapped;
 	int conf_state = 0;
+
+	if (gss_extra == NULL) {
+		snprintf(ebuf, ebufsz, "No GSS auth extra available");
+		return PBS_GSS_ERR_INTERNAL;
+	}
+
+	if (gss_extra->cleartext != NULL) {
+		free(gss_extra->cleartext);
+	}
+	gss_extra->cleartext = malloc(len_in);
+	if (gss_extra->cleartext == NULL) {
+		snprintf(ebuf, ebufsz, "malloc failure");
+		return PBS_GSS_ERR_INTERNAL;
+	}
+	memcpy(gss_extra->cleartext, data_in, len_in);
+	gss_extra->cleartext_len = len_in;
+
+	if (!gss_extra->ready) {
+		snprintf(ebuf, ebufsz, "asked to wrap data but GSS layer not ready");
+		return PBS_GSS_ERR_INTERNAL;
+	}
 
 	wrapped.length = 0;
 	wrapped.value = NULL;
@@ -756,15 +847,17 @@ pbs_gss_wrap(pbs_gss_extra_t *gss_extra, char *data_in, int len_in, char **data_
 	maj_stat = gss_wrap(&min_stat, gss_extra->gssctx, gss_extra->confidential, GSS_C_QOP_DEFAULT, &unwrapped, &conf_state, &wrapped);
 
 	if (maj_stat != GSS_S_COMPLETE) {
-		sprintf(gss_log_buffer, gss_err_msg, __func__, "gss_wrap");
-		if (pbs_gss_log_gss_status)
+		if (pbs_gss_log_gss_status) {
+			snprintf(gss_log_buffer, LOG_BUF_SIZE, gss_err_msg, __func__, "gss_wrap");
 			pbs_gss_log_gss_status(gss_log_buffer, maj_stat, min_stat);
+		}
 
 		maj_stat = gss_release_buffer(&min_stat, &wrapped);
 		if (maj_stat != GSS_S_COMPLETE) {
-			sprintf(gss_log_buffer, gss_err_msg, __func__, "gss_release_buffer");
-			if (pbs_gss_log_gss_status)
+			if (pbs_gss_log_gss_status) {
+				snprintf(gss_log_buffer, LOG_BUF_SIZE, gss_err_msg, __func__, "gss_release_buffer");
 				pbs_gss_log_gss_status(gss_log_buffer, maj_stat, min_stat);
+			}
 
 			return PBS_GSS_ERR_INTERNAL;
 		}
@@ -784,9 +877,11 @@ pbs_gss_wrap(pbs_gss_extra_t *gss_extra, char *data_in, int len_in, char **data_
 
 	maj_stat = gss_release_buffer(&min_stat, &wrapped);
 	if (maj_stat != GSS_S_COMPLETE) {
-		sprintf(gss_log_buffer, gss_err_msg, __func__, "gss_release_buffer");
-		if (pbs_gss_log_gss_status)
+		if (pbs_gss_log_gss_status) {
+			snprintf(gss_log_buffer, LOG_BUF_SIZE, gss_err_msg, __func__, "gss_release_buffer");
 			pbs_gss_log_gss_status(gss_log_buffer, maj_stat, min_stat);
+		}
+
 
 		return PBS_GSS_ERR_INTERNAL;
 	}
@@ -806,12 +901,46 @@ pbs_gss_wrap(pbs_gss_extra_t *gss_extra, char *data_in, int len_in, char **data_
  * @return
  */
 int
-pbs_gss_unwrap(pbs_gss_extra_t *gss_extra, char *data_in, int len_in, char **data_out, int *len_out)
+pbs_gss_unwrap(void *extra, void *data_in, int len_in, void **data_out, int *len_out, char *ebuf, int ebufsz)
 {
+	pbs_gss_extra_t *gss_extra = (pbs_gss_extra_t *)extra;
 	OM_uint32 maj_stat;
 	OM_uint32 min_stat = 0;
 	gss_buffer_desc wrapped;
 	gss_buffer_desc unwrapped;
+
+	if (gss_extra == NULL) {
+		snprintf(ebuf, ebufsz, "No GSS auth extra available");
+		return PBS_GSS_ERR_INTERNAL;
+	}
+
+	if (gss_extra->ready == 0) {
+		snprintf(ebuf, ebufsz, "wrapped data ready but GSS layer not ready");
+		return PBS_GSS_ERR_INTERNAL;
+	}
+
+	if (gss_extra->confidential == 0) {
+		snprintf(ebuf, ebufsz, "wrapped data ready but confidentiality not ensured");
+		return PBS_GSS_ERR_INTERNAL;
+	}
+
+	if (len_in == 0 && data_in == NULL) {
+		if (gss_extra->cleartext == NULL) {
+			snprintf(ebuf, ebufsz, "No cleartext data available in gss auth extra");
+			return PBS_GSS_ERR_INTERNAL;
+		}
+		*data_out = malloc(gss_extra->cleartext_len);
+		if (*data_out == NULL) {
+			snprintf(ebuf, ebufsz, "malloc failure");
+			return PBS_GSS_ERR_INTERNAL;
+		}
+		memcpy(*data_out, gss_extra->cleartext, gss_extra->cleartext_len);
+		*len_out = gss_extra->cleartext_len;
+		free(gss_extra->cleartext);
+		gss_extra->cleartext = NULL;
+		gss_extra->cleartext_len = 0;
+		return PBS_GSS_OK;
+	}
 
 	unwrapped.length = 0;
 	unwrapped.value = NULL;
@@ -822,15 +951,17 @@ pbs_gss_unwrap(pbs_gss_extra_t *gss_extra, char *data_in, int len_in, char **dat
 	maj_stat = gss_unwrap(&min_stat, gss_extra->gssctx, &wrapped, &unwrapped, NULL, NULL);
 
 	if (maj_stat != GSS_S_COMPLETE) {
-		sprintf(gss_log_buffer, gss_err_msg, __func__, "gss_unwrap");
-		if (pbs_gss_log_gss_status)
+		if (pbs_gss_log_gss_status) {
+			snprintf(gss_log_buffer, LOG_BUF_SIZE, gss_err_msg, __func__, "gss_unwrap");
 			pbs_gss_log_gss_status(gss_log_buffer, maj_stat, min_stat);
+		}
 
 		maj_stat = gss_release_buffer(&min_stat, &unwrapped);
 		if (maj_stat != GSS_S_COMPLETE) {
-			sprintf(gss_log_buffer, gss_err_msg, __func__, "gss_release_buffer");
-			if (pbs_gss_log_gss_status)
+			if (pbs_gss_log_gss_status) {
+				snprintf(gss_log_buffer, LOG_BUF_SIZE, gss_err_msg, __func__, "gss_release_buffer");
 				pbs_gss_log_gss_status(gss_log_buffer, maj_stat, min_stat);
+			}
 
 			return PBS_GSS_ERR_INTERNAL;
 		}
@@ -853,9 +984,10 @@ pbs_gss_unwrap(pbs_gss_extra_t *gss_extra, char *data_in, int len_in, char **dat
 
 	maj_stat = gss_release_buffer(&min_stat, &unwrapped);
 	if (maj_stat != GSS_S_COMPLETE) {
-		sprintf(gss_log_buffer, gss_err_msg, __func__, "gss_release_buffer");
-		if (pbs_gss_log_gss_status)
+		if (pbs_gss_log_gss_status) {
+			snprintf(gss_log_buffer, LOG_BUF_SIZE, gss_err_msg, __func__, "gss_release_buffer");
 			pbs_gss_log_gss_status(gss_log_buffer, maj_stat, min_stat);
+		}
 
 		return PBS_GSS_ERR_INTERNAL;
 	}

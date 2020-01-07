@@ -46,6 +46,7 @@
 #include <netinet/in.h>
 
 #include "pbs_ifl.h"
+#include "log.h"
 #include "net_connect.h"
 #include "attribute.h"
 #include "dis.h"
@@ -243,6 +244,7 @@ dis_gss_encrypt(int fd, void *data_in, int len_in)
 	pbs_gss_extra_t *gss_extra = NULL;
 	char *data_out;
 	int len_out;
+	char ebuf[LOG_BUF_SIZE] = {'\0'};
 
 	gss_extra = (pbs_gss_extra_t *)transport_chan_get_extra(fd);
 	if (gss_extra == NULL)
@@ -255,8 +257,9 @@ dis_gss_encrypt(int fd, void *data_in, int len_in)
 		return 0;
 
 	if (gss_extra->ready) {
-		if (pbs_gss_wrap(gss_extra, data_in, len_in, &data_out, &len_out) != PBS_GSS_OK)
+		if (pbs_gss_wrap(gss_extra, data_in, len_in, (void **)&data_out, &len_out, ebuf, sizeof(ebuf)) != PBS_GSS_OK) {
 			return -1;
+		}
 		if (gss_create_token(fd, TCP_GSS_WRAP, data_out, len_out) != PBS_GSS_OK)
 			return -1;
 		free(data_out);
@@ -281,6 +284,7 @@ int
 dis_gss_decrypt(int fd)
 {
 	pbs_gss_extra_t *gss_extra = NULL;
+	char ebuf[LOG_BUF_SIZE] = {'\0'};
 
 	gss_extra = (pbs_gss_extra_t *)transport_chan_get_extra(fd);
 	if (gss_extra == NULL)
@@ -301,7 +305,7 @@ dis_gss_decrypt(int fd)
 		if (type != TCP_GSS_WRAP) {
 			return -1;
 		}
-		if (pbs_gss_unwrap(gss_extra, data_in, len_in, &data_out, &len_out) != PBS_GSS_OK) {
+		if (pbs_gss_unwrap(gss_extra, data_in, len_in, (void **)&data_out, &len_out, ebuf, sizeof(ebuf)) != PBS_GSS_OK) {
 			free(data_out);
 			free(data_in);
 			return -1;
@@ -347,7 +351,7 @@ __tcp_gss_process(int sfds, char *hostname, char *ebuf, int ebufsz)
 	DIS_tcp_funcs();
 
 	if ((gss_extra = (pbs_gss_extra_t *)transport_chan_get_extra(sfds)) == NULL) {
-		gss_extra = pbs_gss_alloc_gss_extra();
+		gss_extra = pbs_gss_alloc_gss_extra(PBS_GSS_SERVER);
 		if (gss_extra == NULL) {
 			snprintf(ebuf, ebufsz, "gss_extra allocation failed");
 			pbs_errno = PBSE_SYSTEM;
@@ -355,8 +359,6 @@ __tcp_gss_process(int sfds, char *hostname, char *ebuf, int ebufsz)
 		}
 		transport_chan_set_extra(sfds, gss_extra);
 	}
-
-	gss_extra->role = PBS_GSS_SERVER;
 
 	if (gss_extra->hostname == NULL) {
 		gss_extra->hostname = strdup(hostname);
@@ -375,8 +377,7 @@ __tcp_gss_process(int sfds, char *hostname, char *ebuf, int ebufsz)
 	i = gss_parse_token(sfds, &type, &data, &data_len);
 	if (i != PBS_GSS_OK)
 		return -1;
-	if (pbs_gss_establish_context(gss_extra, gss_extra->hostname, data, data_len, &data_out, &len_out) != PBS_GSS_OK) {
-		snprintf(ebuf, ebufsz, "Failed to establish GSS context");
+	if (pbs_gss_establish_context(gss_extra, data, data_len, (void **)&data_out, &len_out, &i, ebuf, ebufsz) != PBS_GSS_OK) {
 		return -1;
 	}
 
@@ -487,7 +488,7 @@ tcp_gss_client_authenticate(int sock, char *hostname, char *ebuf, int ebufsz)
 	int i;
 
 	if ((gss_extra = (pbs_gss_extra_t *)transport_chan_get_extra(sock)) == NULL) {
-		gss_extra = pbs_gss_alloc_gss_extra();
+		gss_extra = pbs_gss_alloc_gss_extra(PBS_GSS_CLIENT);
 		if (gss_extra == NULL) {
 			snprintf(ebuf, ebufsz, "gss_extra allocation failed");
 			pbs_errno = PBSE_SYSTEM;
@@ -495,8 +496,6 @@ tcp_gss_client_authenticate(int sock, char *hostname, char *ebuf, int ebufsz)
 		}
 		transport_chan_set_extra(sock, gss_extra);
 	}
-
-	gss_extra->role = PBS_GSS_CLIENT;
 
 	if (gss_extra->hostname == NULL) {
 		gss_extra->hostname = strdup(hostname);
@@ -515,8 +514,7 @@ tcp_gss_client_authenticate(int sock, char *hostname, char *ebuf, int ebufsz)
 	pbs_gss_set_log_handlers(tcp_gss_display_status, tcp_gss_display, NULL);
 
 	do {
-		if (pbs_gss_establish_context(gss_extra, gss_extra->hostname, data_in, len_in, &data_out, &len_out) != PBS_GSS_OK) {
-			snprintf(ebuf, ebufsz, "Failed to establish GSS context");
+		if (pbs_gss_establish_context(gss_extra, data_in, len_in, (void **)&data_out, &len_out, &i, ebuf, ebufsz) != PBS_GSS_OK) {
 			pbs_errno = PBSE_SYSTEM;
 			return PBS_GSS_ERR_CONTEXT_ESTABLISH;
 		}
