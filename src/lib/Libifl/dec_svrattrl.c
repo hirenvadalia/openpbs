@@ -40,7 +40,7 @@
 /**
  * @file	dec_svrattrl.c
  * @brief
- * decode_DIS_svrattrl() - decode into a list of server "svrattrl" structures
+ * decode_wire_svrattrl() - decode into a list of server "svrattrl" structures
  *
  *	The space for the svrattrl structures is allocated as needed.
  *
@@ -72,7 +72,7 @@
 #include "libpbs.h"
 #include "list_link.h"
 #include "attribute.h"
-#include "dis.h"
+#include "pbs_transport.h"
 
 /**
  * @brief-
@@ -104,13 +104,13 @@
  * @param[in] phead - head pointer to list entry list sub-structure
  *
  * @return      int
- * @retval      DIS_SUCCESS(0)  success
- * @retval      error code      error
+ * @retval      0 - success
+ * @retval      !0 - error
  *
  */
 
 int
-decode_DIS_svrattrl(int sock, pbs_list_head *phead)
+decode_wire_svrattrl(int sock, pbs_list_head *phead)
 {
 	int		i;
 	unsigned int	hasresc;

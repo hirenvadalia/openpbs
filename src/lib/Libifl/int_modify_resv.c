@@ -44,7 +44,7 @@
 #include <fcntl.h>
 #include "portability.h"
 #include "libpbs.h"
-#include "dis.h"
+#include "pbs_transport.h"
 #include "tpp.h"
 
 /**
@@ -67,9 +67,9 @@ PBSD_modify_resv(int connect, char *resv_id, struct attropl *attrib, char *exten
 	char *ret = NULL;
 
 	/* first, set up the body of the Modify Reservation request */
-	if ((rc = encode_DIS_ReqHdr(connect, PBS_BATCH_ModifyResv, pbs_current_user, PROT_TCP, NULL)) ||
-		(rc = encode_DIS_ModifyResv(connect, resv_id, attrib)) ||
-		(rc = encode_DIS_ReqExtend(connect, extend))) {
+	if ((rc = encode_wire_ReqHdr(connect, PBS_BATCH_ModifyResv, pbs_current_user, PROT_TCP, NULL)) ||
+		(rc = encode_wire_ModifyResv(connect, resv_id, attrib)) ||
+		(rc = encode_wire_ReqExtend(connect, extend))) {
 			if (set_conn_errtxt(connect, dis_emsg[rc]) != 0) {
 				pbs_errno = PBSE_SYSTEM;
 				return NULL;
@@ -77,7 +77,7 @@ PBSD_modify_resv(int connect, char *resv_id, struct attropl *attrib, char *exten
 			if (pbs_errno == PBSE_PROTOCOL)
 				return NULL;
 	}
-	if (dis_flush(connect)) {
+	if (transport_flush(connect)) {
 		pbs_errno = PBSE_PROTOCOL;
 		return NULL;
 	}

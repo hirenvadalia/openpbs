@@ -83,7 +83,7 @@
 #include "log.h"
 #include "pbs_nodes.h"
 #include "svrfunc.h"
-#include "dis.h"
+#include "pbs_transport.h"
 #include "libsec.h"
 #include "pbs_db.h"
 
@@ -351,10 +351,10 @@ put_failover(int sock, struct batch_request *request)
 
 	DBPRT(("Failover: sending FO(%d) request\n", request->rq_ind.rq_failover))
 
-	if ((rc = encode_DIS_ReqHdr(sock, PBS_BATCH_FailOver, pbs_current_user, PROT_TCP, NULL))==0)
+	if ((rc = encode_wire_ReqHdr(sock, PBS_BATCH_FailOver, pbs_current_user, PROT_TCP, NULL))==0)
 		if ((rc = diswui(sock, request->rq_ind.rq_failover)) == 0)
-			if ((rc=encode_DIS_ReqExtend(sock, 0)) == 0)
-				rc = dis_flush(sock);
+			if ((rc=encode_wire_ReqExtend(sock, 0)) == 0)
+				rc = transport_flush(sock);
 	return rc;
 }
 
@@ -546,7 +546,7 @@ read_fo_request(int conn)
 		return;
 	}
 	request->rq_conn = conn;
-	rc = dis_request_read(conn, request);
+	rc = wire_request_read(conn, request);
 	DBPRT(("Failover: received request (rc=%d) secondary state %d\n", rc, Secondary_state))
 	if (rc == -1) {
 		/*
@@ -624,7 +624,7 @@ read_reg_reply(int sock)
 	fo_reply.brp_choice = BATCH_REPLY_CHOICE_NULL;
 	fo_reply.brp_un.brp_txt.brp_txtlen = 0;
 	fo_reply.brp_un.brp_txt.brp_str    = 0;
-	rc = DIS_reply_read(sock, &fo_reply, 0);
+	rc = wire_reply_read(sock, &fo_reply, 0);
 
 	if ((rc != 0) || (fo_reply.brp_code != 0)) {
 		DBPRT(("Failover: received invalid reply: non-zero code or EOF\n"))

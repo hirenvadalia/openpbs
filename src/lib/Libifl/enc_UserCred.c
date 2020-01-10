@@ -43,7 +43,7 @@
 
 #include "libpbs.h"
 #include "pbs_error.h"
-#include "dis.h"
+#include "pbs_transport.h"
 
 /**
  * @brief
@@ -56,13 +56,13 @@
  * @param[in] len - length of credential
  *
  * @return      int
- * @retval      DIS_SUCCESS(0)  success
- * @retval      error code      error
+ * @retval      0 - success
+ * @retval      !0 - error
  *
  */
 
 int
-encode_DIS_UserCred(int sock, char *user, int type, char *cred, int len)
+encode_wire_UserCred(int sock, char *user, int type, char *cred, int len)
 {
 	int   rc;
 
@@ -84,13 +84,13 @@ encode_DIS_UserCred(int sock, char *user, int type, char *cred, int len)
  * @param[in] tohost - the destination host to migrate users to
  *
  * @return      int
- * @retval      DIS_SUCCESS(0)  success
- * @retval      error code      error
+ * @retval      0 - success
+ * @retval      !0 - error
  *
  */
 
 int
-encode_DIS_UserMigrate(int sock, char *tohost)
+encode_wire_UserMigrate(int sock, char *tohost)
 {
 	int   rc;
 

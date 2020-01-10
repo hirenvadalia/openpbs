@@ -120,7 +120,7 @@ extern "C" {
 #define PBSE_NOSYNCMSTR	15053		/* No Master in Sync Set */
 #define PBSE_BADDEPEND	15054		/* Invalid dependency */
 #define PBSE_DUPLIST	15055		/* Duplicate entry in List */
-#define PBSE_DISPROTO	15056		/* Bad DIS based Request Protocol */
+// Unused - #define PBSE_DISPROTO	15056		/* Bad DIS based Request Protocol */
 #define PBSE_EXECTHERE	15057		/* cannot execute there */
 #define PBSE_SISREJECT	15058		/* sister rejected */
 #define PBSE_SISCOMM	15059		/* sister could not communicate */

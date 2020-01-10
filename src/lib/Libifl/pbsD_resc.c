@@ -45,7 +45,7 @@
 #include <string.h>
 #include <stdio.h>
 #include "libpbs.h"
-#include "dis.h"
+#include "pbs_transport.h"
 #include "pbs_ecl.h"
 
 
@@ -79,7 +79,7 @@ free_node_pool(struct node_pool *np)
 
 /**
  * @brief
- * 	-encode_DIS_resc() - encode a resource related request,
+ * 	-encode_wire_resc() - encode a resource related request,
  *	Used by pbs_rescquery(), pbs_rescreserve() and pbs_rescfree()
  *
  * @param[in] sock - socket fd
@@ -94,7 +94,7 @@ free_node_pool(struct node_pool *np)
  */
 
 static int
-encode_DIS_Resc(int sock, char **rlist, int ct, pbs_resource_t rh)
+encode_wire_Resc(int sock, char **rlist, int ct, pbs_resource_t rh)
 {
 	int    i;
 	int    rc;
@@ -141,9 +141,9 @@ PBS_resc(int c, int reqtype, char **rescl, int ct, pbs_resource_t rh)
 {
 	int rc;
 
-	if ((rc = encode_DIS_ReqHdr(c, reqtype, pbs_current_user, PROT_TCP, NULL)) ||
-		(rc = encode_DIS_Resc(c, rescl, ct, rh)) ||
-		(rc = encode_DIS_ReqExtend(c, NULL))) {
+	if ((rc = encode_wire_ReqHdr(c, reqtype, pbs_current_user, PROT_TCP, NULL)) ||
+		(rc = encode_wire_Resc(c, rescl, ct, rh)) ||
+		(rc = encode_wire_ReqExtend(c, NULL))) {
 		if (set_conn_errtxt(c, dis_emsg[rc]) != 0) {
 			pbs_errno = PBSE_SYSTEM;
 		} else {
@@ -151,7 +151,7 @@ PBS_resc(int c, int reqtype, char **rescl, int ct, pbs_resource_t rh)
 		}
 		return (pbs_errno);
 	}
-	if (dis_flush(c)) {
+	if (transport_flush(c)) {
 		return (pbs_errno = PBSE_PROTOCOL);
 	}
 	return (0);

@@ -40,7 +40,7 @@
 /**
  * @file	enc_Shut.c
  * @brief
- * encode_DIS_ShutDown() - encode a Server Shut Down Batch Request
+ * encode_wire_ShutDown() - encode a Server Shut Down Batch Request
  *
  * @par	Data items are:
  * 			unsigned int	manner
@@ -50,7 +50,7 @@
 
 #include "libpbs.h"
 #include "pbs_error.h"
-#include "dis.h"
+#include "pbs_transport.h"
 
 /**
  * @brief
@@ -60,13 +60,13 @@
  * @param[in] manner - type of shutdown
  *
  * @return      int
- * @retval      DIS_SUCCESS(0)  success
- * @retval      error code      error
+ * @retval      0 - success
+ * @retval      !0 - error
  *
  */
 
 int
-encode_DIS_ShutDown(int sock, int manner)
+encode_wire_ShutDown(int sock, int manner)
 {
 	return (diswui(sock, manner));
 }

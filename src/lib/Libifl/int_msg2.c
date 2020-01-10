@@ -46,7 +46,7 @@
 #include <string.h>
 #include <stdio.h>
 #include "libpbs.h"
-#include "dis.h"
+#include "pbs_transport.h"
 #include "net_connect.h"
 #include "tpp.h"
 
@@ -72,12 +72,12 @@ PBSD_msg_put(int c, char *jobid, int fileopt, char *msg, char *extend, int prot,
 {
 	int rc;
 
-	if ((rc = encode_DIS_ReqHdr(c, PBS_BATCH_MessJob, pbs_current_user, prot, msgid)) ||
-		(rc = encode_DIS_MessageJob(c, jobid, fileopt, msg)) ||
-		(rc = encode_DIS_ReqExtend(c, extend))) {
+	if ((rc = encode_wire_ReqHdr(c, PBS_BATCH_MessJob, pbs_current_user, prot, msgid)) ||
+		(rc = encode_wire_MessageJob(c, jobid, fileopt, msg)) ||
+		(rc = encode_wire_ReqExtend(c, extend))) {
 		return (pbs_errno = PBSE_PROTOCOL);
 	}
-	if (dis_flush(c)) {
+	if (transport_flush(c)) {
 		pbs_errno = PBSE_PROTOCOL;
 		rc	  = pbs_errno;
 	}
@@ -106,13 +106,13 @@ PBSD_py_spawn_put(int c, char *jobid, char **argv, char **envp, int prot, char *
 {
 	int rc;
 
-	if ((rc = encode_DIS_ReqHdr(c, PBS_BATCH_PySpawn, pbs_current_user, prot, msgid)) ||
-		(rc = encode_DIS_PySpawn(c, jobid, argv, envp)) ||
-		(rc = encode_DIS_ReqExtend(c, NULL))) {
+	if ((rc = encode_wire_ReqHdr(c, PBS_BATCH_PySpawn, pbs_current_user, prot, msgid)) ||
+		(rc = encode_wire_PySpawn(c, jobid, argv, envp)) ||
+		(rc = encode_wire_ReqExtend(c, NULL))) {
 			return (pbs_errno = PBSE_PROTOCOL);
 	}
 
-	if (dis_flush(c)) {
+	if (transport_flush(c)) {
 		pbs_errno = PBSE_PROTOCOL;
 		rc = pbs_errno;
 	}
@@ -130,12 +130,12 @@ PBSD_relnodes_put(int c, char *jobid, char *node_list, char *extend, int prot, c
 {
 	int rc;
 
-	if ((rc = encode_DIS_ReqHdr(c, PBS_BATCH_RelnodesJob, pbs_current_user, prot, msgid)) ||
-		(rc = encode_DIS_RelnodesJob(c, jobid, node_list)) ||
-		(rc = encode_DIS_ReqExtend(c, extend))) {
+	if ((rc = encode_wire_ReqHdr(c, PBS_BATCH_RelnodesJob, pbs_current_user, prot, msgid)) ||
+		(rc = encode_wire_RelnodesJob(c, jobid, node_list)) ||
+		(rc = encode_wire_ReqExtend(c, extend))) {
 		return (pbs_errno = PBSE_PROTOCOL);
 	}
-	if (dis_flush(c)) {
+	if (transport_flush(c)) {
 		pbs_errno = PBSE_PROTOCOL;
 		rc	  = pbs_errno;
 	}

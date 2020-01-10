@@ -46,7 +46,7 @@
 #include <string.h>
 #include <stdio.h>
 #include "libpbs.h"
-#include "dis.h"
+#include "pbs_transport.h"
 #include "pbs_ecl.h"
 
 
@@ -83,9 +83,9 @@ __pbs_rerunjob(int c, char *jobid, char *extend)
 	if (pbs_client_thread_lock_connection(c) != 0)
 		return pbs_errno;
 
-	if ((rc = encode_DIS_ReqHdr(c, PBS_BATCH_Rerun, pbs_current_user, PROT_TCP, NULL)) ||
-		(rc = encode_DIS_JobId(c, jobid)) ||
-		(rc = encode_DIS_ReqExtend(c, extend))) {
+	if ((rc = encode_wire_ReqHdr(c, PBS_BATCH_Rerun, pbs_current_user, PROT_TCP, NULL)) ||
+		(rc = encode_wire_JobId(c, jobid)) ||
+		(rc = encode_wire_ReqExtend(c, extend))) {
 		if (set_conn_errtxt(c, dis_emsg[rc]) != 0) {
 			pbs_errno = PBSE_SYSTEM;
 		} else {
@@ -97,7 +97,7 @@ __pbs_rerunjob(int c, char *jobid, char *extend)
 
 	/* write data */
 
-	if (dis_flush(c)) {
+	if (transport_flush(c)) {
 		pbs_errno = PBSE_PROTOCOL;
 		(void)pbs_client_thread_unlock_connection(c);
 		return pbs_errno;

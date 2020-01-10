@@ -40,7 +40,7 @@
 /**
  * @file	enc_Manage.c
  * @brief
- * encode_DIS_Manage() - encode a Manager Batch Request
+ * encode_wire_Manage() - encode a Manager Batch Request
  *
  *	This request is used for most operations where an object is being
  *	created, deleted, or altered.
@@ -50,7 +50,7 @@
 
 #include "libpbs.h"
 #include "pbs_error.h"
-#include "dis.h"
+#include "pbs_transport.h"
 
 /**
  * @brief
@@ -67,13 +67,13 @@
  * @param[in] aoplp - pointer to attropl structure(list)
  *
  * @return      int
- * @retval      DIS_SUCCESS(0)  success
- * @retval      error code      error
+ * @retval      0 - success
+ * @retval      !0 - error
  *
  */
 
 int
-encode_DIS_Manage(int sock, int command, int objtype, char *objname, struct attropl *aoplp)
+encode_wire_Manage(int sock, int command, int objtype, char *objname, struct attropl *aoplp)
 {
 	int   rc;
 
@@ -82,5 +82,5 @@ encode_DIS_Manage(int sock, int command, int objtype, char *objname, struct attr
 		(rc = diswst(sock, objname) != 0))
 			return rc;
 
-	return (encode_DIS_attropl(sock, aoplp));
+	return (encode_wire_attropl(sock, aoplp));
 }

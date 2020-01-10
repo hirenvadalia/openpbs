@@ -94,7 +94,7 @@
 #include "cmds.h"
 #include "libpbs.h"
 #include "net_connect.h"
-#include "dis.h"
+#include "pbs_transport.h"
 #include "port_forwarding.h"
 
 #ifdef LOG_BUF_SIZE
@@ -2236,7 +2236,7 @@ retry:
 		goto retry;
 	}
 
-	DIS_tcp_funcs();
+	set_transport_to_tcp();
 	version = disrsi(news, &ret);
 	if (ret != DIS_SUCCESS) {
 		/*

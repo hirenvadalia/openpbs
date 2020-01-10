@@ -77,7 +77,7 @@ char rrule[67];
  * @param[in] dest - server option
  *
  * @return errflag
- * @retval 0  Success
+ * @retval 0 - success
  * @retval  !0 Failure
  *
  */
@@ -839,7 +839,7 @@ main(int argc, char *argv[], char *envp[])
 
 				if (ncpus_str != NULL)
 					ncpus = strtol(ncpus_str, &endp, 0);
-				
+
 				if (*endp != '\0') {
 					fprintf(stderr, "pbs_rsub: Attribute value error\n");
 					CS_close_app();

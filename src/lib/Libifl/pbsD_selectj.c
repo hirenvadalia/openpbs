@@ -53,7 +53,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "libpbs.h"
-#include "dis.h"
+#include "pbs_transport.h"
 #include "pbs_ecl.h"
 
 
@@ -176,10 +176,10 @@ PBSD_select_put(int c, int type, struct attropl *attrib, struct attrl *rattrib, 
 {
 	int rc;
 
-	if ((rc = encode_DIS_ReqHdr(c, type, pbs_current_user, PROT_TCP, NULL)) ||
-		(rc = encode_DIS_attropl(c, attrib)) ||
-		(rc = encode_DIS_attrl(c, rattrib))  ||
-		(rc = encode_DIS_ReqExtend(c, extend))) {
+	if ((rc = encode_wire_ReqHdr(c, type, pbs_current_user, PROT_TCP, NULL)) ||
+		(rc = encode_wire_attropl(c, attrib)) ||
+		(rc = encode_wire_attrl(c, rattrib))  ||
+		(rc = encode_wire_ReqExtend(c, extend))) {
 		if (set_conn_errtxt(c, dis_emsg[rc]) != 0) {
 			pbs_errno = PBSE_SYSTEM;
 		} else {
@@ -190,7 +190,7 @@ PBSD_select_put(int c, int type, struct attropl *attrib, struct attrl *rattrib, 
 
 	/* write data */
 
-	if (dis_flush(c)) {
+	if (transport_flush(c)) {
 		return (pbs_errno = PBSE_PROTOCOL);
 	}
 

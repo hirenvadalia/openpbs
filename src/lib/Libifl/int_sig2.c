@@ -45,7 +45,7 @@
 #include <string.h>
 #include <stdio.h>
 #include "libpbs.h"
-#include "dis.h"
+#include "pbs_transport.h"
 #include "net_connect.h"
 #include "tpp.h"
 
@@ -72,9 +72,9 @@ PBSD_sig_put(int c, char *jobid, char *signal, char *extend, int prot, char **ms
 {
 	int rc;
 
-	if ((rc = encode_DIS_ReqHdr(c, PBS_BATCH_SignalJob, pbs_current_user, prot, msgid)) ||
-		(rc = encode_DIS_SignalJob(c, jobid, signal)) ||
-		(rc = encode_DIS_ReqExtend(c, extend))) {
+	if ((rc = encode_wire_ReqHdr(c, PBS_BATCH_SignalJob, pbs_current_user, prot, msgid)) ||
+		(rc = encode_wire_SignalJob(c, jobid, signal)) ||
+		(rc = encode_wire_ReqExtend(c, extend))) {
 		if (prot == PROT_TCP) {
 			if (set_conn_errtxt(c, dis_emsg[rc]) != 0) {
 				return (pbs_errno = PBSE_SYSTEM);
@@ -82,7 +82,7 @@ PBSD_sig_put(int c, char *jobid, char *signal, char *extend, int prot, char **ms
 		}
 		return (pbs_errno = PBSE_PROTOCOL);
 	}
-	if (dis_flush(c)) {
+	if (transport_flush(c)) {
 		pbs_errno = PBSE_PROTOCOL;
 		rc = pbs_errno;
 	}

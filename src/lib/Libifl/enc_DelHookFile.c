@@ -43,7 +43,7 @@
 
 #include "libpbs.h"
 #include "pbs_error.h"
-#include "dis.h"
+#include "pbs_transport.h"
 
 /**
  *
@@ -61,7 +61,7 @@
  */
 
 int
-encode_DIS_DelHookFile(int sock, char *filename)
+encode_wire_DelHookFile(int sock, char *filename)
 {
 	int   rc;
 

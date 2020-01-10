@@ -120,7 +120,7 @@
 #include "acct.h"
 #include "sched_cmds.h"
 #include "tpp.h"
-#include "dis.h"
+#include "pbs_transport.h"
 #include "libsec.h"
 #include "pbs_version.h"
 #include "pbs_license.h"
@@ -417,7 +417,7 @@ do_tpp(int stream)
 	void			is_request(int, int);
 	void			stream_eof(int, int, char *);
 
-	DIS_tpp_funcs();
+	set_transport_to_tpp();
 	proto = disrsi(stream, &ret);
 	if (ret != DIS_SUCCESS) {
 		stream_eof(stream, ret, NULL);

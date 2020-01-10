@@ -46,7 +46,7 @@
 #include <string.h>
 #include <stdio.h>
 #include "libpbs.h"
-#include "dis.h"
+#include "pbs_transport.h"
 #include "pbs_ecl.h"
 
 
@@ -84,9 +84,9 @@ __pbs_locjob(int c, char *jobid, char *extend)
 	if (pbs_client_thread_lock_connection(c) != 0)
 		return NULL;
 
-	if ((rc = encode_DIS_ReqHdr(c, PBS_BATCH_LocateJob, pbs_current_user, PROT_TCP, NULL)) ||
-		(rc = encode_DIS_JobId(c, jobid))	   ||
-		(rc = encode_DIS_ReqExtend(c, extend))) {
+	if ((rc = encode_wire_ReqHdr(c, PBS_BATCH_LocateJob, pbs_current_user, PROT_TCP, NULL)) ||
+		(rc = encode_wire_JobId(c, jobid))	   ||
+		(rc = encode_wire_ReqExtend(c, extend))) {
 		if (set_conn_errtxt(c, dis_emsg[rc]) != 0) {
 			pbs_errno = PBSE_SYSTEM;
 		} else {
@@ -98,7 +98,7 @@ __pbs_locjob(int c, char *jobid, char *extend)
 
 	/* write data over tcp stream */
 
-	if (dis_flush(c)) {
+	if (transport_flush(c)) {
 		pbs_errno = PBSE_PROTOCOL;
 		(void)pbs_client_thread_unlock_connection(c);
 		return NULL;
@@ -112,7 +112,7 @@ __pbs_locjob(int c, char *jobid, char *extend)
 	} else if (reply->brp_choice != BATCH_REPLY_CHOICE_NULL &&
 		reply->brp_choice != BATCH_REPLY_CHOICE_Text &&
 		reply->brp_choice != BATCH_REPLY_CHOICE_Locate) {
-		advise("pbs_locjob", "Unexpected reply choice");
+		fprintf(stderr, "pbs_locjobs: Unexpected reply choice\n");
 		pbs_errno = PBSE_PROTOCOL;
 	} else if (get_conn_errno(c) == 0) {
 		if ((ploc = strdup(reply->brp_un.brp_locate)) == NULL) {

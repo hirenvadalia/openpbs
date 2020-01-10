@@ -44,7 +44,7 @@
 #include <string.h>
 #include <stdio.h>
 #include "libpbs.h"
-#include "dis.h"
+#include "pbs_transport.h"
 #include "pbs_ecl.h"
 
 
@@ -84,9 +84,9 @@ pbs_stagein(int c, char *jobid, char *location, char *extend)
 		return pbs_errno;
 
 	/* send stagein request, a run request with a different id */
-	if ((rc = encode_DIS_ReqHdr(c, PBS_BATCH_StageIn, pbs_current_user, PROT_TCP, NULL)) ||
-		(rc = encode_DIS_Run(c, jobid, location, 0)) ||
-		(rc = encode_DIS_ReqExtend(c, extend))) {
+	if ((rc = encode_wire_ReqHdr(c, PBS_BATCH_StageIn, pbs_current_user, PROT_TCP, NULL)) ||
+		(rc = encode_wire_Run(c, jobid, location, 0)) ||
+		(rc = encode_wire_ReqExtend(c, extend))) {
 		if (set_conn_errtxt(c, dis_emsg[rc]) != 0) {
 			pbs_errno = PBSE_SYSTEM;
 		} else {
@@ -96,7 +96,7 @@ pbs_stagein(int c, char *jobid, char *location, char *extend)
 		return pbs_errno;
 	}
 
-	if (dis_flush(c)) {
+	if (transport_flush(c)) {
 		pbs_errno = PBSE_PROTOCOL;
 		(void)pbs_client_thread_unlock_connection(c);
 		return pbs_errno;

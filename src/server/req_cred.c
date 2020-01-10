@@ -80,7 +80,7 @@ typedef struct cred_cache cred_cache;
  *	First, this function checks whether the credentials for credid (e.g. principal) of the
  *	job are stored in server's memory cache and whether the credentials are
  *	not too old. Such credentials are returned. If they are not present
- *	in cache or are too old new credentials are requested with the 
+ *	in cache or are too old new credentials are requested with the
  *	SRV_ATR_cred_renew_tool and renewed credentials are stored in the cache
  *	(server's memory).
  *
@@ -230,7 +230,7 @@ setup_cred(struct batch_request *preq, job  *pjob)
 		}
 	}
 
-	preq->rq_ind.rq_cred.rq_cred_data = NULL;
+	preq->rq_ind.rq_cred.rq_data = NULL;
 
 	if ((cred = get_cached_cred(pjob)) == NULL){
 		free_br(preq);
@@ -239,13 +239,13 @@ setup_cred(struct batch_request *preq, job  *pjob)
 
 	strcpy(preq->rq_ind.rq_cred.rq_credid, pjob->ji_wattr[(int)JOB_ATR_cred_id].at_val.at_str);
 	strcpy(preq->rq_ind.rq_cred.rq_jobid, pjob->ji_qs.ji_jobid);
-	preq->rq_ind.rq_cred.rq_cred_type = cred->type;
-	preq->rq_ind.rq_cred.rq_cred_validity = cred->validity;
-	if ((preq->rq_ind.rq_cred.rq_cred_data = (char *)malloc(cred->size + 1)) == NULL) {
+	preq->rq_ind.rq_cred.rq_type = cred->type;
+	preq->rq_ind.rq_cred.rq_validity = cred->validity;
+	if ((preq->rq_ind.rq_cred.rq_data = (char *)malloc(cred->size + 1)) == NULL) {
 		log_err(errno, __func__, "Unable to allocate Memory!\n");
 		req_reject(PBSE_SYSTEM, 0, preq);
 	}
-	strcpy(preq->rq_ind.rq_cred.rq_cred_data, cred->data);
+	strcpy(preq->rq_ind.rq_cred.rq_data, cred->data);
 
 	return preq;
 }
@@ -278,7 +278,7 @@ post_cred(struct work_task *pwt)
 		} else {
 			/* send_cred was successful  - update validity*/
 
-			pjob->ji_wattr[(int) JOB_ATR_cred_validity].at_val.at_long = preq->rq_ind.rq_cred.rq_cred_validity;
+			pjob->ji_wattr[(int) JOB_ATR_cred_validity].at_val.at_long = preq->rq_ind.rq_cred.rq_validity;
 			pjob->ji_wattr[(int) JOB_ATR_cred_validity].at_flags |= ATR_VFLAG_SET | ATR_VFLAG_MODCACHE;
 			pjob->ji_modified = 1;
 			/* save the full job */

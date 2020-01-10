@@ -49,7 +49,7 @@
 #include "log.h"
 #include "net_connect.h"
 #include "attribute.h"
-#include "dis.h"
+#include "pbs_transport.h"
 #include "pbs_gss.h"
 #include "batch_request.h"
 
@@ -348,7 +348,7 @@ __tcp_gss_process(int sfds, char *hostname, char *ebuf, int ebufsz)
 	enum TCP_GSS_MSG_TYPES type;
 	int i;
 
-	DIS_tcp_funcs();
+	set_transport_to_tcp();
 
 	if ((gss_extra = (pbs_gss_extra_t *)transport_chan_get_extra(sfds)) == NULL) {
 		gss_extra = pbs_gss_alloc_gss_extra(PBS_GSS_SERVER);
@@ -390,7 +390,7 @@ __tcp_gss_process(int sfds, char *hostname, char *ebuf, int ebufsz)
 			len_out = 0;
 			return -1;
 		}
-		if (dis_flush(sfds) < 0) {
+		if (transport_flush(sfds) < 0) {
 			return PBS_GSS_ERR_SENDTOKEN;
 		}
 	}
@@ -427,16 +427,16 @@ tcp_gss_send_auth(int sock)
 {
 	struct batch_reply *reply;
 
-	if (encode_DIS_ReqHdr(sock, PBS_BATCH_AuthExternal, pbs_current_user, PROT_TCP, NULL) ||
+	if (encode_wire_ReqHdr(sock, PBS_BATCH_AuthExternal, pbs_current_user, PROT_TCP, NULL) ||
 		diswuc(sock, AUTH_GSS) || /* authentication_type */
 		diswsi(sock, 0) || /* credentials length not used */
-		encode_DIS_ReqExtend(sock, NULL)) {
+		encode_wire_ReqExtend(sock, NULL)) {
 
 		pbs_errno = PBSE_SYSTEM;
 		return PBS_GSS_ERR_INTERNAL;
 	}
 
-	if (dis_flush(sock)) {
+	if (transport_flush(sock)) {
 		pbs_errno = PBSE_SYSTEM;
 		return PBS_GSS_ERR_INTERNAL;
 	}
@@ -531,7 +531,7 @@ tcp_gss_client_authenticate(int sock, char *hostname, char *ebuf, int ebufsz)
 				len_out = 0;
 				return PBS_GSS_ERR_SENDTOKEN;
 			}
-			if (dis_flush(sock) < 0) {
+			if (transport_flush(sock) < 0) {
 				return PBS_GSS_ERR_SENDTOKEN;
 			}
 			free(data_out);

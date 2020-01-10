@@ -66,7 +66,7 @@
 #include <pbs_ifl.h>
 #include "libpbs.h"
 #include "net_connect.h"
-#include "dis.h"
+#include "pbs_transport.h"
 #include "libsec.h"
 #include "pbs_ecl.h"
 #include "pbs_internal.h"
@@ -286,7 +286,7 @@ PBSD_authenticate(int psock, char * server_name, int server_port,
  * @param[in]	clnt_paddr      pointer to a client "struct sockaddr_in" variable
  *
  * @return	int
- * @retval	 0  successful
+ * @retval	 0 - successful
  * @retval	-1 unsuccessful
  *
  * @par	Remark:\n
@@ -439,16 +439,16 @@ engage_external_authentication(int sock, char *server_name, int auth_type, int f
 		ret = -1;
 		cred_len = strlen(cred);
 
-		if (encode_DIS_ReqHdr(sock, PBS_BATCH_AuthExternal, pbs_current_user, PROT_TCP, NULL) ||
+		if (encode_wire_ReqHdr(sock, PBS_BATCH_AuthExternal, pbs_current_user, PROT_TCP, NULL) ||
 				diswuc(sock, auth_type) || /* authentication_type */
 				diswsi(sock, cred_len) ||       /* credential length */
 				diswcs(sock, cred, cred_len) || /* credential data */
-				encode_DIS_ReqExtend(sock, NULL)) {
+				encode_wire_ReqExtend(sock, NULL)) {
 			pbs_errno = PBSE_SYSTEM;
 			goto err;
 		}
 
-		if (dis_flush(sock)) {
+		if (transport_flush(sock)) {
 			pbs_errno = PBSE_SYSTEM;
 			goto err;
 		}
@@ -717,12 +717,12 @@ __pbs_connect_extend(char *server, char *extend_data)
 #if defined(PBS_SECURITY) && (PBS_SECURITY == KRB5)
 	if (getenv("PBSPRO_IGNORE_KERBEROS") || !pbs_gss_can_get_creds()) {
 #endif
-		if ((i = encode_DIS_ReqHdr(sock, PBS_BATCH_Connect, pbs_current_user, PROT_TCP, NULL)) ||
-			(i = encode_DIS_ReqExtend(sock, extend_data))) {
+		if ((i = encode_wire_ReqHdr(sock, PBS_BATCH_Connect, pbs_current_user, PROT_TCP, NULL)) ||
+			(i = encode_wire_ReqExtend(sock, extend_data))) {
 			pbs_errno = PBSE_SYSTEM;
 			return -1;
 		}
-		if (dis_flush(sock)) {
+		if (transport_flush(sock)) {
 			pbs_errno = PBSE_SYSTEM;
 			return -1;
 		}
@@ -750,7 +750,7 @@ __pbs_connect_extend(char *server, char *extend_data)
 
 	/* setup DIS support routines for following pbs_* calls */
 
-	DIS_tcp_funcs();
+	set_transport_to_tcp();
 	pbs_tcp_timeout = PBS_DIS_TCP_TIMEOUT_VLONG;	/* set for 3 hours */
 
 	/*
@@ -849,8 +849,8 @@ __pbs_disconnect(int connect)
 		return 0;
 
 	/* send close-connection message */
-	if ((encode_DIS_ReqHdr(connect, PBS_BATCH_Disconnect, pbs_current_user, PROT_TCP, NULL) == 0) &&
-		(dis_flush(connect) == 0)) {
+	if ((encode_wire_ReqHdr(connect, PBS_BATCH_Disconnect, pbs_current_user, PROT_TCP, NULL) == 0) &&
+		(transport_flush(connect) == 0)) {
 		for (;;) {	/* wait for server to close connection */
 #ifdef WIN32
 			if (recv(connect, &x, 1, 0) < 1)
@@ -863,7 +863,7 @@ __pbs_disconnect(int connect)
 
 	CS_close_socket(connect);
 	CLOSESOCKET(connect);
-	dis_destroy_chan(connect);
+	transport_destroy_chan(connect);
 
 	/* unlock the connection level lock */
 	if (pbs_client_thread_unlock_connection(connect) != 0)
@@ -1102,12 +1102,12 @@ err:
 	 */
 
 	/* send "dummy" connect message */
-	if ((i = encode_DIS_ReqHdr(sock, PBS_BATCH_Connect, pbs_current_user, PROT_TCP, NULL)) ||
-		(i = encode_DIS_ReqExtend(sock, NULL))) {
+	if ((i = encode_wire_ReqHdr(sock, PBS_BATCH_Connect, pbs_current_user, PROT_TCP, NULL)) ||
+		(i = encode_wire_ReqExtend(sock, NULL))) {
 		pbs_errno = PBSE_SYSTEM;
 		return -1;
 	}
-	if (dis_flush(sock)) {
+	if (transport_flush(sock)) {
 		pbs_errno = PBSE_SYSTEM;
 		return -1;
 	}
@@ -1130,7 +1130,7 @@ err:
 	}
 
 	/* setup DIS support routines for following pbs_* calls */
-	DIS_tcp_funcs();
+	set_transport_to_tcp();
 	pbs_tcp_timeout = PBS_DIS_TCP_TIMEOUT_VLONG;	/* set for 3 hours */
 
 	return sock;

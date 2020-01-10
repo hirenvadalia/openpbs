@@ -51,7 +51,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include "libpbs.h"
-#include "dis.h"
+#include "pbs_transport.h"
 #include "ticket.h"
 #include "net_connect.h"
 #include "tpp.h"
@@ -78,9 +78,9 @@ PBSD_jcred(int c, int type, char *buf, int len, int prot, char **msgid)
 	int rc;
 	struct batch_reply *reply;
 
-	if ((rc =encode_DIS_ReqHdr(c, PBS_BATCH_JobCred, pbs_current_user, prot, msgid)) ||
-		(rc = encode_DIS_JobCred(c, type, buf, len)) ||
-		(rc = encode_DIS_ReqExtend(c, NULL))) {
+	if ((rc =encode_wire_ReqHdr(c, PBS_BATCH_JobCred, pbs_current_user, prot, msgid)) ||
+		(rc = encode_wire_JobCred(c, type, buf, len)) ||
+		(rc = encode_wire_ReqExtend(c, NULL))) {
 		if (prot == PROT_TCP) {
 			if (set_conn_errtxt(c, dis_emsg[rc]) != 0)
 				return (pbs_errno = PBSE_SYSTEM);
@@ -90,13 +90,13 @@ PBSD_jcred(int c, int type, char *buf, int len, int prot, char **msgid)
 
 	if (prot == PROT_TPP) {
 		pbs_errno = PBSE_NONE;
-		if (dis_flush(c))
+		if (transport_flush(c))
 			pbs_errno = PBSE_PROTOCOL;
 
 		return (pbs_errno);
 	}
 
-	if (dis_flush(c)) {
+	if (transport_flush(c)) {
 		return (pbs_errno = PBSE_PROTOCOL);
 	}
 

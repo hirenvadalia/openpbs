@@ -470,7 +470,7 @@ tpp_que_elem_t *tpp_que_ins_elem(tpp_que_t *, tpp_que_elem_t *, void *, int);
 /* End - routines and headers to manage FIFO queues */
 
 void tpp_log_err(int, char *, char *);
-void DIS_tpp_funcs();
+void set_transport_to_tpp();
 int tpp_send(int, void *, int);
 int tpp_recv(int, void *, int);
 int tpp_ready_fds(int *, int);

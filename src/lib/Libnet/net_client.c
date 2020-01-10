@@ -96,7 +96,7 @@ set_client_to_svr_timeout(unsigned int timeout)
  * @param[in]      authport_flags  authentication flags
  *
  * @return	int
- * @retval	 0  successful
+ * @retval	 0 - successful
  * @retval	-1 unsuccessful
  *
  * @par	Remark:	If the authentication fails, messages are logged to

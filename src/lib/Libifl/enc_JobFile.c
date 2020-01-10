@@ -40,7 +40,7 @@
 /**
  * @file	enc_JobFile.c
  * @brief
- * encode_DIS_JobFile() - encode a Job Releated File
+ * encode_wire_JobFile() - encode a Job Releated File
  *
  * @par	Data items are:
  * 			u int	block sequence number
@@ -54,7 +54,7 @@
 
 #include "libpbs.h"
 #include "pbs_error.h"
-#include "dis.h"
+#include "pbs_transport.h"
 
 /**
  * @brief
@@ -73,7 +73,7 @@
  */
 
 int
-encode_DIS_JobFile(int sock, int seq, char *buf, int len, char *jobid, int which)
+encode_wire_JobFile(int sock, int seq, char *buf, int len, char *jobid, int which)
 {
 	int   rc;
 

@@ -92,7 +92,7 @@
 #include "svrfunc.h"
 #include "sched_cmds.h"
 #include "mom_server.h"
-#include "dis.h"
+#include "pbs_transport.h"
 #include "tpp.h"
 #include "libutil.h"
 #include "pbs_sched.h"

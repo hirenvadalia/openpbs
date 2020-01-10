@@ -53,11 +53,12 @@
 #include	<arpa/inet.h>
 
 #include	"pbs_ifl.h"
+// #include	"ifl_internal.h"
 #include	"pbs_internal.h"
 #include	"net_connect.h"
 #include	"resmon.h"
 #include	"log.h"
-#include	"dis.h"
+#include	"pbs_transport.h"
 #include	"rm.h"
 #include	"tpp.h"
 #if defined(FD_SET_IN_SYS_SELECT_H)
@@ -228,7 +229,7 @@ startcom(int stream, int com)
 {
 	int	ret;
 
-	DIS_tpp_funcs();
+	set_transport_to_tpp();
 	ret = diswsi(stream, RM_PROTOCOL);
 	if (ret == DIS_SUCCESS) {
 		ret = diswsi(stream, RM_PROTOCOL_VER);
@@ -272,7 +273,7 @@ int	com;
 		tpp_close(stream);
 		return -1;
 	}
-	if (dis_flush(stream) == -1) {
+	if (transport_flush(stream) == -1) {
 		pbs_errno = errno;
 		DBPRT(("simplecom: flush error %d\n", pbs_errno))
 		tpp_close(stream);
@@ -425,7 +426,7 @@ configrm(int stream, char *file)
 		DBPRT(("configrm: diswcs %s\n", dis_emsg[ret]))
 		return -1;
 	}
-	if (dis_flush(stream) == -1) {
+	if (transport_flush(stream) == -1) {
 		pbs_errno = errno;
 		DBPRT(("configrm: flush error %d\n", pbs_errno))
 		return -1;
@@ -500,7 +501,7 @@ addreq(int stream, char *line)
 	pbs_errno = 0;
 	if ((op = findout(stream)) == NULL)
 		return -1;
-	DIS_tpp_funcs();
+	set_transport_to_tpp();
 	if (doreq(op, line) == -1) {
 		(void)delrm(stream);
 		return -1;
@@ -525,7 +526,7 @@ allreq(char *line)
 	struct	out	*op, *prev;
 	int		i, num;
 
-	DIS_tpp_funcs();
+	set_transport_to_tpp();
 	pbs_errno = 0;
 	num = 0;
 	for (i=0; i<HASHOUT; i++) {
@@ -574,7 +575,7 @@ getreq(int stream)
 	if ((op = findout(stream)) == NULL)
 		return NULL;
 	if (op->len >= 0) {	/* there is a message to send */
-		if (dis_flush(stream) == -1) {
+		if (transport_flush(stream) == -1) {
 			pbs_errno = errno;
 			DBPRT(("getreq: flush error %d\n", pbs_errno))
 			(void)delrm(stream);
@@ -583,7 +584,7 @@ getreq(int stream)
 		op->len = -2;
 		(void)tpp_eom(stream);
 	}
-	DIS_tpp_funcs();
+	set_transport_to_tpp();
 	if (op->len == -2) {
 		if (simpleget(stream) == -1)
 			return NULL;
@@ -643,7 +644,7 @@ flushreq()
 		for (op=outs[i]; op; op=op->next) {
 			if (op->len <= 0)	/* no message to send */
 				continue;
-			if (dis_flush(op->stream) == -1) {
+			if (transport_flush(op->stream) == -1) {
 				pbs_errno = errno;
 				DBPRT(("flushreq: flush error %d\n", pbs_errno))
 				tpp_close(op->stream);

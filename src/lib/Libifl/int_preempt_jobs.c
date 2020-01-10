@@ -44,7 +44,7 @@
 #include <fcntl.h>
 #include "portability.h"
 #include "libpbs.h"
-#include "dis.h"
+#include "pbs_transport.h"
 #include "tpp.h"
 #include "net_connect.h"
 #include "pbs_share.h"
@@ -68,9 +68,9 @@ PBSD_preempt_jobs(int connect, char **preempt_jobs_list)
 	preempt_job_info *ppj_reply = NULL;
 
 	/* first, set up the body of the Preempt Jobs request */
-	if ((rc = encode_DIS_ReqHdr(connect, PBS_BATCH_PreemptJobs, pbs_current_user, PROT_TCP, NULL)) ||
-		(rc = encode_DIS_PreemptJobs(connect, preempt_jobs_list)) ||
-		(rc = encode_DIS_ReqExtend(connect, NULL))) {
+	if ((rc = encode_wire_ReqHdr(connect, PBS_BATCH_PreemptJobs, pbs_current_user, PROT_TCP, NULL)) ||
+		(rc = encode_wire_PreemptJobs(connect, preempt_jobs_list)) ||
+		(rc = encode_wire_ReqExtend(connect, NULL))) {
 			if (set_conn_errtxt(connect, dis_emsg[rc]) != 0) {
 				pbs_errno = PBSE_SYSTEM;
 				return NULL;
@@ -78,7 +78,7 @@ PBSD_preempt_jobs(int connect, char **preempt_jobs_list)
 			if (pbs_errno == PBSE_PROTOCOL)
 				return NULL;
 	}
-	if (dis_flush(connect)) {
+	if (transport_flush(connect)) {
 		pbs_errno = PBSE_PROTOCOL;
 		return NULL;
 	}

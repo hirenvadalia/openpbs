@@ -157,7 +157,7 @@
 #include	"pbs_nodes.h"
 #include	"log.h"
 #include	"tpp.h"
-#include	"dis.h"
+#include	"pbs_transport.h"
 #include	"resmon.h"
 #include	"mom_server.h"
 #include	"pbs_license.h"
@@ -1090,7 +1090,7 @@ send_ip_addrs_to_mom(int stream)
 		if (ret != DIS_SUCCESS)
 			return (ret);
 	}
-	return (dis_flush(stream));
+	return (transport_flush(stream));
 }
 
 /**
@@ -1279,7 +1279,7 @@ ping_a_mom(mominfo_t *pmom, int force_hello, int once)
 			goto err;
 	}
 
-	if (dis_flush(psvrmom->msr_stream) == 0) {
+	if (transport_flush(psvrmom->msr_stream) == 0) {
 		/*
 		 * If the message later fails to be delivered, with TPP, the network is deemed broken,
 		 * and the stream would automatically get closed and everything will start afresh.
@@ -1339,7 +1339,7 @@ ping_flush_mcast(int mtfd, int com)
 			goto err;
 	}
 
-	if (dis_flush(mtfd) == 0) {
+	if (transport_flush(mtfd) == 0) {
 		/*
 		 * If the message later fails to be delivered, with TPP, the network is deemed broken,
 		 * and the stream would automatically get closed and everything will start afresh.
@@ -2275,7 +2275,7 @@ decode_stat_update(int stream, struct resc_used_update *prused)
 		return rc;
 
 	CLEAR_HEAD(prused->ru_attr);
-	rc = decode_DIS_svrattrl(stream, &prused->ru_attr);
+	rc = decode_wire_svrattrl(stream, &prused->ru_attr);
 	if (rc) {
 		free_attrlist(&prused->ru_attr);
 	}
@@ -2589,7 +2589,7 @@ reject_obit(int stream, char *jobid)
 	if (stream != -1) {
 		if (is_compose(stream, IS_BADOBIT) == DIS_SUCCESS) {
 			if (diswst(stream, jobid) == DIS_SUCCESS)
-				dis_flush(stream);
+				transport_flush(stream);
 		}
 	}
 }
@@ -2615,7 +2615,7 @@ ack_obit(int stream, char *jobid)
 	if (stream != -1) {
 		if (is_compose(stream, IS_ACKOBIT) == DIS_SUCCESS) {
 			if (diswst(stream, jobid) == DIS_SUCCESS)
-				dis_flush(stream);
+				transport_flush(stream);
 		}
 	}
 }
@@ -2653,7 +2653,7 @@ send_discard_job(int stream, char *jobid, int runver, char *txt)
 		if ((rc = is_compose(stream, IS_DISCARD_JOB)) == DIS_SUCCESS) {
 			if ((rc = diswst(stream, jobid)) == DIS_SUCCESS)
 				if ((rc = diswsi(stream, runver)) == DIS_SUCCESS)
-					dis_flush(stream);
+					transport_flush(stream);
 		}
 		if (rc != DIS_SUCCESS) {
 			mominfo_t  *mp;
@@ -4437,7 +4437,7 @@ mom_running_jobs(int stream)
 			 * calls to issue_signal would reset TPP DIS routines to TCP
 			 * revert back to TPP routines before continuing
 			 */
-			DIS_tpp_funcs();
+			set_transport_to_tpp();
 		}
 
 		/* all other cases - job left as is */
@@ -5298,7 +5298,7 @@ found:
 				ret = diswul(stream, hook_seq);
 				if (ret != DIS_SUCCESS)
 					goto err;
-				ret = dis_flush(stream);
+				ret = transport_flush(stream);
 				if (ret != DIS_SUCCESS) {
 					ret = DIS_NOCOMMIT;
 					goto err;
@@ -5389,7 +5389,7 @@ found:
 			ret = diswul(stream, hook_seq);
 			if (ret != DIS_SUCCESS)
 				goto err;
-			ret = dis_flush(stream);
+			ret = transport_flush(stream);
 			if (ret != DIS_SUCCESS) {
 				ret = DIS_NOCOMMIT;
 				goto err;
@@ -8252,7 +8252,7 @@ shutdown_nodes(void)
 
 		ret = is_compose(psvrmom->msr_stream, IS_SHUTDOWN);
 		if (ret == DIS_SUCCESS) {
-			(void)dis_flush(psvrmom->msr_stream);
+			(void)transport_flush(psvrmom->msr_stream);
 		}
 	}
 }

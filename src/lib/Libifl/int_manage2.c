@@ -46,7 +46,7 @@
 #include <string.h>
 #include <stdio.h>
 #include "libpbs.h"
-#include "dis.h"
+#include "pbs_transport.h"
 #include "net_connect.h"
 #include "tpp.h"
 
@@ -68,8 +68,8 @@
  * @param[in] msgid - msg id
  *
  * @return      int
- * @retval      DIS_SUCCESS(0)  success
- * @retval      error code      error
+ * @retval      0 - success
+ * @retval      !0 - error
  *
  */
 int
@@ -77,9 +77,9 @@ PBSD_mgr_put(int c, int function, int command, int objtype, char *objname, struc
 {
 	int rc;
 
-	if ((rc = encode_DIS_ReqHdr(c, function, pbs_current_user, prot, msgid)) ||
-		(rc = encode_DIS_Manage(c, command, objtype, objname, aoplp)) ||
-		(rc = encode_DIS_ReqExtend(c, extend))) {
+	if ((rc = encode_wire_ReqHdr(c, function, pbs_current_user, prot, msgid)) ||
+		(rc = encode_wire_Manage(c, command, objtype, objname, aoplp)) ||
+		(rc = encode_wire_ReqExtend(c, extend))) {
 		if (prot == PROT_TCP) {
 			if (set_conn_errtxt(c, dis_emsg[rc]) != 0)
 				return (pbs_errno = PBSE_SYSTEM);
@@ -89,12 +89,12 @@ PBSD_mgr_put(int c, int function, int command, int objtype, char *objname, struc
 
 	if (prot == PROT_TPP) {
 		pbs_errno = PBSE_NONE;
-		if (dis_flush(c))
+		if (transport_flush(c))
 			pbs_errno = PBSE_PROTOCOL;
 		return pbs_errno;
 	}
 
-	if (dis_flush(c)) {
+	if (transport_flush(c)) {
 		return (pbs_errno = PBSE_PROTOCOL);
 	}
 	return 0;

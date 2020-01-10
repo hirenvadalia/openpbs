@@ -55,7 +55,7 @@
 #ifdef WIN32
 #include	<sddl.h>
 #endif
-#include	"dis.h"
+#include	"pbs_transport.h"
 #include	"tm.h"
 #include	"pbs_ifl.h"
 #include 	"pbs_client_thread.h"
@@ -529,7 +529,7 @@ localmom()
 		goto failed;
 	}
 
-	DIS_tcp_funcs();
+	set_transport_to_tcp();
 	return (local_conn);
 
 failed:
@@ -552,7 +552,7 @@ failed:
  * @param[in] event - event
  *
  * @return	int
- * @retval	DIS_SUCCESS(0)	success
+ * @retval	0	success
  * @retval	!0		error
  *
  */
@@ -670,7 +670,7 @@ tm_init(void *info, struct tm_roots *roots)
 
 	if (startcom(TM_INIT, nevent) != DIS_SUCCESS)
 		return TM_ESYSTEM;
-	dis_flush(local_conn);
+	transport_flush(local_conn);
 	add_event(nevent, TM_ERROR_NODE, TM_INIT, (void *)roots);
 
 	if ((err = tm_poll(TM_NULL_EVENT, &revent, 1, &nerr)) != TM_SUCCESS)
@@ -758,7 +758,7 @@ tm_attach(char *jobid, char *cookie, pid_t pid, tm_task_id *tid, char *host, int
 	if (diswsi(local_conn, pid) != DIS_SUCCESS)	/* send pid */
 		return TM_ENOTCONNECTED;
 
-	dis_flush(local_conn);
+	transport_flush(local_conn);
 	add_event(nevent, TM_ERROR_NODE, TM_ATTACH, (void *)tid);
 
 	init_done = 1;		/* fake having called tm_init */
@@ -868,7 +868,7 @@ tm_spawn(int argc, char **argv, char **envp,
 	}
 	if (diswcs(local_conn, "", 0) != DIS_SUCCESS)
 		return TM_ENOTCONNECTED;
-	dis_flush(local_conn);
+	transport_flush(local_conn);
 	add_event(*event, where, TM_SPAWN, (void *)tid);
 	return TM_SUCCESS;
 }
@@ -905,7 +905,7 @@ tm_kill(tm_task_id tid, int sig, tm_event_t *event)
 		return TM_ENOTCONNECTED;
 	if (diswsi(local_conn, sig) != DIS_SUCCESS)
 		return TM_ENOTCONNECTED;
-	dis_flush(local_conn);
+	transport_flush(local_conn);
 	add_event(*event, tp->t_node, TM_SIGNAL, NULL);
 	return TM_SUCCESS;
 }
@@ -940,7 +940,7 @@ tm_obit(tm_task_id tid, int *obitval, tm_event_t *event)
 		return TM_ESYSTEM;
 	if (diswui(local_conn, tid) != DIS_SUCCESS)
 		return TM_ESYSTEM;
-	dis_flush(local_conn);
+	transport_flush(local_conn);
 	add_event(*event, tp->t_node, TM_OBIT, (void *)obitval);
 	return TM_SUCCESS;
 }
@@ -983,7 +983,7 @@ tm_taskinfo(tm_node_id node, tm_task_id *tid_list,
 		return TM_ESYSTEM;
 	if (diswsi(local_conn, node) != DIS_SUCCESS)
 		return TM_ESYSTEM;
-	dis_flush(local_conn);
+	transport_flush(local_conn);
 
 	thold = (struct taskhold *)malloc(sizeof(struct taskhold));
 	assert(thold != NULL);
@@ -1056,7 +1056,7 @@ tm_rescinfo(tm_node_id node, char *resource, int len, tm_event_t *event)
 		return TM_ESYSTEM;
 	if (diswsi(local_conn, node) != DIS_SUCCESS)
 		return TM_ESYSTEM;
-	dis_flush(local_conn);
+	transport_flush(local_conn);
 
 	rhold = (struct reschold *)malloc(sizeof(struct reschold));
 	assert(rhold != NULL);
@@ -1098,7 +1098,7 @@ tm_publish(char *name, void *info, int len, tm_event_t *event)
 	if (diswcs(local_conn, info, len) != DIS_SUCCESS)
 		return TM_ESYSTEM;
 
-	dis_flush(local_conn);
+	transport_flush(local_conn);
 	add_event(*event, TM_ERROR_NODE, TM_POSTINFO, NULL);
 	return TM_SUCCESS;
 }
@@ -1146,7 +1146,7 @@ tm_subscribe(tm_task_id tid, char *name, void *info, int len, int *info_len, tm_
 		return TM_ESYSTEM;
 	if (diswst(local_conn, name) != DIS_SUCCESS)
 		return TM_ESYSTEM;
-	dis_flush(local_conn);
+	transport_flush(local_conn);
 
 	ihold = (struct infohold *)malloc(sizeof(struct infohold));
 	assert(ihold != NULL);
@@ -1386,7 +1386,7 @@ tm_poll(tm_event_t poll_event, tm_event_t *result_event, int wait, int *tm_errno
 	 ** the value of wait the user set.
 	 */
 	pbs_tcp_timeout = wait ? FOREVER : 0;
-	DIS_tcp_funcs();
+	set_transport_to_tcp();
 
 	prot = disrsi(local_conn, &ret);
 	if (ret == DIS_EOD) {

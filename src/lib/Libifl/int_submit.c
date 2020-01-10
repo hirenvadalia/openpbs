@@ -49,7 +49,7 @@
 #endif
 #include "portability.h"
 #include "libpbs.h"
-#include "dis.h"
+#include "pbs_transport.h"
 #include "tpp.h"
 #include "net_connect.h"
 
@@ -73,7 +73,7 @@ is_compose(int stream, int command)
 
 	if (stream < 0)
 		return DIS_EOF;
-	DIS_tpp_funcs();
+	set_transport_to_tpp();
 
 	ret = diswsi(stream, IS_PROTOCOL);
 	if (ret != DIS_SUCCESS)
@@ -189,9 +189,9 @@ PBSD_rdytocmt(int c, char *jobid, int prot, char **msgid)
 	int rc;
 	struct batch_reply *reply;
 
-	if ((rc = encode_DIS_ReqHdr(c, PBS_BATCH_RdytoCommit, pbs_current_user, prot, msgid)) ||
-		(rc = encode_DIS_JobId(c, jobid))  ||
-		(rc = encode_DIS_ReqExtend(c, NULL))) {
+	if ((rc = encode_wire_ReqHdr(c, PBS_BATCH_RdytoCommit, pbs_current_user, prot, msgid)) ||
+		(rc = encode_wire_JobId(c, jobid))  ||
+		(rc = encode_wire_ReqExtend(c, NULL))) {
 		if (prot == PROT_TCP) {
 			if (set_conn_errtxt(c, dis_emsg[rc]) != 0) {
 				return (pbs_errno = PBSE_SYSTEM);
@@ -202,12 +202,12 @@ PBSD_rdytocmt(int c, char *jobid, int prot, char **msgid)
 
 	if (prot == PROT_TPP) {
 		pbs_errno = PBSE_NONE;
-		if (dis_flush(c))
+		if (transport_flush(c))
 			pbs_errno = PBSE_PROTOCOL;
 		return pbs_errno;
 	}
 
-	if (dis_flush(c))
+	if (transport_flush(c))
 		return (pbs_errno = PBSE_PROTOCOL);
 
 	/* read reply */
@@ -240,9 +240,9 @@ PBSD_commit(int c, char *jobid, int prot, char **msgid)
 	struct batch_reply *reply;
 	int rc;
 
-	if ((rc = encode_DIS_ReqHdr(c, PBS_BATCH_Commit, pbs_current_user, prot, msgid)) ||
-		(rc = encode_DIS_JobId(c, jobid)) ||
-		(rc = encode_DIS_ReqExtend(c, NULL))) {
+	if ((rc = encode_wire_ReqHdr(c, PBS_BATCH_Commit, pbs_current_user, prot, msgid)) ||
+		(rc = encode_wire_JobId(c, jobid)) ||
+		(rc = encode_wire_ReqExtend(c, NULL))) {
 		if (prot == PROT_TCP) {
 			if (set_conn_errtxt(c, dis_emsg[rc]) != 0) {
 				return (pbs_errno = PBSE_SYSTEM);
@@ -253,12 +253,12 @@ PBSD_commit(int c, char *jobid, int prot, char **msgid)
 
 	if (prot == PROT_TPP) {
 		pbs_errno = PBSE_NONE;
-		if (dis_flush(c))
+		if (transport_flush(c))
 			pbs_errno = PBSE_PROTOCOL;
 		return pbs_errno;
 	}
 
-	if (dis_flush(c)) {
+	if (transport_flush(c)) {
 		return (pbs_errno = PBSE_PROTOCOL);
 	}
 
@@ -299,9 +299,9 @@ PBSD_scbuf(int c, int reqtype, int seq, char *buf, int len, char *jobid, enum jo
 	if (jobid == NULL)
 		jobid = "";	/* use null string for null pointer */
 
-	if ((rc = encode_DIS_ReqHdr(c, reqtype, pbs_current_user, prot, msgid)) ||
-		(rc = encode_DIS_JobFile(c, seq, buf, len, jobid, which)) ||
-		(rc = encode_DIS_ReqExtend(c, NULL))) {
+	if ((rc = encode_wire_ReqHdr(c, reqtype, pbs_current_user, prot, msgid)) ||
+		(rc = encode_wire_JobFile(c, seq, buf, len, jobid, which)) ||
+		(rc = encode_wire_ReqExtend(c, NULL))) {
 		if (prot == PROT_TCP) {
 			if (set_conn_errtxt(c, dis_emsg[rc]) != 0) {
 				return (pbs_errno = PBSE_SYSTEM);
@@ -312,12 +312,12 @@ PBSD_scbuf(int c, int reqtype, int seq, char *buf, int len, char *jobid, enum jo
 
 	if (prot == PROT_TPP) {
 		pbs_errno = PBSE_NONE;
-		if (dis_flush(c))
+		if (transport_flush(c))
 			pbs_errno = PBSE_PROTOCOL;
 		return pbs_errno;
 	}
 
-	if (dis_flush(c)) {
+	if (transport_flush(c)) {
 		return (pbs_errno = PBSE_PROTOCOL);
 	}
 
@@ -497,9 +497,9 @@ PBSD_queuejob(int c, char *jobid, char *destin, struct attropl *attrib, char *ex
 	char *return_jobid = NULL;
 
 	/* first, set up the body of the Queue Job request */
-	if ((rc = encode_DIS_ReqHdr(c, PBS_BATCH_QueueJob, pbs_current_user, prot, msgid)) ||
-		(rc = encode_DIS_QueueJob(c, jobid, destin, attrib)) ||
-		(rc = encode_DIS_ReqExtend(c, extend))) {
+	if ((rc = encode_wire_ReqHdr(c, PBS_BATCH_QueueJob, pbs_current_user, prot, msgid)) ||
+		(rc = encode_wire_QueueJob(c, jobid, destin, attrib)) ||
+		(rc = encode_wire_ReqExtend(c, extend))) {
 		if (prot == PROT_TCP) {
 			if (set_conn_errtxt(c, dis_emsg[rc]) != 0) {
 				pbs_errno = PBSE_SYSTEM;
@@ -512,13 +512,13 @@ PBSD_queuejob(int c, char *jobid, char *destin, struct attropl *attrib, char *ex
 
 	if (prot == PROT_TPP) {
 		pbs_errno = PBSE_NONE;
-		if (dis_flush(c))
+		if (transport_flush(c))
 			pbs_errno = PBSE_PROTOCOL;
 
 		return (""); /* return something NON-NULL for tpp */
 	}
 
-	if (dis_flush(c)) {
+	if (transport_flush(c)) {
 		pbs_errno = PBSE_PROTOCOL;
 		return return_jobid;
 	}

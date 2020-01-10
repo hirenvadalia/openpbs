@@ -43,7 +43,7 @@
 #include <fcntl.h>
 #include "portability.h"
 #include "libpbs.h"
-#include "dis.h"
+#include "pbs_transport.h"
 #include "net_connect.h"
 #include "tpp.h"
 
@@ -78,9 +78,9 @@ PBSD_hookbuf(int c, int reqtype, int seq, char *buf, int len, char *hook_filenam
 	if ((hook_filename == NULL) || (hook_filename[0] == '\0'))
 		return (pbs_errno = PBSE_PROTOCOL);
 
-	if ((rc = encode_DIS_ReqHdr(c, reqtype, pbs_current_user, prot, msgid)) ||
-		(rc = encode_DIS_CopyHookFile(c, seq, buf, len, hook_filename)) ||
-		(rc = encode_DIS_ReqExtend(c, NULL))) {
+	if ((rc = encode_wire_ReqHdr(c, reqtype, pbs_current_user, prot, msgid)) ||
+		(rc = encode_wire_CopyHookFile(c, seq, buf, len, hook_filename)) ||
+		(rc = encode_wire_ReqExtend(c, NULL))) {
 
 		if (prot == PROT_TCP) {
 			if (set_conn_errtxt(c, dis_emsg[rc]) != 0)
@@ -91,12 +91,12 @@ PBSD_hookbuf(int c, int reqtype, int seq, char *buf, int len, char *hook_filenam
 
 	if (prot == PROT_TPP) {
 		pbs_errno = PBSE_NONE;
-		if (dis_flush(c))
+		if (transport_flush(c))
 			pbs_errno = PBSE_PROTOCOL;
 		return pbs_errno;
 	}
 
-	if (dis_flush(c)) {
+	if (transport_flush(c)) {
 		return (pbs_errno = PBSE_PROTOCOL);
 	}
 
@@ -190,9 +190,9 @@ PBSD_delhookfile(int c, char *hook_filename, int prot, char **msgid)
 	if ((hook_filename == NULL) || (hook_filename[0] == '\0'))
 		return (pbs_errno = PBSE_PROTOCOL);
 
-	if ((rc = encode_DIS_ReqHdr(c, PBS_BATCH_DelHookFile, pbs_current_user, prot, msgid)) ||
-		(rc = encode_DIS_DelHookFile(c, hook_filename)) ||
-		(rc = encode_DIS_ReqExtend(c, NULL))) {
+	if ((rc = encode_wire_ReqHdr(c, PBS_BATCH_DelHookFile, pbs_current_user, prot, msgid)) ||
+		(rc = encode_wire_DelHookFile(c, hook_filename)) ||
+		(rc = encode_wire_ReqExtend(c, NULL))) {
 		if (prot == PROT_TCP) {
 			if (set_conn_errtxt(c, dis_emsg[rc]) != 0)
 				return (pbs_errno = PBSE_SYSTEM);
@@ -202,12 +202,12 @@ PBSD_delhookfile(int c, char *hook_filename, int prot, char **msgid)
 
 	if (prot == PROT_TPP) {
 		pbs_errno = PBSE_NONE;
-		if (dis_flush(c))
+		if (transport_flush(c))
 			pbs_errno = PBSE_PROTOCOL;
 		return pbs_errno;
 	}
 
-	if (dis_flush(c)) {
+	if (transport_flush(c)) {
 		return (pbs_errno = PBSE_PROTOCOL);
 	}
 

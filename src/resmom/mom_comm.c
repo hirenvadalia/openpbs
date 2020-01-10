@@ -81,7 +81,7 @@
 #include	"log.h"
 #include	"net_connect.h"
 #include	"tpp.h"
-#include	"dis.h"
+#include	"pbs_transport.h"
 #include	"mom_func.h"
 #include	"credential.h"
 #include	"ticket.h"
@@ -719,7 +719,7 @@ tm_reply(int stream, int version, int com, tm_event_t event)
 
 	DBPRT(("tm_reply: stream %d version %d com %d event %d\n",
 		stream, version, com, event))
-	DIS_tcp_funcs();
+	set_transport_to_tcp();
 
 	ret = diswsi(stream, TM_PROTOCOL);
 	if (ret != DIS_SUCCESS)
@@ -764,7 +764,7 @@ im_compose(int stream, char *jobid, char *cookie, int command,
 
 	if (stream < 0)
 		return DIS_EOF;
-	DIS_tpp_funcs();
+	set_transport_to_tpp();
 
 	ret = diswsi(stream, IM_PROTOCOL);
 	if (ret != DIS_SUCCESS)
@@ -1178,9 +1178,9 @@ send_sisters_job_update(job *pjob)
 				free_attrlist(&phead);
 				continue;
 			}
-			(void)encode_DIS_svrattrl(np->hn_stream,
+			(void)encode_wire_svrattrl(np->hn_stream,
 							psatl);
-			(void)dis_flush(np->hn_stream);
+			(void)transport_flush(np->hn_stream);
 		}
 		num++;
 
@@ -1198,9 +1198,9 @@ send_sisters_job_update(job *pjob)
 				free_attrlist(&phead);
 				return (-1);
 			}
-			(void)encode_DIS_svrattrl(mtfd, psatl);
+			(void)encode_wire_svrattrl(mtfd, psatl);
 
-			ret = dis_flush(mtfd);
+			ret = transport_flush(mtfd);
 			if (ret != DIS_SUCCESS) {
 				log_err(errno, __func__, "flush mcast stream failed");
 				tpp_mcast_close(mtfd);
@@ -1241,8 +1241,8 @@ receive_job_update(int stream, job *pjob)
 	attribute_def		*pdef;
 
 	CLEAR_HEAD(lhead);
-	if (decode_DIS_svrattrl(stream, &lhead) != DIS_SUCCESS) {
-		log_err(-1, __func__, "decode_DIS_svrattrl failed");
+	if (decode_wire_svrattrl(stream, &lhead) != DIS_SUCCESS) {
+		log_err(-1, __func__, "decode_wire_svrattrl failed");
 		return (-1);
 	}
 	for (psatl = (svrattrl *)GET_NEXT(lhead);
@@ -1613,7 +1613,7 @@ send_sisters_mcast_inner(job *pjob, int com, pbs_jobndstm_t command_func,
 				return 0;
 			}
 		}
-		ret = dis_flush(mtfd);
+		ret = transport_flush(mtfd);
 		if (ret != DIS_SUCCESS) {
 			close_sisters_mcast(pjob);
 			tpp_mcast_close(mtfd);
@@ -1747,7 +1747,7 @@ send_sisters_inner(job *pjob, int com, pbs_jobndstm_t command_func,
 			if (ret != DIS_SUCCESS)
 				continue;
 		}
-		ret = dis_flush(np->hn_stream);
+		ret = transport_flush(np->hn_stream);
 		if (ret == -1)
 			continue;
 
@@ -2249,7 +2249,7 @@ node_bailout(job *pjob, hnodent *np)
 				(void)tm_reply(ep->ee_fd, ptask->ti_protover,
 					TM_ERROR, ep->ee_client);
 				(void)diswsi(ep->ee_fd, TM_ESYSTEM);
-				(void)dis_flush(ep->ee_fd);
+				(void)transport_flush(ep->ee_fd);
 				break;
 
 			case	IM_POLL_JOB:
@@ -2821,7 +2821,7 @@ send_resc_used_to_ms(int stream, char *jobid)
 		return (-1);
 	}
 
-	ret = encode_DIS_svrattrl(stream, psatl);
+	ret = encode_wire_svrattrl(stream, psatl);
 	free_attrlist(&send_head);
 	if (ret != DIS_SUCCESS)
 		return (-1);
@@ -2872,8 +2872,8 @@ recv_resc_used_from_sister(int stream, char *jobid, int nodeidx)
 	pdef = &job_attr_def[(int)JOB_ATR_resc_used];
 
 	CLEAR_HEAD(lhead);
-	if (decode_DIS_svrattrl(stream, &lhead) != DIS_SUCCESS) {
-		sprintf(log_buffer, "decode_DIS_svrattrl failed");
+	if (decode_wire_svrattrl(stream, &lhead) != DIS_SUCCESS) {
+		sprintf(log_buffer, "decode_wire_svrattrl failed");
 		return (-1);
 	}
 	if  ((pjob->ji_resources[nodeidx].nr_used.at_flags & ATR_VFLAG_SET) != 0) {
@@ -3139,8 +3139,8 @@ im_request(int stream, int version)
 
 			pjob->ji_numnodes = hnodenum;
 			CLEAR_HEAD(lhead);
-			if (decode_DIS_svrattrl(stream, &lhead) != DIS_SUCCESS) {
-				sprintf(log_buffer, "decode_DIS_svrattrl failed");
+			if (decode_wire_svrattrl(stream, &lhead) != DIS_SUCCESS) {
+				sprintf(log_buffer, "decode_wire_svrattrl failed");
 				goto err;
 			}
 			/*
@@ -3493,13 +3493,13 @@ im_request(int stream, int version)
 			if (tpp_eom(stream) == -1)
 				goto join_err;
 
-			if (dis_flush(stream) == -1)
+			if (transport_flush(stream) == -1)
 				goto join_err;
 
 			goto fini;
 
 join_err:
-			log_err(errno, __func__, "dis_flush");
+			log_err(errno, __func__, "transport_flush");
 			(void)mom_process_hooks(HOOK_EVENT_EXECJOB_ABORT, PBS_MOM_SERVICE_NAME, mom_host, &hook_input, &hook_output, hook_msg, sizeof(hook_msg), 1);
 			tpp_close(stream);
 			mom_deljob(pjob);
@@ -4747,7 +4747,7 @@ join_err:
 					(void)tm_reply(efd, ptask->ti_protover,
 						TM_OKAY, event_client);
 					(void)diswui(efd, taskid);
-					(void)dis_flush(efd);
+					(void)transport_flush(efd);
 					break;
 
 				case	IM_GET_TASKS:
@@ -4768,7 +4768,7 @@ join_err:
 					(void)tm_reply(efd, ptask->ti_protover,
 						TM_OKAY, event_client);
 					for (;;) {
-						DIS_tpp_funcs();
+						set_transport_to_tpp();
 						taskid = disrui(stream, &ret);
 						if (ret != DIS_SUCCESS) {
 							if (ret == DIS_EOD)
@@ -4780,12 +4780,12 @@ join_err:
 								goto err;
 							}
 						}
-						DIS_tcp_funcs();
+						set_transport_to_tcp();
 						(void)diswui(efd, taskid);
 					}
-					DIS_tcp_funcs();
+					set_transport_to_tcp();
 					(void)diswui(efd, TM_NULL_TASK);
-					(void)dis_flush(efd);
+					(void)transport_flush(efd);
 					break;
 
 				case	IM_SIGNAL_TASK:
@@ -4803,7 +4803,7 @@ join_err:
 						break;
 					(void)tm_reply(efd, ptask->ti_protover,
 						TM_OKAY, event_client);
-					(void)dis_flush(efd);
+					(void)transport_flush(efd);
 					break;
 
 				case	IM_OBIT_TASK:
@@ -4824,7 +4824,7 @@ join_err:
 					(void)tm_reply(efd, ptask->ti_protover,
 						TM_OKAY, event_client);
 					(void)diswsi(efd, exitval);
-					(void)dis_flush(efd);
+					(void)transport_flush(efd);
 					break;
 
 				case	IM_GET_INFO:
@@ -4846,7 +4846,7 @@ join_err:
 					(void)tm_reply(efd, ptask->ti_protover,
 						TM_OKAY, event_client);
 					(void)diswcs(efd, info, len);
-					(void)dis_flush(efd);
+					(void)transport_flush(efd);
 					break;
 
 				case	IM_GET_RESC:
@@ -4868,7 +4868,7 @@ join_err:
 					(void)tm_reply(efd, ptask->ti_protover,
 						TM_OKAY, event_client);
 					(void)diswst(efd, info);
-					(void)dis_flush(efd);
+					(void)transport_flush(efd);
 					break;
 
 				case	IM_POLL_JOB:
@@ -5308,7 +5308,7 @@ join_err:
 					(void)tm_reply(efd, ptask->ti_protover,
 						TM_ERROR, event_client);
 					(void)diswsi(efd, errcode);
-					(void)dis_flush(efd);
+					(void)transport_flush(efd);
 					break;
 
 				case	IM_POLL_JOB:
@@ -5486,9 +5486,9 @@ done:
 	tpp_eom(stream);
 	if (reply) {	/* check if write worked */
 		if (ret != DIS_SUCCESS ||
-			dis_flush(stream) == -1) {
+			transport_flush(stream) == -1) {
 			if (errno != 0)
-				log_err(errno, __func__, "dis_flush");
+				log_err(errno, __func__, "transport_flush");
 			tpp_close(stream);
 			if (np != NULL && np->hn_stream == stream)
 				np->hn_stream = -1;
@@ -6190,7 +6190,7 @@ aterr:
 			sprintf(log_buffer, "REGISTER received - NOT IMPLEMENTED");
 			(void)tm_reply(fd, version, TM_ERROR, event);
 			(void)diswsi(fd, TM_ENOTIMPLEMENTED);
-			(void)dis_flush(fd);
+			(void)transport_flush(fd);
 			goto err;
 
 		default:
@@ -6253,7 +6253,7 @@ aterr:
 				ret = diswui(phost->hn_stream, tvnodeid);
 				if (ret != DIS_SUCCESS)
 					goto done;
-				ret = (dis_flush(phost->hn_stream) == -1) ?
+				ret = (transport_flush(phost->hn_stream) == -1) ?
 					DIS_NOCOMMIT : DIS_SUCCESS;
 				if (ret != DIS_SUCCESS)
 					goto done;
@@ -6451,7 +6451,7 @@ aterr:
 					goto done;
 				}
 			}
-			ret = (dis_flush(phost->hn_stream) == -1) ?
+			ret = (transport_flush(phost->hn_stream) == -1) ?
 				DIS_NOCOMMIT : DIS_SUCCESS;
 			if (ret != DIS_SUCCESS) {
 				arrayfree(argv);
@@ -6498,7 +6498,7 @@ aterr:
 				ret = diswsi(phost->hn_stream, signum);
 				if (ret != DIS_SUCCESS)
 					goto done;
-				ret = (dis_flush(phost->hn_stream) == -1) ?
+				ret = (transport_flush(phost->hn_stream) == -1) ?
 					DIS_NOCOMMIT : DIS_SUCCESS;
 				if (ret != DIS_SUCCESS)
 					goto done;
@@ -6548,7 +6548,7 @@ aterr:
 				ret = diswui(phost->hn_stream, taskid);
 				if (ret != DIS_SUCCESS)
 					goto done;
-				ret = (dis_flush(phost->hn_stream) == -1) ?
+				ret = (transport_flush(phost->hn_stream) == -1) ?
 					DIS_NOCOMMIT : DIS_SUCCESS;
 				if (ret != DIS_SUCCESS)
 					goto done;
@@ -6621,7 +6621,7 @@ aterr:
 				free(name);
 				if (ret != DIS_SUCCESS)
 					goto done;
-				ret = (dis_flush(phost->hn_stream) == -1) ?
+				ret = (transport_flush(phost->hn_stream) == -1) ?
 					DIS_NOCOMMIT : DIS_SUCCESS;
 				if (ret != DIS_SUCCESS)
 					goto done;
@@ -6665,7 +6665,7 @@ aterr:
 				ret = diswui(phost->hn_stream, myvnodeid);
 				if (ret != DIS_SUCCESS)
 					goto done;
-				ret = (dis_flush(phost->hn_stream) == -1) ?
+				ret = (transport_flush(phost->hn_stream) == -1) ?
 					DIS_NOCOMMIT : DIS_SUCCESS;
 				if (ret != DIS_SUCCESS)
 					goto done;
@@ -6685,14 +6685,14 @@ aterr:
 			sprintf(log_buffer, "%s: unknown command %d", jobid, command);
 			(void)tm_reply(fd, version, TM_ERROR, event);
 			(void)diswsi(fd, TM_EUNKNOWNCMD);
-			(void)dis_flush(fd);
+			(void)transport_flush(fd);
 			goto err;
 	}
 
 done:
 	if (reply) {
 		DBPRT(("%s: REPLY %s\n", __func__, dis_emsg[ret]))
-		if (ret != DIS_SUCCESS || dis_flush(fd) == -1) {
+		if (ret != DIS_SUCCESS || transport_flush(fd) == -1) {
 			sprintf(log_buffer, "comm failed %s", dis_emsg[ret]);
 			log_err(errno, __func__, log_buffer);
 			close_conn(fd);
@@ -6786,9 +6786,9 @@ send_join_job_restart(int com, eventent *ep, int nth, job *pjob, pbs_list_head *
 		}
 
 		psatl = (svrattrl *)GET_NEXT(*phead);
-		(void)encode_DIS_svrattrl(stream, psatl);
+		(void)encode_wire_svrattrl(stream, psatl);
 	}
-	dis_flush(stream);
+	transport_flush(stream);
 }
 
 /**
@@ -6853,7 +6853,7 @@ send_join_job_restart_mcast(int mtfd, int com, eventent *ep, int nth, job *pjob,
 		}
 
 		psatl = (svrattrl *)GET_NEXT(*phead);
-		(void)encode_DIS_svrattrl(stream, psatl);
+		(void)encode_wire_svrattrl(stream, psatl);
 	}
-	dis_flush(stream);
+	transport_flush(stream);
 }

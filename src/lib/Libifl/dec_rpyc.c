@@ -40,7 +40,7 @@
 /**
  * @file	dec_rcpy.c
  * @brief
- * 	decode_DIS_replyCmd() - decode a Batch Protocol Reply Structure for a Command
+ * 	decode_wire_replyCmd() - decode a Batch Protocol Reply Structure for a Command
  *
  *	This routine decodes a batch reply into the form used by commands.
  *	The only difference between this and the server version is on status
@@ -56,7 +56,7 @@
 #include <sys/types.h>
 #include <stdlib.h>
 #include "libpbs.h"
-#include "dis.h"
+#include "pbs_transport.h"
 
 /**
  * @brief-
@@ -81,7 +81,7 @@
  */
 
 int
-decode_DIS_replyCmd(int sock, struct batch_reply *reply)
+decode_wire_replyCmd(int sock, struct batch_reply *reply)
 {
 	int		      ct;
 	int		      i;
@@ -175,7 +175,7 @@ decode_DIS_replyCmd(int sock, struct batch_reply *reply)
 					(void)free(pstcmd);
 					return rc;
 				}
-				rc = decode_DIS_attrl(sock, &pstcmd->brp_attrl);
+				rc = decode_wire_attrl(sock, &pstcmd->brp_attrl);
 				if (rc) {
 					(void)free(pstcmd);
 					return rc;

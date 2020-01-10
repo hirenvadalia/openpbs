@@ -78,7 +78,7 @@
 #include "attribute.h"
 #include "pbs_nodes.h"
 #include "svrfunc.h"
-#include "dis.h"
+#include "pbs_transport.h"
 #include "list_link.h"
 #include "attribute.h"
 #include "work_task.h"
@@ -262,8 +262,8 @@ svr_disconnect_with_wait_option(int sock, int wait)
 	if (pbs_client_thread_lock_connection(sock) != 0)
 		return;
 
-	if ((encode_DIS_ReqHdr(sock, PBS_BATCH_Disconnect, pbs_current_user, PROT_TCP, NULL) == 0) &&
-		(dis_flush(sock) == 0)) {
+	if ((encode_wire_ReqHdr(sock, PBS_BATCH_Disconnect, pbs_current_user, PROT_TCP, NULL) == 0) &&
+		(transport_flush(sock) == 0)) {
 		conn_t *conn = get_conn(sock);
 
 		/* if no error, will be closed when process_request */

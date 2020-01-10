@@ -62,8 +62,6 @@
  *	close_quejob()
  *	free_rescrq()
  *	arrayfree()
- *	read_carray()
- *	decode_DIS_PySpawn()
  *	free_br()
  *	freebr_manage()
  *	freebr_cpyfile()
@@ -104,7 +102,7 @@
 #include "batch_request.h"
 #include "log.h"
 #include "tpp.h"
-#include "dis.h"
+#include "pbs_transport.h"
 #include "pbs_nodes.h"
 #include "svrfunc.h"
 #include "pbs_sched.h"
@@ -216,7 +214,7 @@ authenticate_external(conn_t *conn, struct batch_request *request)
 	int fromsvr = 0;
 	int rc = 0;
 
-	switch(request->rq_ind.rq_authen_external.rq_auth_type) {
+	switch(request->rq_ind.rq_auth_ext.rq_auth_type) {
 #ifndef WIN32
 		case AUTH_MUNGE:
 			if (pbs_conf.auth_method != AUTH_MUNGE) {
@@ -225,7 +223,7 @@ authenticate_external(conn_t *conn, struct batch_request *request)
 				goto err;
 			}
 
-			rc = pbs_munge_validate(request->rq_ind.rq_authen_external.rq_authen_un.rq_munge.rq_authkey, &fromsvr, log_buffer, sizeof(log_buffer));
+			rc = pbs_munge_validate(request->rq_ind.rq_auth_ext.rq_authen_un.rq_munge.rq_authkey, &fromsvr, log_buffer, sizeof(log_buffer));
 			if (rc != 0)
 				goto err;
 
@@ -320,7 +318,7 @@ process_request(int sfds)
 #ifndef PBS_MOM
 
 	if (conn->cn_active == FromClientDIS) {
-		rc = dis_request_read(sfds, request);
+		rc = wire_request_read(sfds, request);
 	} else {
 		log_event(PBSEVENT_SYSTEM, PBS_EVENTCLASS_REQUEST, LOG_ERR,
 			"process_req", "request on invalid type of connection");
@@ -329,7 +327,7 @@ process_request(int sfds)
 		return;
 	}
 #else	/* PBS_MOM */
-	rc = dis_request_read(sfds, request);
+	rc = wire_request_read(sfds, request);
 #endif	/* PBS_MOM */
 
 	if (rc == -1) {		/* End of file */
@@ -1181,127 +1179,6 @@ arrayfree(char **array)
 	free(array);
 }
 
-/**
- * @brief
- *		Read a bunch of strings into a NULL terminated array.
- *		The strings are regular null terminated char arrays
- *		and the string array is NULL terminated.
- *
- *		Pass in array location to hold the allocated array
- *		and return an error value if there is a problem.  If
- *		an error does occur, arrloc is not changed.
- *
- * @param[in]	stream	- socket where you reads the request.
- * @param[out]	arrloc	- NULL terminated array where strings are stored.
- *
- * @return	error code
- */
-static int
-read_carray(int stream, char ***arrloc)
-{
-	int	i, num, ret;
-	char	*cp, **carr;
-
-	if (arrloc == NULL)
-		return PBSE_INTERNAL;
-
-	num = 4;	/* keep track of the number of array slots */
-	carr = (char **)calloc(sizeof(char **), num);
-	if (carr == NULL)
-		return PBSE_SYSTEM;
-
-	for (i=0;; i++) {
-		cp = disrst(stream, &ret);
-		if ((cp == NULL) || (ret != DIS_SUCCESS)) {
-			arrayfree(carr);
-			if (cp != NULL)
-				free(cp);
-			return PBSE_SYSTEM;
-		}
-		if (*cp == '\0') {
-			free(cp);
-			break;
-		}
-		if (i == num-1) {
-			char	**hold;
-
-			hold = (char **)realloc(carr,
-				num * 2 * sizeof(char **));
-			if (hold == NULL) {
-				arrayfree(carr);
-				free(cp);
-				return PBSE_SYSTEM;
-			}
-			carr = hold;
-
-			/* zero the last half of the now doubled carr */
-			memset(&carr[num], 0, num * sizeof(char **));
-			num *= 2;
-		}
-		carr[i] = cp;
-	}
-	carr[i] = NULL;
-	*arrloc = carr;
-	return ret;
-}
-
-/**
- * @brief
- *		Read a python spawn request off the wire.
- *		Each of the argv and envp arrays is sent by writing a counted
- *		string followed by a zero length string ("").
- *
- * @param[in]	sock	- socket where you reads the request.
- * @param[in]	preq	- the batch_request structure to free up.
- */
-int
-decode_DIS_PySpawn(int sock, struct batch_request *preq)
-{
-	int	rc;
-
-	rc = disrfst(sock, sizeof(preq->rq_ind.rq_py_spawn.rq_jid),
-		preq->rq_ind.rq_py_spawn.rq_jid);
-	if (rc)
-		return rc;
-
-	rc = read_carray(sock, &preq->rq_ind.rq_py_spawn.rq_argv);
-	if (rc)
-		return rc;
-
-	rc = read_carray(sock, &preq->rq_ind.rq_py_spawn.rq_envp);
-	if (rc)
-		return rc;
-
-	return rc;
-}
-
-/**
- * @brief
- *		Read a release nodes from job request off the wire.
- *
- * @param[in]	sock	- socket where you reads the request.
- * @param[in]	preq	- the batch_request structure containing the request details.
- *
- * @return int
- *
- * @retval	0	- if successful
- * @retval	!= 0	- if not successful (an error encountered along the way)
- */
-int
-decode_DIS_RelnodesJob(int sock, struct batch_request *preq)
-{
-	int rc;
-
-	preq->rq_ind.rq_relnodes.rq_node_list = NULL;
-
-	rc = disrfst(sock, PBS_MAXSVRJOBID+1, preq->rq_ind.rq_relnodes.rq_jid);
-	if (rc)
-		return rc;
-
-	preq->rq_ind.rq_relnodes.rq_node_list = disrst(sock, &rc);
-	return rc;
-}
-
 
 /**
  * @brief
@@ -1416,8 +1293,8 @@ free_br(struct batch_request *preq)
 				free(preq->rq_ind.rq_jobfile.rq_data);
 			break;
 		case PBS_BATCH_Cred:
-			if (preq->rq_ind.rq_cred.rq_cred_data)
-				free(preq->rq_ind.rq_cred.rq_cred_data);
+			if (preq->rq_ind.rq_cred.rq_data)
+				free(preq->rq_ind.rq_cred.rq_data);
 			break;
 
 #ifndef PBS_MOM		/* Server Only */

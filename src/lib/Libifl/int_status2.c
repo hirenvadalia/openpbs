@@ -46,7 +46,7 @@
 #include <string.h>
 #include <stdio.h>
 #include "libpbs.h"
-#include "dis.h"
+#include "pbs_transport.h"
 #include "net_connect.h"
 #include "tpp.h"
 
@@ -72,9 +72,9 @@ PBSD_status_put(int c, int function, char *id, struct attrl *attrib, char *exten
 {
 	int rc;
 
-	if ((rc = encode_DIS_ReqHdr(c, function, pbs_current_user, prot, msgid))   ||
-		(rc = encode_DIS_Status(c, id, attrib)) ||
-		(rc = encode_DIS_ReqExtend(c, extend))) {
+	if ((rc = encode_wire_ReqHdr(c, function, pbs_current_user, prot, msgid))   ||
+		(rc = encode_wire_Status(c, id, attrib)) ||
+		(rc = encode_wire_ReqExtend(c, extend))) {
 		if (prot == PROT_TCP) {
 			if (set_conn_errtxt(c, dis_emsg[rc]) != 0) {
 				return (pbs_errno = PBSE_SYSTEM);
@@ -82,7 +82,7 @@ PBSD_status_put(int c, int function, char *id, struct attrl *attrib, char *exten
 		}
 		return (pbs_errno = PBSE_PROTOCOL);
 	}
-	if (dis_flush(c)) {
+	if (transport_flush(c)) {
 		return (pbs_errno = PBSE_PROTOCOL);
 	}
 

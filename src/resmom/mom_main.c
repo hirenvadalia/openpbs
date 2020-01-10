@@ -99,7 +99,7 @@
 #include	"log.h"
 #include	"net_connect.h"
 #include	"tpp.h"
-#include	"dis.h"
+#include	"pbs_transport.h"
 #include	"resmon.h"
 #include	"batch_request.h"
 #include	"pbs_license.h"
@@ -5987,7 +5987,7 @@ rm_request(int iochan, int version, int prot)
 		ipadd = conn->cn_addr;
 		port = conn->cn_port;
 		close_io = close_conn;
-		flush_io = dis_flush;
+		flush_io = transport_flush;
 	} else {
 		addr = tpp_getaddr(iochan);
 		if (addr == NULL) {
@@ -5998,7 +5998,7 @@ rm_request(int iochan, int version, int prot)
 		ipadd = ntohl(addr->sin_addr.s_addr);
 		port = ntohs((unsigned short)addr->sin_port);
 		close_io = (void(*)(int))tpp_close;
-		flush_io = dis_flush;
+		flush_io = transport_flush;
 	}
 	if (version != RM_PROTOCOL_VER) {
 		sprintf(log_buffer, "protocol version %d unknown", version);
@@ -6242,7 +6242,7 @@ do_tpp(int stream)
 	void	is_request	(int stream, int version);
 	void	im_eof		(int stream, int ret);
 
-	DIS_tpp_funcs();
+	set_transport_to_tpp();
 	proto = disrsi(stream, &ret);
 	if (ret != DIS_SUCCESS) {
 		im_eof(stream, ret);
@@ -6416,7 +6416,7 @@ tcp_request(int fd)
 		(ipadd & 0x000000ff),
 		ntohs(conn->cn_port));
 	DBPRT(("%s: fd %d addr %s\n", __func__, fd, address))
-	DIS_tcp_funcs();
+	set_transport_to_tcp();
 	if (!addrfind(ipadd)) {
 		sprintf(log_buffer, "bad connect from %s", address);
 		log_err(errno, __func__, log_buffer);
@@ -6425,7 +6425,7 @@ tcp_request(int fd)
 	}
 	log_buffer[0] = '\0';
 	for (c=0;; c++) {
-		DIS_tcp_funcs();
+		set_transport_to_tcp();
 
 		if (do_tcp(fd))
 			break;
@@ -8099,7 +8099,7 @@ net_down_handler(void *data)
 			server_stream);
 		log_event(PBSEVENT_SYSTEM, PBS_EVENTCLASS_SERVER, LOG_NOTICE,
 			msg_daemonname, log_buffer);
-		dis_flush(server_stream);
+		transport_flush(server_stream);
 		tpp_close(server_stream);
 		server_stream = -1;
 	}
@@ -8113,7 +8113,7 @@ net_down_handler(void *data)
 			num < pjob->ji_numnodes;
 			num++, np++) {
 			if (np->hn_stream >= 0) {
-				dis_flush(np->hn_stream);
+				transport_flush(np->hn_stream);
 				tpp_close(np->hn_stream);
 				np->hn_stream = -1;
 			}
@@ -10777,7 +10777,7 @@ do_multinodebusy(job *pjob, int which)
 			im_compose(stream, pjob->ji_qs.ji_jobid,
 				pjob->ji_wattr[(int)JOB_ATR_Cookie].at_val.at_str,
 				IM_REQUEUE, TM_NULL_EVENT, TM_NULL_TASK, IM_OLD_PROTOCOL_VER);
-			dis_flush(stream);
+			transport_flush(stream);
 		}
 	}
 }

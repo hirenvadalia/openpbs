@@ -40,7 +40,7 @@
 /**
  * @file	enc_MsgJob.c
  * @brief
- * encode_DIS_MessageJob() - encode a Message Job Batch Request
+ * encode_wire_MessageJob() - encode a Message Job Batch Request
  *
  * @par	Data items are:
  * 			string		job id
@@ -52,25 +52,25 @@
 
 #include "libpbs.h"
 #include "pbs_error.h"
-#include "dis.h"
+#include "pbs_transport.h"
 
 /**
  * @brief
  *	- encode a Message Job Batch Request
  *
  * @param[in] sock - socket descriptor
- * @param[in] jobid - job id 
+ * @param[in] jobid - job id
  * @param[in] fileopt - which file
  * @param[in] msg - msg to be encoded
  *
  * @return      int
- * @retval      DIS_SUCCESS(0)  success
- * @retval      error code      error
+ * @retval      0 - success
+ * @retval      !0 - error
  *
  */
 
 int
-encode_DIS_MessageJob(int sock, char *jobid, int fileopt, char *msg)
+encode_wire_MessageJob(int sock, char *jobid, int fileopt, char *msg)
 {
 	int   rc;
 
@@ -95,12 +95,12 @@ encode_DIS_MessageJob(int sock, char *jobid, int fileopt, char *msg)
  * @param[in] envp - pointer to environment variable
  *
  * @return      int
- * @retval      DIS_SUCCESS(0)  success
- * @retval      error code      error
+ * @retval      0 - success
+ * @retval      !0 - error
  *
  */
 int
-encode_DIS_PySpawn(int sock, char *jobid, char **argv, char **envp)
+encode_wire_PySpawn(int sock, char *jobid, char **argv, char **envp)
 {
 	int	rc, i;
 	char	*cp;
@@ -129,7 +129,7 @@ encode_DIS_PySpawn(int sock, char *jobid, char **argv, char **envp)
 }
 
 int
-encode_DIS_RelnodesJob(int sock, char *jobid, char *node_list)
+encode_wire_RelnodesJob(int sock, char *jobid, char *node_list)
 {
 	int   rc;
 

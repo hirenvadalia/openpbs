@@ -78,7 +78,7 @@
 #include "job.h"
 #include "log.h"
 #include "tpp.h"
-#include "dis.h"
+#include "pbs_transport.h"
 #include "pbs_nodes.h"
 #include "mom_mach.h"
 #include "pbs_error.h"
@@ -3269,7 +3269,7 @@ finish_exec(job *pjob)
 		(void)close(parent2child_moms_status_pipe_r);
 
 #if defined(PBS_SECURITY) && (PBS_SECURITY == KRB5)
-		DIS_tcp_funcs();
+		set_transport_to_tcp();
 #endif
 
 		/* add the pipe to the connection table so we can poll it */

@@ -61,7 +61,7 @@
 #include <errno.h>
 #include <string.h>
 #include <sys/types.h>
-#include "dis.h"
+#include "pbs_transport.h"
 #include "libpbs.h"
 #include "server_limits.h"
 #include "list_link.h"
@@ -416,7 +416,7 @@ issue_Drequest(int conn, struct batch_request *request, void (*func)(), struct w
 		sock = conn;
 		request->rq_conn = sock;
 		wt   = WORK_Deferred_Reply;
-		DIS_tcp_funcs();
+		set_transport_to_tcp();
 	}
 
 	ptask = set_task(wt, (long) conn, func, (void *) request);
@@ -512,30 +512,30 @@ issue_Drequest(int conn, struct batch_request *request, void (*func)(), struct w
 			break;
 
 		case PBS_BATCH_Rerun:
-			rc = encode_DIS_ReqHdr(sock, PBS_BATCH_Rerun, pbs_current_user, prot, &msgid);
+			rc = encode_wire_ReqHdr(sock, PBS_BATCH_Rerun, pbs_current_user, prot, &msgid);
 			if (rc != 0)
 				break;
-			rc = encode_DIS_JobId(sock, request->rq_ind.rq_rerun);
+			rc = encode_wire_JobId(sock, request->rq_ind.rq_rerun);
 			if (rc != 0)
 				break;
-			rc = encode_DIS_ReqExtend(sock, 0);
+			rc = encode_wire_ReqExtend(sock, 0);
 			if (rc != 0)
 				break;
-			rc = dis_flush(sock);
+			rc = transport_flush(sock);
 			break;
 
 
 		case PBS_BATCH_RegistDep:
-			rc = encode_DIS_ReqHdr(sock, PBS_BATCH_RegistDep, pbs_current_user, prot, &msgid);
+			rc = encode_wire_ReqHdr(sock, PBS_BATCH_RegistDep, pbs_current_user, prot, &msgid);
 			if (rc != 0)
 				break;
-			rc = encode_DIS_Register(sock, request);
+			rc = encode_wire_Register(sock, request);
 			if (rc != 0)
 				break;
-			rc = encode_DIS_ReqExtend(sock, 0);
+			rc = encode_wire_ReqExtend(sock, 0);
 			if (rc != 0)
 				break;
-			rc = dis_flush(sock);
+			rc = transport_flush(sock);
 			break;
 
 		case PBS_BATCH_SignalJob:
@@ -557,68 +557,68 @@ issue_Drequest(int conn, struct batch_request *request, void (*func)(), struct w
 			break;
 
 		case PBS_BATCH_TrackJob:
-			rc = encode_DIS_ReqHdr(sock, PBS_BATCH_TrackJob, pbs_current_user, prot, &msgid);
+			rc = encode_wire_ReqHdr(sock, PBS_BATCH_TrackJob, pbs_current_user, prot, &msgid);
 			if (rc != 0)
 				break;
-			rc = encode_DIS_TrackJob(sock, request);
+			rc = encode_wire_TrackJob(sock, request);
 			if (rc != 0)
 				break;
-			rc = encode_DIS_ReqExtend(sock, request->rq_extend);
+			rc = encode_wire_ReqExtend(sock, request->rq_extend);
 			if (rc != 0)
 				break;
-			rc = dis_flush(sock);
+			rc = transport_flush(sock);
 			break;
 
 		case PBS_BATCH_CopyFiles:
-			rc = encode_DIS_ReqHdr(sock, PBS_BATCH_CopyFiles, pbs_current_user, prot, &msgid);
+			rc = encode_wire_ReqHdr(sock, PBS_BATCH_CopyFiles, pbs_current_user, prot, &msgid);
 			if (rc != 0)
 				break;
-			rc = encode_DIS_CopyFiles(sock, request);
+			rc = encode_wire_CopyFiles(sock, request);
 			if (rc != 0)
 				break;
-			rc = encode_DIS_ReqExtend(sock, get_job_credid(request->rq_ind.rq_cpyfile.rq_jobid));
+			rc = encode_wire_ReqExtend(sock, get_job_credid(request->rq_ind.rq_cpyfile.rq_jobid));
 			if (rc != 0)
 				break;
-			rc = dis_flush(sock);
+			rc = transport_flush(sock);
 			break;
 
 		case PBS_BATCH_CopyFiles_Cred:
-			rc = encode_DIS_ReqHdr(sock, PBS_BATCH_CopyFiles_Cred, pbs_current_user, prot, &msgid);
+			rc = encode_wire_ReqHdr(sock, PBS_BATCH_CopyFiles_Cred, pbs_current_user, prot, &msgid);
 			if (rc != 0)
 				break;
-			rc = encode_DIS_CopyFiles_Cred(sock, request);
+			rc = encode_wire_CopyFiles_Cred(sock, request);
 			if (rc != 0)
 				break;
-			rc = encode_DIS_ReqExtend(sock, 0);
+			rc = encode_wire_ReqExtend(sock, 0);
 			if (rc != 0)
 				break;
-			rc = dis_flush(sock);
+			rc = transport_flush(sock);
 			break;
 
 		case PBS_BATCH_DelFiles:
-			rc = encode_DIS_ReqHdr(sock, PBS_BATCH_DelFiles, pbs_current_user, prot, &msgid);
+			rc = encode_wire_ReqHdr(sock, PBS_BATCH_DelFiles, pbs_current_user, prot, &msgid);
 			if (rc != 0)
 				break;
-			rc = encode_DIS_CopyFiles(sock, request);
+			rc = encode_wire_CopyFiles(sock, request);
 			if (rc != 0)
 				break;
-			rc = encode_DIS_ReqExtend(sock, 0);
+			rc = encode_wire_ReqExtend(sock, 0);
 			if (rc != 0)
 				break;
-			rc = dis_flush(sock);
+			rc = transport_flush(sock);
 			break;
 
 		case PBS_BATCH_DelFiles_Cred:
-			rc = encode_DIS_ReqHdr(sock, PBS_BATCH_DelFiles_Cred, pbs_current_user, prot, &msgid);
+			rc = encode_wire_ReqHdr(sock, PBS_BATCH_DelFiles_Cred, pbs_current_user, prot, &msgid);
 			if (rc != 0)
 				break;
-			rc = encode_DIS_CopyFiles_Cred(sock, request);
+			rc = encode_wire_CopyFiles_Cred(sock, request);
 			if (rc != 0)
 				break;
-			rc = encode_DIS_ReqExtend(sock, 0);
+			rc = encode_wire_ReqExtend(sock, 0);
 			if (rc != 0)
 				break;
-			rc = dis_flush(sock);
+			rc = transport_flush(sock);
 			break;
 
 		case PBS_BATCH_FailOver:
@@ -628,9 +628,9 @@ issue_Drequest(int conn, struct batch_request *request, void (*func)(), struct w
 			rc = PBSD_cred(conn,
 				request->rq_ind.rq_cred.rq_credid,
 				request->rq_ind.rq_cred.rq_jobid,
-				request->rq_ind.rq_cred.rq_cred_type,
-				request->rq_ind.rq_cred.rq_cred_data,
-				request->rq_ind.rq_cred.rq_cred_validity,
+				request->rq_ind.rq_cred.rq_type,
+				request->rq_ind.rq_cred.rq_data,
+				request->rq_ind.rq_cred.rq_validity,
 				prot,
 				&msgid);
 			break;
@@ -708,7 +708,7 @@ process_Dreply(int sock)
 
 	pbs_tcp_timeout = PBS_DIS_TCP_TIMEOUT_LONG;
 
-	if ((rc = DIS_reply_read(sock, &request->rq_reply, 0)) != 0) {
+	if ((rc = wire_reply_read(sock, &request->rq_reply, 0)) != 0) {
 		close_conn(sock);
 		request->rq_reply.brp_code = rc;
 		request->rq_reply.brp_choice = BATCH_REPLY_CHOICE_NULL;
@@ -748,7 +748,7 @@ process_DreplyTPP(int c)
 	if ((pmom = tfind2((u_long) c, 0, &streams)) == NULL)
 		return;
 
-	DIS_tpp_funcs();
+	set_transport_to_tpp();
 
 	/* find the work task for the socket, it will point us to the request */
 	msgid = disrst(c, &rc);
@@ -804,7 +804,7 @@ process_DreplyTPP(int c)
 				}
 
 				/* read and decode the reply */
-				if ((rc = DIS_reply_read(c, reply, 1)) != 0) {
+				if ((rc = wire_reply_read(c, reply, 1)) != 0) {
 					reply->brp_code = rc;
 					reply->brp_choice = BATCH_REPLY_CHOICE_NULL;
 					ptask->wt_aux = PBSE_NORELYMOM;

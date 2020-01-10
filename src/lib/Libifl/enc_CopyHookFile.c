@@ -43,7 +43,7 @@
 
 #include "libpbs.h"
 #include "pbs_error.h"
-#include "dis.h"
+#include "pbs_transport.h"
 
 /**
  *
@@ -68,7 +68,7 @@
  */
 
 int
-encode_DIS_CopyHookFile(int sock, int seq, char *buf, int len, char *filename)
+encode_wire_CopyHookFile(int sock, int seq, char *buf, int len, char *filename)
 {
 	int   rc;
 

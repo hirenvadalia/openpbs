@@ -142,7 +142,7 @@
 #include "cmds.h"
 #include "server.h"
 #include "pbs_sched.h"
-#include "dis.h"
+#include "pbs_transport.h"
 #include "acct.h"
 
 

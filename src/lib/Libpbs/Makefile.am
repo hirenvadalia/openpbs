@@ -41,7 +41,8 @@ lib_LTLIBRARIES = libpbs.la
 libpbs_la_CPPFLAGS = \
 	-I$(top_srcdir)/src/include \
 	-I$(top_srcdir)/src/lib/Libtpp \
-	@KRB5_CFLAGS@
+	@KRB5_CFLAGS@ \
+	@flatcc_inc@
 
 #
 # There are specific rules that must be followed when updating the library
@@ -51,7 +52,7 @@ libpbs_la_CPPFLAGS = \
 #
 pkgconfig_DATA = pbs.pc
 
-libpbs_la_LDFLAGS = -version-info 0:0:0 @KRB5_LIBS@
+libpbs_la_LDFLAGS = -version-info 0:0:0 @KRB5_LIBS@ @flatcc_lib@
 
 libpbs_la_LIBADD= \
 	-lcrypto \
@@ -100,85 +101,19 @@ libpbs_la_SOURCES = \
 	../Libcmds/prt_job_err.c \
 	../Libcmds/set_attr.c \
 	../Libcmds/set_resource.c \
-	../Libdis/dis_helpers.c \
-	../Libdis/dis.c \
-	../Libdis/dis_.h \
-	../Libdis/discui_.c \
-	../Libdis/discul_.c \
-	../Libdis/disi10d_.c \
-	../Libdis/disi10l_.c \
-	../Libdis/disiui_.c \
-	../Libdis/disp10d_.c \
-	../Libdis/disp10l_.c \
-	../Libdis/disrcs.c \
-	../Libdis/disrd.c \
-	../Libdis/disrf.c \
-	../Libdis/disrfcs.c \
-	../Libdis/disrfst.c \
-	../Libdis/disrl.c \
-	../Libdis/disrl_.c \
-	../Libdis/disrsc.c \
-	../Libdis/disrsi.c \
-	../Libdis/disrsi_.c \
-	../Libdis/disrsl.c \
-	../Libdis/disrsl_.c \
-	../Libdis/disrss.c \
-	../Libdis/disrst.c \
-	../Libdis/disruc.c \
-	../Libdis/disrui.c \
-	../Libdis/disrul.c \
-	../Libdis/disrus.c \
-	../Libdis/diswcs.c \
-	../Libdis/diswf.c \
-	../Libdis/diswl_.c \
-	../Libdis/diswsi.c \
-	../Libdis/diswsl.c \
-	../Libdis/diswui.c \
-	../Libdis/diswui_.c \
-	../Libdis/diswul.c \
-	../Libdis/ps_dis.c \
-	../Libdis/diswull.c \
-	../Libdis/disrull.c \
-	../Libdis/discull_.c \
-	../Libdis/disrsll_.c \
+	../Libifl/transport_helpers.c \
 	../Libecl/ecl_verify.c \
 	../Libecl/ecl_verify_datatypes.c \
 	../Libecl/ecl_verify_values.c \
 	../Libecl/ecl_verify_object_name.c \
 	../Libecl/pbs_client_thread.c \
-	../Libifl/advise.c \
 	../Libifl/conn_table.c \
-	../Libifl/dec_Authen.c \
-	../Libifl/dec_CopyHookFile.c \
-	../Libifl/dec_DelHookFile.c \
-	../Libifl/dec_JobCred.c \
-	../Libifl/dec_JobFile.c \
-	../Libifl/dec_JobId.c \
-	../Libifl/dec_Manage.c \
-	../Libifl/dec_MsgJob.c \
-	../Libifl/dec_MoveJob.c \
-	../Libifl/dec_UserCred.c \
-	../Libifl/dec_QueueJob.c \
-	../Libifl/dec_Reg.c \
-	../Libifl/dec_ReqExt.c \
-	../Libifl/dec_ReqHdr.c \
-	../Libifl/dec_Resc.c \
-	../Libifl/dec_RunJob.c \
-	../Libifl/dec_Shut.c \
-	../Libifl/dec_Sig.c \
-	../Libifl/dec_Status.c \
-	../Libifl/dec_Track.c \
-	../Libifl/dec_attrl.c \
-	../Libifl/dec_attropl.c \
-	../Libifl/dec_rpyc.c \
+	../Libifl/wire_auth.c \
+	../Libifl/wire_attrl.c \
 	../Libifl/dec_svrattrl.c \
-	../Libifl/dec_ModifyResv.c \
-	../Libifl/dec_PreemptJobs.c \
 	../Libifl/enc_CopyHookFile.c \
 	../Libifl/enc_CpyFil.c \
 	../Libifl/enc_DelHookFile.c \
-	../Libifl/enc_JobCred.c \
-	../Libifl/enc_JobFile.c \
 	../Libifl/enc_JobId.c \
 	../Libifl/enc_UserCred.c \
 	../Libifl/enc_Manage.c \
@@ -193,8 +128,6 @@ libpbs_la_SOURCES = \
 	../Libifl/enc_Sig.c \
 	../Libifl/enc_Status.c \
 	../Libifl/enc_Track.c \
-	../Libifl/enc_attrl.c \
-	../Libifl/enc_attropl.c \
 	../Libifl/enc_reply.c \
 	../Libifl/enc_SubmitResv.c \
 	../Libifl/enc_ModifyResv.c \
@@ -217,7 +150,6 @@ libpbs_la_SOURCES = \
 	../Libifl/int_ucred.c \
 	../Libifl/int_cred.c \
 	../Libifl/enc_Cred.c \
-	../Libifl/dec_Cred.c \
 	../Libifl/int_modify_resv.c \
 	../Libifl/int_preempt_jobs.c \
 	../Libifl/list_link.c \
@@ -285,7 +217,12 @@ libpbs_la_SOURCES = \
 	ecl_node_attr_def.c \
 	ecl_queue_attr_def.c \
 	ecl_resc_def_all.c \
-	ecl_resv_attr_def.c
+	ecl_resv_attr_def.c \
+	flatbuffers_common_builder.h \
+	flatbuffers_common_reader.h \
+	pbs_ifl_builder.h \
+	pbs_ifl_reader.h \
+	pbs_ifl_verifier.h
 
 CLEANFILES = \
 	ecl_job_attr_def.c \
@@ -294,7 +231,12 @@ CLEANFILES = \
 	ecl_node_attr_def.c \
 	ecl_queue_attr_def.c \
 	ecl_resc_def_all.c \
-	ecl_resv_attr_def.c
+	ecl_resv_attr_def.c \
+	flatbuffers_common_builder.h \
+	flatbuffers_common_reader.h \
+	pbs_ifl_builder.h \
+	pbs_ifl_reader.h \
+	pbs_ifl_verifier.h
 
 ecl_job_attr_def.c: $(top_srcdir)/src/lib/Libattr/master_job_attr_def.xml
 	@echo Generating $@ from $< ; \
@@ -337,3 +279,7 @@ ecl_resc_def_all.c: $(top_srcdir)/src/lib/Libattr/master_resc_def_all.xml
 	$(PYTHON) $(top_srcdir)/buildutils/attr_parser.py \
 		-m $(top_srcdir)/src/lib/Libattr/master_resc_def_all.xml \
 		-s /dev/null -e $@ -a resc
+
+flatbuffers_common_builder.h flatbuffers_common_reader.h pbs_ifl_builder.h pbs_ifl_reader.h pbs_ifl_verifier.h: $(top_srcdir)/src/lib/Libifl/pbs_ifl.fbs
+	@echo Generating google Flatbuffers code from $< ; \
+	@flatcc_bin@ -a $<

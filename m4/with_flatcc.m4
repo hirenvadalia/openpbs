@@ -36,97 +36,40 @@
 # trademark licensing policies.
 #
 
-include_HEADERS = \
-	pbs_error.h \
-	pbs_ifl.h \
-	rm.h \
-	tm_.h \
-	tm.h
-
-noinst_HEADERS = \
-	acct.h \
-	attribute.h \
-	avltree.h \
-	basil.h \
-	batch_request.h \
-	bitfield.h \
-	cmds.h \
-	credential.h \
-	pbs_transport.h \
-	grunt.h \
-	hook_func.h \
-	hook.h \
-	ifl_internal.h \
-	job.h \
-	libpbs.h \
-	libsec.h \
-	libutil.h \
-	limits_if.h \
-	list_link.h \
-	log.h \
-	Long_.h \
-	Long.h \
-	Makefile.in \
-	mom_func.h \
-	mom_hook_func.h \
-	mom_server.h \
-	mom_vnode.h \
-	net_connect.h \
-	pbs_gss.h \
-	pbs_krb5.h \
-	pbs_array_list.h \
-	pbs_assert.h \
-	pbs_client_thread.h \
-	pbs_db.h \
-	pbs_ecl.h \
-	pbs_entlim.h \
-	pbs_internal.h \
-	pbs_reliable.h \
-	pbs_json.h \
-	pbs_license.h \
-	pbs_mpp.h \
-	pbs_mutex.h \
-	pbs_nodes.h \
-	pbs_python.h \
-	pbs_python_private.h \
-	pbs_share.h \
-	pbs_undolr.h \
-	pbs_version.h \
-	placementsets.h \
-	portability.h \
-	port_forwarding.h \
-	provision.h \
-	qmgr.h \
-	queue.h \
-	reservation.h \
-	resmon.h \
-	resource.h \
-	resv_node.h \
-	tpp.h \
-	sched_cmds.h \
-	pbs_sched.h \
-	server.h \
-	server_limits.h \
-	site_queue.h \
-	site_job_attr_def.h \
-	site_job_attr_enum.h \
-	site_qmgr_node_print.h \
-	site_qmgr_que_print.h \
-	site_qmgr_sched_print.h \
-	site_qmgr_svr_print.h \
-	site_que_attr_def.h \
-	site_que_attr_enum.h \
-	site_resc_attr_def.h \
-	site_resv_attr_def.h \
-	site_resv_attr_enum.h \
-	site_sched_attr_def.h \
-	site_sched_attr_enum.h \
-	site_svr_attr_def.h \
-	site_svr_attr_enum.h \
-	svrfunc.h \
-	ticket.h \
-	tracking.h \
-	user.h \
-	win.h \
-	win_remote_shell.h \
-	work_task.h
+AC_DEFUN([PBS_AC_WITH_FLATCC],
+[
+  AC_ARG_WITH([flatcc],
+    AS_HELP_STRING([--with-flatcc=DIR],
+      [Specify the directory where flatcc is installed.]
+    )
+  )
+  AS_IF([test "x${with_flatcc}" != "x"],
+    flatcc_dir=["${with_flatcc}"],
+    flatcc_dir=["/usr"]
+  )
+  AC_MSG_CHECKING([for flatcc])
+  AS_IF([test -r "${flatcc_dir}/bin/flatcc"],
+    AS_IF([test "${flatcc_dir}" != "/usr"],
+      [flatcc_bin="${flatcc_dir}/bin/flatcc"],
+      [flatcc_bin="flatcc"]),
+    AC_MSG_ERROR([flatcc binary not found.]))
+  AS_IF([test -r "${flatcc_dir}/include/flatcc/flatcc.h"],
+    AS_IF([test "${flatcc_dir}" != "/usr"],
+      [flatcc_inc="-I${flatcc_dir}/include"]),
+    AC_MSG_ERROR([flatcc headers not found.]))
+  AS_IF([test "${flatcc_dir}" = "/usr"],
+    # Using system installed flatcc
+    AS_IF([test -r "/usr/lib64/libflatcc.so" -o -r "/usr/lib/libflatcc.so" -o -r "/usr/lib/x86_64-linux-gnu/libflatcc.so"],
+      [flatcc_lib="-lflatcc -lflatccrt"],
+      AC_MSG_ERROR([flatcc shared object library not found.])),
+    # Using developer installed flatcc
+    AS_IF([test -r "${flatcc_dir}/lib/libflatcc.a"],
+      [flatcc_lib="${flatcc_dir}/lib/libflatcc.a ${flatcc_dir}/lib/libflatccrt.a"],
+      AC_MSG_ERROR([flatcc library not found.])
+    )
+  )
+  AC_MSG_RESULT([${flatcc_dir}])
+  AC_SUBST(flatcc_bin)
+  AC_SUBST(flatcc_inc)
+  AC_SUBST(flatcc_lib)
+])

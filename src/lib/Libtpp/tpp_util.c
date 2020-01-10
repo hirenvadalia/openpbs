@@ -69,7 +69,7 @@
 #include "pbs_error.h"
 
 #include "tpp.h"
-#include "dis.h"
+#include "pbs_transport.h"
 
 #if defined(PBS_SECURITY) && (PBS_SECURITY == KRB5)
 #include "pbs_gss.h"
@@ -94,8 +94,7 @@ long tpp_log_event_mask = 0;
 
 #define PBS_TCP_KEEPALIVE "PBS_TCP_KEEPALIVE" /* environment string to search for */
 
-/* extern functions called from this file into the tpp_transport.c */
-static pbs_tcp_chan_t * tppdis_get_user_data(int);
+static pbs_transport_chan_t * tppdis_get_user_data(int);
 
 /**
  * @brief
@@ -114,19 +113,19 @@ static pbs_tcp_chan_t * tppdis_get_user_data(int);
  * @par MT-safe: No
  *
  */
-static pbs_tcp_chan_t *
+static pbs_transport_chan_t *
 tppdis_get_user_data(int fd)
 {
 	void *data = tpp_get_user_data(fd);
 	if (data == NULL) {
 		if (errno != ENOTCONN) {
 			/* fd connected, but first time - so call setup */
-			dis_setup_chan(fd, (pbs_tcp_chan_t * (*)(int))&tpp_get_user_data);
+			transport_setup_chan(fd, (pbs_transport_chan_t * (*)(int))&tpp_get_user_data);
 			/* get the buffer again*/
 			data = tpp_get_user_data(fd);
 		}
 	}
-	return (pbs_tcp_chan_t *)data;
+	return (pbs_transport_chan_t *)data;
 }
 
 /**
@@ -140,10 +139,10 @@ tppdis_get_user_data(int fd)
  *
  */
 void
-DIS_tpp_funcs()
+set_transport_to_tpp()
 {
 	pfn_transport_get_chan = tppdis_get_user_data;
-	pfn_transport_set_chan = (int (*)(int, pbs_tcp_chan_t *)) &tpp_set_user_data;
+	pfn_transport_set_chan = (int (*)(int, pbs_transport_chan_t *)) &tpp_set_user_data;
 	pfn_transport_chan_free_extra = NULL;
 	pfn_transport_recv = tpp_recv;
 	pfn_transport_send = tpp_send;

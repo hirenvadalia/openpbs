@@ -65,7 +65,7 @@ extern "C" {
 #include "pbs_error.h"
 #include "pbs_internal.h"
 #include "pbs_client_thread.h"
-#include "dis.h"
+#include "pbs_transport.h"
 
 /* Protocol types when connecting to another server (eg mom) */
 #define PROT_INVALID	-1
@@ -149,15 +149,15 @@ typedef struct pbs_conn {
 	int ch_errno;			/* last error on this connection */
 	char *ch_errtxt;		/* pointer to last server error text	*/
 	pthread_mutex_t ch_mutex;	/* serialize connection between threads */
-	pbs_tcp_chan_t *ch_chan;	/* pointer tcp chan structure for this connection */
+	pbs_transport_chan_t *ch_chan;	/* pointer tcp chan structure for this connection */
 } pbs_conn_t;
 
 int set_conn_errtxt(int, const char *);
 char * get_conn_errtxt(int);
 int set_conn_errno(int, int);
 int get_conn_errno(int);
-pbs_tcp_chan_t * get_conn_chan(int);
-int set_conn_chan(int, pbs_tcp_chan_t *);
+pbs_transport_chan_t * get_conn_chan(int);
+int set_conn_chan(int, pbs_transport_chan_t *);
 pthread_mutex_t * get_conn_mutex(int);
 
 
@@ -337,7 +337,6 @@ struct batch_reply {
 extern int is_compose(int, int);
 extern int is_compose_cmd(int, int, char **);
 extern void PBS_free_aopl(struct attropl *);
-extern void advise(char *, ...);
 extern int PBSD_rdytocmt(int, char *, int, char **);
 extern int PBSD_commit(int, char *, int, char **);
 extern int PBSD_jcred(int, int, char *, int, int, char **);
@@ -361,38 +360,31 @@ extern struct batch_status * PBSD_status(int, int, char *, struct attrl *, char 
 extern preempt_job_info * PBSD_preempt_jobs(int, char **);
 extern struct batch_status * PBSD_status_get(int);
 extern char * PBSD_queuejob(int, char *, char *, struct attropl *, char *, int, char **);
-extern int decode_DIS_svrattrl(int, pbs_list_head *);
-extern int decode_DIS_attrl(int, struct attrl **);
-extern int decode_DIS_JobId(int, char *);
-extern int decode_DIS_replyCmd(int, struct batch_reply *);
-extern int encode_DIS_JobCred(int, int, char *, int);
-extern int encode_DIS_UserCred(int, char *, int, char *, int);
-extern int encode_DIS_UserMigrate(int, char *);
-extern int encode_DIS_JobFile(int, int, char *, int, char *, int);
-extern int encode_DIS_JobId(int, char *);
-extern int encode_DIS_Manage(int, int, int, char *, struct attropl *);
-extern int encode_DIS_MessageJob(int, char *, int, char *);
-extern int encode_DIS_MoveJob(int, char *, char *);
-extern int encode_DIS_ModifyResv(int, char *, struct attropl *);
-extern int encode_DIS_RelnodesJob(int, char *, char *);
-extern int encode_DIS_PySpawn(int, char *, char **, char **);
-extern int encode_DIS_QueueJob(int, char *, char *, struct attropl *);
-extern int encode_DIS_SubmitResv(int, char *, struct attropl *);
-extern int encode_DIS_JobCredential(int, int, char *, int);
-extern int encode_DIS_ReqExtend(int, char *);
-extern int encode_DIS_ReqHdr(int, int, char *, int, char **);
-extern int encode_DIS_Rescq(int, char **, int);
-extern int encode_DIS_Run(int, char *, char *, unsigned long);
-extern int encode_DIS_ShutDown(int, int);
-extern int encode_DIS_SignalJob(int, char *, char *);
-extern int encode_DIS_Status(int, char *, struct attrl *);
-extern int encode_DIS_attrl(int, struct attrl *);
-extern int encode_DIS_attropl(int, struct attropl *);
-extern int encode_DIS_CopyHookFile(int, int, char *, int, char *);
-extern int encode_DIS_DelHookFile(int, char *);
-extern int encode_DIS_PreemptJobs(int, char **);
+extern int decode_wire_attrl(int, struct attrl **);
+extern int decode_wire_replyCmd(int, struct batch_reply *);
+extern int encode_wire_JobId(int, char *);
+extern int encode_wire_Manage(int, int, int, char *, struct attropl *);
+extern int encode_wire_MessageJob(int, char *, int, char *);
+extern int encode_wire_MoveJob(int, char *, char *);
+extern int encode_wire_ModifyResv(int, char *, struct attropl *);
+extern int encode_wire_RelnodesJob(int, char *, char *);
+extern int encode_wire_PySpawn(int, char *, char **, char **);
+extern int encode_wire_SubmitResv(int, char *, struct attropl *);
+extern int encode_wire_JobCredential(int, int, char *, int);
+extern int encode_wire_ReqExtend(int, char *);
+extern int encode_wire_ReqHdr(int, int, char *, int, char **);
+extern int encode_wire_Rescq(int, char **, int);
+extern int encode_wire_Run(int, char *, char *, unsigned long);
+extern int encode_wire_ShutDown(int, int);
+extern int encode_wire_SignalJob(int, char *, char *);
+extern int encode_wire_Status(int, char *, struct attrl *);
+extern int encode_wire_attrl(int, struct attrl *);
+extern int encode_wire_attropl(int, struct attropl *);
+extern int encode_wire_CopyHookFile(int, int, char *, int, char *);
+extern int encode_wire_DelHookFile(int, char *);
+extern int encode_wire_PreemptJobs(int, char **);
 extern char * PBSD_submit_resv(int, char *, struct attropl *, char *);
-extern int DIS_reply_read(int, struct batch_reply *, int);
+extern int wire_reply_read(int, struct batch_reply *, int);
 extern void pbs_authors(void);
 extern int engage_external_authentication(int, char *, int, int, char *, int);
 extern char * PBSD_modify_resv(int, char *, struct attropl *, char *);

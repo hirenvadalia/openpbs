@@ -87,7 +87,7 @@
 #include "job.h"
 #include "log.h"
 #include "tpp.h"
-#include "dis.h"
+#include "pbs_transport.h"
 #include "pbs_nodes.h"
 #include "mom_mach.h"
 #include "mom_func.h"

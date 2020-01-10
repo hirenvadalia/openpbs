@@ -60,7 +60,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <time.h>
-#include "dis.h"
+#include "pbs_transport.h"
 #include "libpbs.h"
 #include "pbs_error.h"
 #include "server_limits.h"
@@ -523,16 +523,16 @@ return_file(job *pjob, enum job_file which, int sock)
 	(void)strcpy(prq->rq_ind.rq_jobfile.rq_jobid, pjob->ji_qs.ji_jobid);
 
 	while ((amt = read(fds, buf, RT_BLK_SZ)) > 0) {
-		if ((rc = encode_DIS_ReqHdr(sock, PBS_BATCH_MvJobFile, pbs_current_user, PROT_TCP, NULL)) ||
-			(rc = encode_DIS_JobFile(sock, seq++, buf, amt,
+		if ((rc = encode_wire_ReqHdr(sock, PBS_BATCH_MvJobFile, pbs_current_user, PROT_TCP, NULL)) ||
+			(rc = encode_wire_JobFile(sock, seq++, buf, amt,
 			pjob->ji_qs.ji_jobid, which)) ||
-			(rc = encode_DIS_ReqExtend(sock, NULL))) {
+			(rc = encode_wire_ReqExtend(sock, NULL))) {
 			break;
 		}
 
-		dis_flush(sock);
+		transport_flush(sock);
 
-		if ((DIS_reply_read(sock, &prq->rq_reply, 0) != 0) ||
+		if ((wire_reply_read(sock, &prq->rq_reply, 0) != 0) ||
 			(prq->rq_reply.brp_code != 0)) {
 			rc = -1;
 			break;
@@ -1232,7 +1232,7 @@ post_reply(job *pjob, int err)
 			pjob->ji_postevent, pjob->ji_taskid, IM_OLD_PROTOCOL_VER);
 		(void)diswsi(stream, err);
 	}
-	(void)dis_flush(stream);
+	(void)transport_flush(stream);
 
 	pjob->ji_postevent = TM_NULL_EVENT;
 	pjob->ji_taskid = TM_NULL_TASK;
@@ -5083,7 +5083,7 @@ req_cred(struct batch_request *preq) /* ptr to the decoded request */
 	char *data_base64 = NULL;
 	job *pjob;
 
-	if (decode_block_base64((unsigned char *)preq->rq_ind.rq_cred.rq_cred_data, preq->rq_ind.rq_cred.rq_cred_size, out_data, &out_len, buf, LOG_BUF_SIZE) != 0) {
+	if (decode_block_base64((unsigned char *)preq->rq_ind.rq_cred.rq_data, preq->rq_ind.rq_cred.rq_size, out_data, &out_len, buf, LOG_BUF_SIZE) != 0) {
 		log_err(errno, __func__, buf);
 		req_reject(PBSE_SYSTEM, 0, preq);
 		return;
@@ -5104,9 +5104,9 @@ req_cred(struct batch_request *preq) /* ptr to the decoded request */
 	data->length = out_len;
 	memcpy(data->data, out_data, out_len);
 
-	data_base64 = strdup(preq->rq_ind.rq_cred.rq_cred_data);
+	data_base64 = strdup(preq->rq_ind.rq_cred.rq_data);
 
-	store_or_update_cred(preq->rq_ind.rq_cred.rq_jobid, preq->rq_ind.rq_cred.rq_credid, preq->rq_ind.rq_cred.rq_cred_type, data, data_base64, preq->rq_ind.rq_cred.rq_cred_validity);
+	store_or_update_cred(preq->rq_ind.rq_cred.rq_jobid, preq->rq_ind.rq_cred.rq_credid, preq->rq_ind.rq_cred.rq_type, data, data_base64, preq->rq_ind.rq_cred.rq_validity);
 
 	/* renew ticket for the job */
 	if ((pjob = find_job(preq->rq_ind.rq_cred.rq_jobid)) != NULL) {

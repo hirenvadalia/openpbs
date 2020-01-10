@@ -1,0 +1,243 @@
+namespace PBS.ifl;
+
+enum ProtType:byte { Batch, TaskManager }
+enum batch_op:byte { SET, UNSET, INCR, DECR, EQ, NE, GE, GT, LE, LT, DFLT }
+
+table Header {
+	protType: ProtType = Batch;
+	batchId: short;
+	user: string;
+}
+
+table Attribute {
+	name: string;
+	resc: string;
+	value: string;
+	op: batch_op;
+}
+
+table Extend {
+	extend: string;
+}
+
+table Qjob {
+	jobId: string;
+	destin: string;
+	attrs: [Attribute];
+}
+
+table JobFile {
+	seq: long;
+	type: short;
+	size: long;
+	jobId: string;
+	data: string;
+}
+
+table JobId {
+	jobId: string;
+}
+
+table Manage {
+	cmd: short;
+	objType: short;
+	objName: string; // jobid, quename etc
+	attrs: [Attribute];
+}
+
+table Msg {
+	fileInd: short;
+	jobId: string;
+	text: string;
+}
+
+table DmnCmd {
+	cmd: short;
+}
+
+table Signal {
+	jobId: string;
+	sigName: string;
+}
+
+table Stat {
+	jobIds: string;
+	attrs: [Attribute];
+}
+
+table Spawn {
+	jobId: string;
+	argv: [string];
+	envp: [string];
+}
+
+table AuthMunge {
+	key: string;
+}
+
+table AuthResvPort {
+	port: short;
+}
+
+table AuthExternal {
+	cred: string;
+}
+
+union AuthInfo {AuthMunge, AuthResvPort, AuthExternal}
+
+table Auth {
+	type: short;
+	info: AuthInfo;
+}
+
+table Move {
+	jobId: string;
+	dest: string;
+}
+
+table Run {
+	jobId: string;
+	dest: string;
+	resch: long;
+}
+
+table SchedDefRep {
+	cmd: short;
+	id: string;
+	err: short;
+	text: string;
+}
+
+table Select {
+	selAttrs: [Attribute];
+	rtnAttrs: [Attribute];
+}
+
+table Track {
+	hops: short;
+	jobId: string;
+	location: string;
+	state: byte;
+}
+
+table Register {
+	owner: string;
+	server: string;
+	parent: string;
+	child: string;
+	type: short;
+	op: short;
+	cost: long;
+}
+
+table CopyHook {
+	seq: short;
+	size: long;
+	filename: string;
+	data: string;
+}
+
+table FilePair {
+	local: string;
+	remote: string;
+	flag: short;
+}
+
+table CopyFile {
+	jobId: string;
+	owner: string;
+	user: string;
+	group: string;
+	flags: short;
+	pairs: [FilePair];
+}
+
+table CopyFileCred {
+	files: CopyFile;
+	type: short;
+	cred: string;
+}
+
+table Cred {
+	jobId: string;
+	user: string;
+	validity: long;
+	type: short;
+	size: short;
+	data: string;
+}
+
+table UserMigrate {
+	tohost: string;
+}
+
+table RelNodes {
+	jobId: string;
+	nodes: string;
+}
+
+table RescQuery {
+	handle: short;
+	queries: [string];
+}
+
+table PreemptJob {
+	jid: string;
+	order: string;
+}
+
+table Preempt {
+	infos: [PreemptJob];
+}
+
+union ReqBody {
+	Qjob, JobFile, JobId, Manage,
+	Msg, DmnCmd, Signal, Stat,
+	Spawn, Auth, Move, Run,
+	SchedDefRep, Select, Track,
+	Register, CopyHook, CopyFile,
+	Cred, UserMigrate, RelNodes,
+	RescQuery, Preempt, CopyFileCred
+}
+
+table Req {
+	hdr: Header;
+	body: ReqBody;
+	extend: Extend;
+}
+
+table StatRespJob {
+	type: short;
+	name: string;
+	attrs: [Attribute];
+}
+
+table SelectResp {
+	ids: [string];
+}
+
+table StatResp {
+	jobs: [StatRespJob];
+}
+
+table RescQueryResp {
+	avail: [short];
+	alloc: [short];
+	resvd: [short];
+	down: [short];
+}
+
+union RespBody {
+	text: string, // jobid, text, location etc reponses
+	selects: SelectResp, // select reponses
+	stats: StatResp, // stat, cmdstat reponses
+	rescq: RescQueryResp, // resource query reponses
+	preempts: Preempt // preempt jobs reply
+}
+
+table Resp {
+	code: short;
+	auxCode: short;
+	choice: short;
+	body: RespBody;
+}

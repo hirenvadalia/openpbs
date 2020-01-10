@@ -58,7 +58,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include "dis.h"
+#include "pbs_transport.h"
 #include "libpbs.h"
 #include "list_link.h"
 #include "server_limits.h"
@@ -1578,7 +1578,7 @@ scan_for_exiting(void)
 							pobit->oe_u.oe_tm.oe_event);
 						(void)diswsi(pobit->oe_u.oe_tm.oe_fd,
 							ptask->ti_qs.ti_exitstat);
-						(void)dis_flush(pobit->oe_u.oe_tm.oe_fd);
+						(void)transport_flush(pobit->oe_u.oe_tm.oe_fd);
 					}
 				}
 				else if (pnode->hn_stream != -1 &&
@@ -1594,7 +1594,7 @@ scan_for_exiting(void)
 						pobit->oe_u.oe_tm.oe_taskid, IM_OLD_PROTOCOL_VER);
 					(void)diswsi(pnode->hn_stream,
 						ptask->ti_qs.ti_exitstat);
-					(void)dis_flush(pnode->hn_stream);
+					(void)transport_flush(pnode->hn_stream);
 				}
 
 end_loop:
@@ -1713,7 +1713,7 @@ end_loop:
 					resc_used(pjob, "cpupercent", gettime));
 				(void)send_resc_used_to_ms(stream,
 							pjob->ji_qs.ji_jobid);
-				(void)dis_flush(stream);
+				(void)transport_flush(stream);
 				pjob->ji_obit = TM_NULL_EVENT;
 			}
 			continue;
@@ -1925,11 +1925,11 @@ send_restart(void)
 	char *svr;
 	int j;
 
-	DIS_tpp_funcs();
+	set_transport_to_tpp();
 	if (server_stream >= 0) {
 		log_eventf(PBSEVENT_SYSTEM, PBS_EVENTCLASS_SERVER, LOG_NOTICE, msg_daemonname,
 				"Closing existing server stream %d", server_stream);
-		dis_flush(server_stream);
+		transport_flush(server_stream);
 		tpp_close(server_stream);
 		server_stream = -1;
 	}
@@ -1952,7 +1952,7 @@ send_restart(void)
 	}
 
 	(void)diswui(j, pbs_mom_port);
-	dis_flush(j);
+	transport_flush(j);
 	log_eventf(PBSEVENT_SYSTEM, PBS_EVENTCLASS_SERVER, LOG_NOTICE, msg_daemonname,
 			"Restart sent to server at %s:%d", svr, port);
 	tpp_close(j);

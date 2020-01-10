@@ -40,7 +40,7 @@
 /**
  * @file	enc_Sig.c
  * @brief
- * encode_DIS_SignalJob() - encode a Signal Job Batch Request
+ * encode_wire_SignalJob() - encode a Signal Job Batch Request
  *
  * @par Data items are:
  * 			string		job id
@@ -51,7 +51,7 @@
 
 #include "libpbs.h"
 #include "pbs_error.h"
-#include "dis.h"
+#include "pbs_transport.h"
 
 /**
  * @brief
@@ -62,13 +62,13 @@
  * @param[in] signal - signal
  *
  * @return      int
- * @retval      DIS_SUCCESS(0)  success
- * @retval      error code      error
+ * @retval      0 - success
+ * @retval      !0 - error
  *
  */
 
 int
-encode_DIS_SignalJob(int sock, char *jobid, char *signal)
+encode_wire_SignalJob(int sock, char *jobid, char *signal)
 {
 	int   rc;
 

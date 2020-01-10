@@ -341,7 +341,7 @@ get_conn_errno(int fd)
  * @par MT-safe: Yes
  */
 int
-set_conn_chan(int fd, pbs_tcp_chan_t *chan)
+set_conn_chan(int fd, pbs_transport_chan_t *chan)
 {
 	pbs_conn_t *p = NULL;
 
@@ -366,7 +366,7 @@ set_conn_chan(int fd, pbs_tcp_chan_t *chan)
  *
  * @param[in] fd - socket number
  *
- * @return pbs_tcp_chan_t *
+ * @return pbs_transport_chan_t *
  * @retval !NULL - success
  * @retval NULL - error
  *
@@ -375,11 +375,11 @@ set_conn_chan(int fd, pbs_tcp_chan_t *chan)
  *
  * @par MT-safe: Yes
  */
-pbs_tcp_chan_t *
+pbs_transport_chan_t *
 get_conn_chan(int fd)
 {
 	pbs_conn_t *p = NULL;
-	pbs_tcp_chan_t *chan = NULL;
+	pbs_transport_chan_t *chan = NULL;
 
 	if (INVALID_SOCK(fd))
 		return NULL;

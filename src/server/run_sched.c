@@ -55,7 +55,7 @@
 #include "libpbs.h"
 #include "net_connect.h"
 #include "sched_cmds.h"
-#include "dis.h"
+#include "pbs_transport.h"
 #include "list_link.h"
 #include "attribute.h"
 #include "job.h"
@@ -142,7 +142,7 @@ put_sched_cmd(int sock, int cmd, char *jobid)
 {
 	int   ret;
 
-	DIS_tcp_funcs();
+	set_transport_to_tcp();
 	if ((ret = diswsi(sock, cmd)) != DIS_SUCCESS)
 		goto err;
 
@@ -151,7 +151,7 @@ put_sched_cmd(int sock, int cmd, char *jobid)
 			goto err;
 	}
 
-	(void)dis_flush(sock);
+	(void)transport_flush(sock);
 	return 0;
 
 err:

@@ -46,7 +46,7 @@
 #include <string.h>
 #include <stdio.h>
 #include "libpbs.h"
-#include "dis.h"
+#include "pbs_transport.h"
 #include "pbs_error.h"
 #include "pbs_ecl.h"
 
@@ -89,7 +89,7 @@ pbs_defschreply(int c, int cmd, char *id, int err, char *txt, char *extend)
 		return pbs_errno;
 
 	/* encode request */
-	if ((rc = encode_DIS_ReqHdr(c, PBS_BATCH_DefSchReply, pbs_current_user, PROT_TCP, NULL)) ||
+	if ((rc = encode_wire_ReqHdr(c, PBS_BATCH_DefSchReply, pbs_current_user, PROT_TCP, NULL)) ||
 		(rc = diswui(c, cmd)  != 0)                        ||
 		(rc = diswst(c, id)  != 0)                        ||
 		(rc = diswui(c, err)  != 0)) {
@@ -106,7 +106,7 @@ pbs_defschreply(int c, int cmd, char *id, int err, char *txt, char *extend)
 		rc = diswst(c, txt);
 	}
 	if (rc == 0)
-		rc = encode_DIS_ReqExtend(c, extend);
+		rc = encode_wire_ReqExtend(c, extend);
 	if (rc) {
 		if (set_conn_errtxt(c, dis_emsg[rc]) != 0) {
 			pbs_errno = PBSE_SYSTEM;
@@ -117,7 +117,7 @@ pbs_defschreply(int c, int cmd, char *id, int err, char *txt, char *extend)
 		return pbs_errno;
 	}
 
-	if (dis_flush(c)) {
+	if (transport_flush(c)) {
 		pbs_errno = PBSE_PROTOCOL;
 		(void)pbs_client_thread_unlock_connection(c);
 		return pbs_errno;

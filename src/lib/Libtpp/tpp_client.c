@@ -95,7 +95,7 @@
 #include "avltree.h"
 
 #include "tpp.h"
-#include "dis.h"
+#include "pbs_transport.h"
 
 /* definitions of pointer functions for global use */
 void (*pfn_rpp_add_close_func)(int, void (*func)(int));
@@ -887,7 +887,7 @@ tpp_eom(int fd)
 {
 	tpp_packet_t *p;
 	stream_t *strm;
-	pbs_tcp_chan_t *tpp;
+	pbs_transport_chan_t *tpp;
 
 	/* check for bad file descriptor */
 	if (fd < 0)
@@ -1612,13 +1612,13 @@ tpp_shutdown()
 
 	tpp_transport_shutdown();
 
-	DIS_tpp_funcs();
+	set_transport_to_tpp();
 
 	tpp_lock(&strmarray_lock);
 	for (i = 0; i < max_strms; i++) {
 		if (strmarray[i].slot_state == TPP_SLOT_BUSY) {
 			sd = strmarray[i].strm->sd;
-			dis_destroy_chan(sd);
+			transport_destroy_chan(sd);
 			free_stream_resources(strmarray[i].strm);
 			free_stream(sd);
 		}
@@ -1942,7 +1942,7 @@ tpp_close(int sd)
 
 	tpp_unlock(&strmarray_lock);
 
-	dis_destroy_chan(strm->sd);
+	transport_destroy_chan(strm->sd);
 
 	if (strm->t_state != TPP_TRNS_STATE_OPEN || send_spl_packet(strm, TPP_CLOSE_STRM) != 0)
 		queue_strm_close(strm);
@@ -2368,7 +2368,7 @@ tpp_mcast_close(int mtfd)
 		return -1;
 	}
 
-	dis_destroy_chan(strm->sd);
+	transport_destroy_chan(strm->sd);
 
 	free_stream_resources(strm);
 	free_stream(mtfd);

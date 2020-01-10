@@ -40,7 +40,7 @@
 /**
  * @file	enc_reply.c
  * @brief
- * encode_DIS_reply() - encode a Batch Protocol Reply Structure
+ * encode_wire_reply() - encode a Batch Protocol Reply Structure
  *
  * 	batch_reply structure defined in libpbs.h, it must be allocated
  *	by the caller.
@@ -51,10 +51,10 @@
 #include "libpbs.h"
 #include "list_link.h"
 #include "attribute.h"
-#include "dis.h"
+#include "pbs_transport.h"
 #include "net_connect.h"
 
-int encode_DIS_svrattrl(int sock, svrattrl *psattl);
+int encode_wire_svrattrl(int sock, svrattrl *psattl);
 
 
 /**
@@ -74,7 +74,7 @@ int encode_DIS_svrattrl(int sock, svrattrl *psattl);
  */
 
 static int
-encode_DIS_reply_inner(int sock, struct batch_reply *reply)
+encode_wire_reply_inner(int sock, struct batch_reply *reply)
 {
 	int		    ct;
 	int		    i;
@@ -153,7 +153,7 @@ encode_DIS_reply_inner(int sock, struct batch_reply *reply)
 						return rc;
 
 				psvrl = (svrattrl *)GET_NEXT(pstat->brp_attr);
-				if ((rc = encode_DIS_svrattrl(sock, psvrl)) != 0)
+				if ((rc = encode_wire_svrattrl(sock, psvrl)) != 0)
 					return rc;
 				pstat =(struct brp_status *)GET_NEXT(pstat->brp_stlink);
 			}
@@ -227,7 +227,7 @@ encode_DIS_reply_inner(int sock, struct batch_reply *reply)
 }
 
 int
-encode_DIS_reply(int sock, struct batch_reply *reply)
+encode_wire_reply(int sock, struct batch_reply *reply)
 {
 	int rc;
 	/* first encode "header" consisting of protocol type and version */
@@ -236,11 +236,11 @@ encode_DIS_reply(int sock, struct batch_reply *reply)
 		(rc = diswui(sock, PBS_BATCH_PROT_VER)))
 			return rc;
 
-	return (encode_DIS_reply_inner(sock, reply));
+	return (encode_wire_reply_inner(sock, reply));
 }
 
 int
-encode_DIS_replyTPP(int sock, char *msgid, struct batch_reply *reply)
+encode_wire_replyTPP(int sock, char *msgid, struct batch_reply *reply)
 {
 	int rc;
 	/* first encode "header" consisting of protocol type and version */
@@ -255,5 +255,5 @@ encode_DIS_replyTPP(int sock, char *msgid, struct batch_reply *reply)
 	if ((rc = diswst(sock, msgid)) != DIS_SUCCESS)
 		return rc;
 
-	return (encode_DIS_reply_inner(sock, reply));
+	return (encode_wire_reply_inner(sock, reply));
 }

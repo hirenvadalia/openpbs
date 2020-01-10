@@ -40,7 +40,7 @@
 /**
  * @file	enc_Reg.c
  * @brief
- * encode_DIS_Register() - encode a Register Dependency Batch Request
+ * encode_wire_Register() - encode a Register Dependency Batch Request
  *
  *	This request is used by the server ONLY; its input is a server
  *	batch request structure.
@@ -63,7 +63,7 @@
 #include "attribute.h"
 #include "credential.h"
 #include "batch_request.h"
-#include "dis.h"
+#include "pbs_transport.h"
 
 /**
  * @brief
@@ -85,13 +85,13 @@
  * @param[out] preq - pointer to batch_request structure
  *
  * @return      int
- * @retval      DIS_SUCCESS(0)  success
- * @retval      error code      error
+ * @retval      0 - success
+ * @retval      !0 - error
  *
  */
 
 int
-encode_DIS_Register(int sock, struct batch_request *preq)
+encode_wire_Register(int sock, struct batch_request *preq)
 {
 	int   rc;
 

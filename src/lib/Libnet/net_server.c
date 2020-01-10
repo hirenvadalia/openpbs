@@ -431,7 +431,7 @@ connection_idlecheck(void)
  * @param[in] pconn  pointer to a "conn_t" variable
  *
  * @return Error code
- * @return	 0  successful
+ * @return	 0 - successful
  * @retval	-1 unsuccessful
  *
  * @par Remark:
@@ -900,7 +900,7 @@ close_conn(int sd)
 		return;
 
 	if (svr_conn[idx]->cn_active != ChildPipe) {
-		dis_destroy_chan(sd);
+		transport_destroy_chan(sd);
 	}
 
 	if (svr_conn[idx]->cn_active != ChildPipe) {

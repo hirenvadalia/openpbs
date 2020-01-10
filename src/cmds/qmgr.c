@@ -3599,7 +3599,7 @@ show_help(char *str)
  * @param[out] attr    The attribute list with operators.
  *
  * @return Error code
- * @retval       0  Success
+ * @retval       0 - success
  * @retval       !0 Failure
  *
  * Note:
@@ -4227,7 +4227,7 @@ parse_request(char *request, char ***req)
 	}
 	for (i = IND_FIRST; i <= IND_LAST; i++)
 		(*req)[i] = NULL;
-		
+
 	for (i = 0; !EOL(*foreptr) && i < MAX_REQ_WORDS && error == 0;) {
 		while (White(*foreptr))
 			foreptr++;
@@ -4259,4 +4259,3 @@ parse_request(char *request, char ***req)
 
 	return error ? 0 : chars_parsed;
 }
-

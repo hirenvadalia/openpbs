@@ -40,7 +40,7 @@
 /**
  * @file	enc_RunJob.c
  * @brief
- * encode_DIS_RunJob() - encode a Run Job Batch Request
+ * encode_wire_RunJob() - encode a Run Job Batch Request
  *
  * @par Data items are:
  * 			string		job id
@@ -52,10 +52,10 @@
 
 #include "libpbs.h"
 #include "pbs_error.h"
-#include "dis.h"
+#include "pbs_transport.h"
 
 /*
- * encode_DIS_Run - used to encode the basic information for the
+ * encode_wire_Run - used to encode the basic information for the
  *	RunJob request and the ConfirmReservation request
  */
 
@@ -70,13 +70,13 @@
  * @param[in] arg - ar
  *
  * @return      int
- * @retval      DIS_SUCCESS(0)  success
- * @retval      error code      error
+ * @retval      0 - success
+ * @retval      !0 - error
  *
  */
 
 int
-encode_DIS_Run(int sock, char *id, char *where, unsigned long arg)
+encode_wire_Run(int sock, char *id, char *where, unsigned long arg)
 {
 	int   rc;
 

@@ -129,7 +129,7 @@
 #include "pbs_nodes.h"
 #include "svrfunc.h"
 #include "sched_cmds.h"
-#include "dis.h"
+#include "pbs_transport.h"
 #include "libsec.h"
 #include "pbs_license.h"
 #include "pbs_reliable.h"
@@ -1554,7 +1554,7 @@ check_block_wt(struct work_task *ptask)
 	**	All ready to talk... now send the info.
 	*/
 
-	DIS_tcp_funcs();
+	set_transport_to_tcp();
 	ret = diswsi(blockj->fd, 1);		/* version */
 	if (ret != DIS_SUCCESS)
 		goto err;
@@ -1571,12 +1571,12 @@ check_block_wt(struct work_task *ptask)
 	ret = diswsi(blockj->fd, blockj->exitstat);
 	if (ret != DIS_SUCCESS)
 		goto err;
-	(void)dis_flush(blockj->fd);
+	(void)transport_flush(blockj->fd);
 
 	sprintf(log_buffer, "%s: Write successful to client %s for job %s ", __func__,
 	blockj->client, blockj->jobid);
 	log_event(PBSEVENT_DEBUG, PBS_EVENTCLASS_JOB, LOG_NOTICE, blockj->jobid, log_buffer);
-	dis_destroy_chan(blockj->fd);
+	transport_destroy_chan(blockj->fd);
 	CS_close_socket(blockj->fd);
 	goto end;
 
@@ -1589,8 +1589,8 @@ retry:
 		blockj->client, blockj->jobid);
 	}
 err:
-	DIS_tcp_funcs();
-	dis_destroy_chan(blockj->fd);
+	set_transport_to_tcp();
+	transport_destroy_chan(blockj->fd);
 	if (ret != DIS_SUCCESS) {
 		sprintf(log_buffer, "DIS error while replying to client %s for job %s",
 		blockj->client, blockj->jobid);

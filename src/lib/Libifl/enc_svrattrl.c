@@ -40,7 +40,7 @@
 /**
  * @file	enc_svrattrl.c
  * @brief
- * encode_DIS_svrattrl() - encode a list of server "svrattrl" structures
+ * encode_wire_svrattrl() - encode a list of server "svrattrl" structures
  *
  *	The first item encoded is a unsigned integer, a count of the
  *	number of svrattrl entries in the linked list.  This is encoded
@@ -67,7 +67,7 @@
 #include "libpbs.h"
 #include "list_link.h"
 #include "attribute.h"
-#include "dis.h"
+#include "pbs_transport.h"
 
 /**
  * @brief
@@ -91,13 +91,13 @@
  * @param[in] psattl - pointer to svr attr list
  *
  * @return      int
- * @retval      DIS_SUCCESS(0)  success
- * @retval      error code      error
+ * @retval      0 - success
+ * @retval      !0 - error
  *
  */
 
 int
-encode_DIS_svrattrl(int sock, svrattrl *psattl)
+encode_wire_svrattrl(int sock, svrattrl *psattl)
 {
 	unsigned int ct = 0;
 	unsigned int name_len;

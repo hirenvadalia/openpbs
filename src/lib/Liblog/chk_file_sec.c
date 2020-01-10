@@ -70,7 +70,7 @@
  * @param[in]	sticky - value indicating whether to allow write on directory
  * @param[in] 	disallow - value indicating whether admin and owner given access permission
  * @param[in] 	path - directory path
- * @param[in] 	errmsg - appropriate error msg 
+ * @param[in] 	errmsg - appropriate error msg
  *
  * @return	int
  * @retval	0		success
@@ -109,7 +109,7 @@ teststat(struct stat *sp, int isdir, int sticky, int disallow,
  *
  * @return      int
  * @retval      0               success
- * @retval      error code      error
+ * @retval      !0 - error
  *
  */
 
@@ -158,7 +158,7 @@ teststat(struct stat *sp, int isdir, int sticky, int disallow)
  *
  * @return      int
  * @retval      0               success
- * @retval      error code      error
+ * @retval      !0 - error
  *
  */
 
@@ -215,10 +215,10 @@ tempstat(struct stat *sp, int isdir, int sticky, int disallow)
  * @param[in]	path - path to check
  * @param[in]	isdir - 1 = path is directory, 0 = file
  * @param[in]	sticky - allow write on directory if sticky set
- * @param[in]	disallow - perm bits to disallow	
+ * @param[in]	disallow - perm bits to disallow
  * @param[in] 	fullpath - check full path
- * 
- * @return	int	
+ *
+ * @return	int
  * @retval	0 			if ok
  * @retval	errno value 		if not ok, including:
  *              			EPERM if not owned by root

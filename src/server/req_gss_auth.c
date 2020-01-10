@@ -52,7 +52,7 @@
 #include "log.h"
 #include "net_connect.h"
 #include "server.h"
-#include "dis.h"
+#include "pbs_transport.h"
 
 extern time_t    time_now;
 

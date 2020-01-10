@@ -49,7 +49,7 @@
 #include "libsec.h"
 #endif
 #include "libpbs.h"
-#include "dis.h"
+#include "pbs_transport.h"
 #include "pbs_gss.h"
 
 static int tcp_recv(int, void *, int);
@@ -58,7 +58,7 @@ static int tcp_send(int, void *, int);
 /**
  * @brief
  *	Get the user buffer associated with the tcp channel. If no buffer has
- *	been set, then allocate a pbs_tcp_chan_t structure and associate with
+ *	been set, then allocate a pbs_transport_chan_t structure and associate with
  *	the given tcp channel
  *
  * @param[in] - fd - tcp channel to which to get/associate a user buffer
@@ -72,13 +72,13 @@ static int tcp_send(int, void *, int);
  * @par MT-safe: No
  *
  */
-static pbs_tcp_chan_t *
+static pbs_transport_chan_t *
 tcp_get_chan(int fd)
 {
-	pbs_tcp_chan_t *chan = get_conn_chan(fd);
+	pbs_transport_chan_t *chan = get_conn_chan(fd);
 	if (chan == NULL) {
 		if (errno != ENOTCONN) {
-			dis_setup_chan(fd, get_conn_chan);
+			transport_setup_chan(fd, get_conn_chan);
 			chan = get_conn_chan(fd);
 		}
 	}
@@ -252,7 +252,7 @@ tcp_send(int fd, void *data, int len)
  *
  */
 void
-DIS_tcp_funcs()
+set_transport_to_tcp()
 {
 	pfn_transport_get_chan = tcp_get_chan;
 	pfn_transport_set_chan = set_conn_chan;

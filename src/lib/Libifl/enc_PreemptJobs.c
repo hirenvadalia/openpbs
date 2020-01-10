@@ -40,7 +40,7 @@
 
 #include "libpbs.h"
 #include "pbs_error.h"
-#include "dis.h"
+#include "pbs_transport.h"
 #include "pbs_share.h"
 
 /**
@@ -52,7 +52,7 @@
  * @return - error code while writing data to the socket.
  */
 int
-encode_DIS_PreemptJobs(int sock, char **preempt_jobs_list)
+encode_wire_PreemptJobs(int sock, char **preempt_jobs_list)
 {
 	int	i = 0;
 	int	rc = 0;
@@ -66,7 +66,6 @@ encode_DIS_PreemptJobs(int sock, char **preempt_jobs_list)
 	for (i = 0; i < count; i++)
 		if ((rc = diswst(sock, preempt_jobs_list[i])) != 0)
 			return rc;
-	
+
 	return rc;
 }
-

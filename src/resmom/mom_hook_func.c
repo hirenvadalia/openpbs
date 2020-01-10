@@ -82,7 +82,7 @@
 #include "pbs_reliable.h"
 #include "pbs_version.h"
 #include "tpp.h"
-#include "dis.h"
+#include "pbs_transport.h"
 
 
 #define	RESCASSN_NCPUS	"resources_assigned.ncpus"
@@ -3474,7 +3474,7 @@ void reply_hook_bg(job *pjob)
 				if ((ret = diswsi(server_stream, n)) != DIS_SUCCESS)
 					goto err;
 
-				dis_flush(server_stream);
+				transport_flush(server_stream);
 				tpp_eom(server_stream);
 				break;
 		}

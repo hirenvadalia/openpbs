@@ -40,7 +40,7 @@
 /**
  * @file	enc_JobId.c
  * @brief
- * encode_DIS_JobId() - encode a Job ID string
+ * encode_wire_JobId() - encode a Job ID string
  *
  * @par This is used for the following batch requests:
  *		Ready_to_Commit
@@ -53,7 +53,7 @@
 
 #include "pbs_error.h"
 #include "libpbs.h"
-#include "dis.h"
+#include "pbs_transport.h"
 
 /**
  * @brief
@@ -70,13 +70,13 @@
  * @param[in] jobid - job id
  *
  * @return      int
- * @retval      DIS_SUCCESS(0)  success
- * @retval      error code      error
+ * @retval      0 - success
+ * @retval      !0 - error
  *
  */
 
 int
-encode_DIS_JobId(int sock, char *jobid)
+encode_wire_JobId(int sock, char *jobid)
 {
 	return (diswst(sock, jobid));
 }

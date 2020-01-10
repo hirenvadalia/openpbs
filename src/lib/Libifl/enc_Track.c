@@ -40,7 +40,7 @@
 /**
  * @file	enc_Track.c
  * @brief
- * encode_DIS_TrackJob() - encode a Track Job Batch Request
+ * encode_wire_TrackJob() - encode a Track Job Batch Request
  *
  *	This request is used by the server ONLY; its input is a server
  *	batch request structure.
@@ -61,7 +61,7 @@
 #include "attribute.h"
 #include "credential.h"
 #include "batch_request.h"
-#include "dis.h"
+#include "pbs_transport.h"
 
 /**
  * @brief
@@ -81,13 +81,13 @@
  * @param[out] preq - pointer to batch_request structure
  *
  * @return      int
- * @retval      DIS_SUCCESS(0)  success
- * @retval      error code      error
+ * @retval      0 - success
+ * @retval      !0 - error
  *
  */
 
 int
-encode_DIS_TrackJob(int sock, struct batch_request *preq)
+encode_wire_TrackJob(int sock, struct batch_request *preq)
 {
 	int   rc;
 

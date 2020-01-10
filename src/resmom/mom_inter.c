@@ -362,7 +362,7 @@ setcurrentworkdir(char *command)
  * @param[in] s - socket fd from where data needs to be read.
  *
  * @return  int
- * @retval    0  Success
+ * @retval    0 - success
  * @retval   -1  Failure
  * @retval   -2  Peer Closed
  *

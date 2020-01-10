@@ -49,7 +49,7 @@
  *	reply_jobid() - used by several requests where the job id must be sent
  *	reply_free()  - free the substructure that might hang from a reply
  *	set_err_msg() - set a message relating to the error "code"
- *	dis_reply_write()	- reply is sent to a remote client
+ *	wire_reply()	- reply is sent to a remote client
  *	reply_badattr()	- Create a reject (error) reply for a request including the name of the bad attribute/resource.
  *
  */
@@ -61,7 +61,7 @@
 #include <errno.h>
 #include <sys/types.h>
 #include "libpbs.h"
-#include "dis.h"
+#include "pbs_transport.h"
 #include "log.h"
 #include "pbs_error.h"
 #include "server_limits.h"
@@ -90,7 +90,7 @@ char   *resc_in_err = NULL;
 
 extern struct pbs_err_to_txt pbs_err_to_txt[];
 extern int pbs_tcp_errno;
-extern int dis_flush(int index);
+extern int transport_flush(int index);
 
 void reply_free(struct batch_reply *prep);
 
@@ -163,48 +163,48 @@ set_err_msg(int code, char *msgbuf, size_t msglen)
 }
 /**
  * @brief
- * 		reply is to be sent to a remote client
+ *	reply is to be sent to a remote client
  *
- * @param[in]	sfds - connection socket
- * @param[in]	preq - batch_request which contains the reply for the request
+ * @param[in] fd - connection socket
+ * @param[in] preq - batch_request which contains the reply for the request
  *
- * @return	return code
+ * @return int
+ * @retval 0 - Success
+ * @retval !0 - Error
  */
 static int
-dis_reply_write(int sfds, struct batch_request *preq)
+wire_reply(int fd, struct batch_request *preq)
 {
 	int rc;
-	struct batch_reply *preply = &preq->rq_reply;
+	struct batch_reply *preply = &(preq->rq_reply);
 
 	if (preq->istpp) {
-		rc = encode_DIS_replyTPP(sfds, preq->tppcmd_msgid, preply);
+		rc = encode_wire_replyTPP(fd, preq->tppcmd_msgid, preply);
 	} else {
 		/*
-		 * clear pbs_tcp_errno - set on error in dis_flush when called
-		 * either in encode_DIS_reply() or directly below.
+		 * clear pbs_tcp_errno - set on error in transport_flush when called
+		 * either in encode_wire_reply() or directly below.
 		 */
 		pbs_tcp_errno = 0;
-		DIS_tcp_funcs();		/* setup for DIS over tcp */
-
-		rc = encode_DIS_reply(sfds, preply);
+		set_transport_to_tcp();
+		rc = encode_wire_reply(fd, preply);
 	}
 
 	if (rc == 0) {
-		dis_flush(sfds);
+		transport_flush(fd);
 	}
 
 	if (rc) {
-		char hn[PBS_MAXHOSTNAME+1];
+		char hn[PBS_MAXHOSTNAME + 1];
 
-		if (get_connecthost(sfds, hn, PBS_MAXHOSTNAME) == -1)
+		if (get_connecthost(fd, hn, PBS_MAXHOSTNAME) == -1)
 			strcpy(hn, "??");
-		(void)sprintf(log_buffer, "DIS reply failure, %d, to host %s, errno=%d", rc, hn, pbs_tcp_errno);
+		(void)sprintf(log_buffer, "reply write failure, %d, to host %s, errno=%d", rc, hn, pbs_tcp_errno);
 		/* if EAGAIN - then write was blocked and timed-out, note it */
 		if (pbs_tcp_errno == EAGAIN)
 			strcat(log_buffer, " write timed out");
-		log_event(PBSEVENT_SYSTEM, PBS_EVENTCLASS_REQUEST, LOG_WARNING,
-			"dis_reply_write", log_buffer);
-		close_client(sfds);
+		log_event(PBSEVENT_SYSTEM, PBS_EVENTCLASS_REQUEST, LOG_WARNING, __func__, log_buffer);
+		close_client(fd);
 	}
 	return rc;
 }
@@ -232,36 +232,35 @@ int
 reply_send(struct batch_request *request)
 {
 #ifndef PBS_MOM
-	struct work_task   *ptask;
+	struct work_task *ptask = NULL;
 #endif	/* PBS_MOM */
-	int		    rc = 0;
-	int		    sfds = request->rq_conn;		/* socket */
-
-	/* if this is a child request, just move the error to the parent */
+	int rc = 0;
+	int fd = request->rq_conn;
 
 	if (request->rq_parentbr) {
+		/*
+		 * if this is a child request, just move the error to the parent
+		 */
 		if ((request->rq_parentbr->rq_reply.brp_choice == BATCH_REPLY_CHOICE_NULL) && (request->rq_parentbr->rq_reply.brp_code == 0)) {
 			request->rq_parentbr->rq_reply.brp_code = request->rq_reply.brp_code;
 			request->rq_parentbr->rq_reply.brp_auxcode = request->rq_reply.brp_auxcode;
 			if (request->rq_reply.brp_choice == BATCH_REPLY_CHOICE_Text) {
-				request->rq_parentbr->rq_reply.brp_choice =
-					request->rq_reply.brp_choice;
-				request->rq_parentbr->rq_reply.brp_un.brp_txt.brp_txtlen
-				= request->rq_reply.brp_un.brp_txt.brp_txtlen;
-				request->rq_parentbr->rq_reply.brp_un.brp_txt.brp_str =
-					strdup(request->rq_reply.brp_un.brp_txt.brp_str);
+				request->rq_parentbr->rq_reply.brp_choice = request->rq_reply.brp_choice;
+				request->rq_parentbr->rq_reply.brp_un.brp_txt.brp_txtlen = request->rq_reply.brp_un.brp_txt.brp_txtlen;
+				request->rq_parentbr->rq_reply.brp_un.brp_txt.brp_str = strdup(request->rq_reply.brp_un.brp_txt.brp_str);
 				if (request->rq_parentbr->rq_reply.brp_un.brp_txt.brp_str == NULL) {
-					log_err(-1, "reply_send", "Unable to allocate Memory!\n");
+					log_err(-1, __func__, "Unable to allocate Memory!\n");
 					return (PBSE_SYSTEM);
 				}
 			}
 		}
 	} else if (request->rq_refct > 0) {
-		/* waiting on sister (subjob) requests, will send when */
-		/* last one decrecments the reference count to zero    */
+		/*
+		 * waiting on sister (subjob) requests, will send when
+		 * last one decrecments the reference count to zero
+		 */
 		return 0;
-	} else if (sfds == PBS_LOCAL_CONNECTION) {
-
+	} else if (fd == PBS_LOCAL_CONNECTION) {
 #ifndef PBS_MOM
 		/*
 		 * reply stays local, find work task and move it to
@@ -274,11 +273,9 @@ reply_send(struct batch_request *request)
 
 		ptask = (struct work_task *)GET_NEXT(task_list_event);
 		while (ptask) {
-			if ((ptask->wt_type == WORK_Deferred_Local) &&
-				(ptask->wt_parm1 == (void *)request)) {
+			if ((ptask->wt_type == WORK_Deferred_Local) && (ptask->wt_parm1 == (void *)request)) {
 				delete_link(&ptask->wt_linkall);
-				append_link(&task_list_immed,
-					&ptask->wt_linkall, ptask);
+				append_link(&task_list_immed, &ptask->wt_linkall, ptask);
 				return (0);
 			}
 			ptask = (struct work_task *)GET_NEXT(ptask->wt_linkall);
@@ -289,15 +286,11 @@ reply_send(struct batch_request *request)
 		log_err(-1, __func__, "did not find work task for local request");
 #endif	/* PBS_MOM */
 		rc = PBSE_SYSTEM;
-
-	} else if (sfds >= 0) {
-
+	} else if (fd >= 0) {
 		/*
 		 * Otherwise, the reply is to be sent to a remote client
 		 */
-		if (rc == PBSE_NONE) {
-			rc = dis_reply_write(sfds, request);
-		}
+		rc = wire_reply(fd, request);
 	}
 
 	free_br(request);

@@ -46,7 +46,7 @@
 #include <string.h>
 #include <stdio.h>
 #include "libpbs.h"
-#include "dis.h"
+#include "pbs_transport.h"
 #include "pbs_ecl.h"
 
 
@@ -87,7 +87,7 @@ __pbs_msgjob(int c, char *jobid, int fileopt, char *msg, char *extend)
 
 	/* setup DIS support routines for following DIS calls */
 
-	DIS_tcp_funcs();
+	set_transport_to_tcp();
 
 	if ((rc = PBSD_msg_put(c, jobid, fileopt, msg, extend, 0, NULL)) != 0) {
 		if (set_conn_errtxt(c, dis_emsg[rc]) != 0) {
@@ -153,7 +153,7 @@ pbs_py_spawn(int c, char *jobid, char **argv, char **envp)
 
 	/* setup DIS support routines for following DIS calls */
 
-	DIS_tcp_funcs();
+	set_transport_to_tcp();
 
 	if ((rc = PBSD_py_spawn_put(c, jobid, argv, envp, 0, NULL)) != 0) {
 		if (set_conn_errtxt(c, dis_emsg[rc]) != 0) {
@@ -207,7 +207,7 @@ char *extend;
 
 	/* setup DIS support routines for following DIS calls */
 
-	DIS_tcp_funcs();
+	set_transport_to_tcp();
 
 	if ((rc = PBSD_relnodes_put(c, jobid, node_list, extend, 0, NULL)) != 0) {
 		if (set_conn_errtxt(c, dis_emsg[rc]) != 0) {

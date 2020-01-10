@@ -40,7 +40,7 @@
 /**
  * @file	enc_MoveJob.c
  * @brief
- * encode_DIS_MoveJob() - encode a Move Job Batch Request
+ * encode_wire_MoveJob() - encode a Move Job Batch Request
  *			  also used for an Order Job Batch Request
  *
  * @par Data items are:
@@ -52,7 +52,7 @@
 
 #include "libpbs.h"
 #include "pbs_error.h"
-#include "dis.h"
+#include "pbs_transport.h"
 
 /**
  * @brief
@@ -64,13 +64,13 @@
  * @param[in] destin - destination to which job to be moved
  *
  * @return      int
- * @retval      DIS_SUCCESS(0)  success
- * @retval      error code      error
+ * @retval      0 - success
+ * @retval      !0 - error
  *
  */
 
 int
-encode_DIS_MoveJob(int sock, char *jobid, char *destin)
+encode_wire_MoveJob(int sock, char *jobid, char *destin)
 {
 	int   rc;
 

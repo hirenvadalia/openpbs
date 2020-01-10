@@ -40,7 +40,7 @@
 /**
  * @file	enc_JobCred.c
  * @brief
- * encode_DIS_JobCred() - encode a Job Credential Batch Request
+ * encode_wire_JobCred() - encode a Job Credential Batch Request
  *
  * @par Data items are:
  * 			unsigned int	Credential type
@@ -51,7 +51,7 @@
 
 #include "libpbs.h"
 #include "pbs_error.h"
-#include "dis.h"
+#include "pbs_transport.h"
 
 /**
  * @brief
@@ -70,9 +70,9 @@
  * @retval      0 for success
  * @retval      non-zero otherwise
  */
-	
+
 int
-encode_DIS_JobCred(int sock, int type, char *cred, int len)
+encode_wire_JobCred(int sock, int type, char *cred, int len)
 {
 	int   rc;
 

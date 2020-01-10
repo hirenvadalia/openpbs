@@ -54,7 +54,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include "libpbs.h"
-#include "dis.h"
+#include "pbs_transport.h"
 
 /**
  * @brief read a batch reply from the given connecction index
@@ -72,7 +72,7 @@ PBSD_rdrpy(int c)
 	struct batch_reply *reply;
 	time_t old_timeout;
 
-	DIS_tcp_funcs();
+	set_transport_to_tcp();
 
 	/* clear any prior error message */
 	if (set_conn_errtxt(c, NULL) != 0) {
@@ -90,7 +90,7 @@ PBSD_rdrpy(int c)
 	if (pbs_tcp_timeout < PBS_DIS_TCP_TIMEOUT_LONG)
 		pbs_tcp_timeout = PBS_DIS_TCP_TIMEOUT_LONG;
 
-	if ((rc = decode_DIS_replyCmd(c, reply)) != 0) {
+	if ((rc = decode_wire_replyCmd(c, reply)) != 0) {
 		(void)free(reply);
 		pbs_errno = PBSE_PROTOCOL;
 		return NULL;

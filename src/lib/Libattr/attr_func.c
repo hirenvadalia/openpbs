@@ -1583,4 +1583,3 @@ void free_attrl_list(struct attrl *at_list)
 	}
 
 }
-

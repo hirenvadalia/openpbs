@@ -53,7 +53,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include "libpbs.h"
-#include "dis.h"
+#include "pbs_transport.h"
 #include "ticket.h"
 #include "pbs_ifl.h"
 #include "pbs_ecl.h"
@@ -71,7 +71,7 @@
  *
  * @return      int
  * @retval      0  		success
- * @retval      error code      error
+ * @retval      !0 - error
  *
  */
 
@@ -90,9 +90,9 @@ PBSD_ucred(int c, char *user, int type, char *buf, int len)
 	if (pbs_client_thread_lock_connection(c) != 0)
 		return pbs_errno;
 
-	if ((rc =encode_DIS_ReqHdr(c, PBS_BATCH_UserCred, pbs_current_user, PROT_TCP, NULL)) ||
-		(rc = encode_DIS_UserCred(c, user, type, buf, len)) ||
-		(rc = encode_DIS_ReqExtend(c, NULL))) {
+	if ((rc =encode_wire_ReqHdr(c, PBS_BATCH_UserCred, pbs_current_user, PROT_TCP, NULL)) ||
+		(rc = encode_wire_UserCred(c, user, type, buf, len)) ||
+		(rc = encode_wire_ReqExtend(c, NULL))) {
 		if (set_conn_errtxt(c, dis_emsg[rc]) != 0) {
 			pbs_errno = PBSE_SYSTEM;
 		} else {
@@ -101,7 +101,7 @@ PBSD_ucred(int c, char *user, int type, char *buf, int len)
 		(void)pbs_client_thread_unlock_connection(c);
 		return pbs_errno;
 	}
-	if (dis_flush(c)) {
+	if (transport_flush(c)) {
 		pbs_errno = PBSE_PROTOCOL;
 		(void)pbs_client_thread_unlock_connection(c);
 		return pbs_errno;
@@ -129,7 +129,7 @@ PBSD_ucred(int c, char *user, int type, char *buf, int len)
  *
  * @return      int
  * @retval      0		success
- * @retval      error code      error
+ * @retval      !0 - error
  *
  */
 int
@@ -147,9 +147,9 @@ PBSD_user_migrate(int c, char *tohost)
 	if (pbs_client_thread_lock_connection(c) != 0)
 		return pbs_errno;
 
-	if ((rc =encode_DIS_ReqHdr(c, PBS_BATCH_UserMigrate, pbs_current_user, PROT_TCP, NULL)) ||
-		(rc = encode_DIS_UserMigrate(c, tohost)) ||
-		(rc = encode_DIS_ReqExtend(c, NULL))) {
+	if ((rc =encode_wire_ReqHdr(c, PBS_BATCH_UserMigrate, pbs_current_user, PROT_TCP, NULL)) ||
+		(rc = encode_wire_UserMigrate(c, tohost)) ||
+		(rc = encode_wire_ReqExtend(c, NULL))) {
 		if (set_conn_errtxt(c, dis_emsg[rc]) != 0) {
 			pbs_errno = PBSE_SYSTEM;
 		} else {
@@ -158,7 +158,7 @@ PBSD_user_migrate(int c, char *tohost)
 		(void)pbs_client_thread_unlock_connection(c);
 		return pbs_errno;
 	}
-	if (dis_flush(c)) {
+	if (transport_flush(c)) {
 		pbs_errno = PBSE_PROTOCOL;
 		(void)pbs_client_thread_unlock_connection(c);
 		return pbs_errno;
