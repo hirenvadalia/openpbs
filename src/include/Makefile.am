@@ -129,4 +129,20 @@ noinst_HEADERS = \
 	user.h \
 	win.h \
 	win_remote_shell.h \
-	work_task.h
+	work_task.h \
+	flatbuffers_common_builder.h \
+	flatbuffers_common_reader.h \
+	pbs_ifl_builder.h \
+	pbs_ifl_reader.h \
+	pbs_ifl_verifier.h
+
+CLEANFILES = \
+	flatbuffers_common_builder.h \
+	flatbuffers_common_reader.h \
+	pbs_ifl_builder.h \
+	pbs_ifl_reader.h \
+	pbs_ifl_verifier.h
+
+flatbuffers_common_builder.h flatbuffers_common_reader.h pbs_ifl_builder.h pbs_ifl_reader.h pbs_ifl_verifier.h: $(top_srcdir)/src/lib/Libifl/pbs_ifl.fbs
+	@echo Generating Google Flatbuffers code from $< ; \
+	@flatcc_bin@ -a $<

@@ -69,6 +69,81 @@
 #include "attribute.h"
 #include "pbs_transport.h"
 
+#include "ifl_internal.h"
+#include "pbs_error.h"
+
+flatbuffers_ref_t __encode_wire_attrl(void *B, struct attropl *p, int use_op);
+
+/**
+ * @brief-
+ *	helper function for encode attrl or attrol
+ *
+ * @param[in] B - pointer to flatbuffer
+ * @param[in] p - pointer to attropl structure
+ * @param[in] use_op - whether to set op from given attropl or force to SET
+ *
+ * @return flatbuffers_ref_t
+ * @retval flatbuffer vec ref
+ *
+ */
+flatbuffers_ref_t
+__encode_wire_attrl(void *B, struct attropl *p, int use_op)
+{
+	struct attropl *ps = NULL;
+
+	ns(Attribute_vec_start(B));
+
+	for (ps = p; ps; ps = ps->next) {
+		ns(Attribute_start(B));
+		ns(Attribute_name_add(B, flatbuffers_string_create_str(B, ps->name)));
+		if (ps->resource) {
+			ns(Attribute_resource_add(B, flatbuffers_string_create_str(B, ps->resource)));
+		}
+		ns(Attribute_value_add(B, flatbuffers_string_create_str(B, ps->value)));
+		if (use_op)
+			ns(Attribute_op_add(B, (unsigned int)ps->op));
+		else
+			ns(Attribute_op_add(B, SET));
+		ns(Attribute_vec_push(B, ns(Attribute_end(B))));
+	}
+
+	return ((ns(Attribute_vec_end(B))));
+}
+
+/**
+ * @brief-
+ *	encode a list of PBS API "attrl" structures into given flatbuffer
+ *
+ * @param[in] B - pointer to flatbuffer
+ * @param[in] pattrl - pointer to attrl structure
+ *
+ * @return flatbuffers_ref_t
+ * @retval flatbuffer vec ref
+ *
+ */
+flatbuffers_ref_t
+encode_wire_attrl(void *B, struct attrl *pattrl)
+{
+	return __encode_wire_attrl(B, (struct attropl *)pattrl, 0);
+}
+
+/**
+ * @brief-
+ *	encode a list of PBS API "attropl" structures into given flatbuffer
+ *
+ * @param[in] B - pointer to flatbuffer
+ * @param[in] pattrl - pointer to attropl structure
+ *
+ * @return flatbuffers_ref_t
+ * @retval flatbuffer vec ref
+ *
+ */
+flatbuffers_ref_t
+encode_wire_attropl(void *B, struct attropl *pattropl)
+{
+	return __encode_wire_attrl(B, pattropl, 1);
+}
+
 /**
  * @brief
  *	-encode a list of server "svrattrl" structures
@@ -99,6 +174,7 @@
 int
 encode_wire_svrattrl(int sock, svrattrl *psattl)
 {
+	// FIXME: this is same as encode_wire_attrl, use it
 	unsigned int ct = 0;
 	unsigned int name_len;
 	svrattrl *ps;

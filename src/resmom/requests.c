@@ -532,7 +532,7 @@ return_file(job *pjob, enum job_file which, int sock)
 
 		transport_flush(sock);
 
-		if ((wire_reply_read(sock, &prq->rq_reply, 0) != 0) ||
+		if ((wire_reply_read_svr(sock, &prq->rq_reply, 0) != 0) ||
 			(prq->rq_reply.brp_code != 0)) {
 			rc = -1;
 			break;

@@ -1240,7 +1240,6 @@ receive_job_update(int stream, job *pjob)
 	svrattrl		*psatl;
 	attribute_def		*pdef;
 
-	CLEAR_HEAD(lhead);
 	if (decode_wire_svrattrl(stream, &lhead) != DIS_SUCCESS) {
 		log_err(-1, __func__, "decode_wire_svrattrl failed");
 		return (-1);
@@ -2871,7 +2870,6 @@ recv_resc_used_from_sister(int stream, char *jobid, int nodeidx)
 
 	pdef = &job_attr_def[(int)JOB_ATR_resc_used];
 
-	CLEAR_HEAD(lhead);
 	if (decode_wire_svrattrl(stream, &lhead) != DIS_SUCCESS) {
 		sprintf(log_buffer, "decode_wire_svrattrl failed");
 		return (-1);
@@ -3138,7 +3136,6 @@ im_request(int stream, int version)
 			}
 
 			pjob->ji_numnodes = hnodenum;
-			CLEAR_HEAD(lhead);
 			if (decode_wire_svrattrl(stream, &lhead) != DIS_SUCCESS) {
 				sprintf(log_buffer, "decode_wire_svrattrl failed");
 				goto err;

@@ -206,18 +206,18 @@ table Req {
 	extend: Extend;
 }
 
-table StatRespJob {
+table StatRespStat {
 	type: short;
 	name: string;
 	attrs: [Attribute];
 }
 
-table SelectResp {
-	ids: [string];
+table StatResp {
+	stats: [StatRespStat];
 }
 
-table StatResp {
-	jobs: [StatRespJob];
+table SelectResp {
+	ids: [string];
 }
 
 table RescQueryResp {
@@ -227,12 +227,16 @@ table RescQueryResp {
 	down: [short];
 }
 
+table TextResp {
+	txt: string;
+}
+
 union RespBody {
-	text: string, // jobid, text, location etc reponses
-	selects: SelectResp, // select reponses
-	stats: StatResp, // stat, cmdstat reponses
-	rescq: RescQueryResp, // resource query reponses
-	preempts: Preempt // preempt jobs reply
+	TextResp, // jobid, text, location etc reponses
+	SelectResp, // select reponses
+	StatResp, // stat, cmdstat reponses
+	RescQueryResp, // resource query reponses
+	Preempt // preempt jobs reply
 }
 
 table Resp {

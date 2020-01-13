@@ -370,8 +370,9 @@ extern void req_cred(struct batch_request *);
 #endif
 
 /* PBS Batch Request Decode/Encode routines */
-extern int decode_wire_replySvr(int, struct batch_reply *);
-extern int decode_wire_svrattrl(int, pbs_list_head *);
+int wire_reply_read(int sock, struct batch_reply *reply, int prot, int forsvr);
+
+extern int decode_wire_svrattrl(ns(Attribute_vec_t), pbs_list_head *);
 
 extern int encode_wire_failover(int, struct batch_request *);
 extern int encode_wire_CopyFiles(int, struct batch_request *);
@@ -384,7 +385,10 @@ extern int encode_wire_svrattrl(int, svrattrl *);
 extern int encode_wire_Cred(int, char *, char *, int, char *, size_t, long);
 
 extern int wire_request_read(int, struct batch_request *);
-extern int dis_reply_read(int, struct batch_reply *, int);
+extern int wire_reply_read(int sock, struct batch_reply *reply, int prot, int forsvr);
+
+#define wire_reply_read_cmd(x, y, z) wire_reply_read(x, y, z, 0)
+#define wire_reply_read_svr(x, y, z) wire_reply_read(x, y, z, 1)
 
 #ifdef __cplusplus
 }

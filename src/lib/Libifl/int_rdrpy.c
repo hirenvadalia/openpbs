@@ -90,7 +90,7 @@ PBSD_rdrpy(int c)
 	if (pbs_tcp_timeout < PBS_DIS_TCP_TIMEOUT_LONG)
 		pbs_tcp_timeout = PBS_DIS_TCP_TIMEOUT_LONG;
 
-	if ((rc = decode_wire_replyCmd(c, reply)) != 0) {
+	if ((rc = wire_reply_read_cmd(c, reply, PROT_TCP)) != 0) {
 		(void)free(reply);
 		pbs_errno = PBSE_PROTOCOL;
 		return NULL;

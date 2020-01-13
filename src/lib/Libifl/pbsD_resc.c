@@ -212,7 +212,7 @@ pbs_rescquery(int c, char **resclist, int num_resc,
 
 	/* read in reply */
 
-	reply = PBSD_rdrpy(c);
+	reply = PBSD_rdrpy(c); // FIXME: handle NULL return
 	if ((rc = get_conn_errno(c)) == PBSE_NONE &&
 		reply->brp_choice == BATCH_REPLY_CHOICE_RescQuery) {
 		struct	brp_rescq	*resq = &reply->brp_un.brp_rescq;

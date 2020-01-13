@@ -624,7 +624,7 @@ read_reg_reply(int sock)
 	fo_reply.brp_choice = BATCH_REPLY_CHOICE_NULL;
 	fo_reply.brp_un.brp_txt.brp_txtlen = 0;
 	fo_reply.brp_un.brp_txt.brp_str    = 0;
-	rc = wire_reply_read(sock, &fo_reply, 0);
+	rc = wire_reply_read_svr(sock, &fo_reply, 0);
 
 	if ((rc != 0) || (fo_reply.brp_code != 0)) {
 		DBPRT(("Failover: received invalid reply: non-zero code or EOF\n"))

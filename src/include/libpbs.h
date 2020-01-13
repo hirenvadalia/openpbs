@@ -72,15 +72,13 @@ extern "C" {
 #define PROT_TCP	 0
 #define PROT_TPP	 1
 
-#define PBS_BATCH_PROT_TYPE	2
-#define PBS_BATCH_PROT_VER	1
-/* #define PBS_REQUEST_MAGIC (56) */
-/* #define PBS_REPLY_MAGIC   (57) */
 #define SCRIPT_CHUNK_Z (65536)
+
 #ifndef TRUE
 #define TRUE 1
 #define FALSE 0
 #endif
+
 #ifndef EOF
 #define EOF (-1)
 #endif
@@ -360,8 +358,6 @@ extern struct batch_status * PBSD_status(int, int, char *, struct attrl *, char 
 extern preempt_job_info * PBSD_preempt_jobs(int, char **);
 extern struct batch_status * PBSD_status_get(int);
 extern char * PBSD_queuejob(int, char *, char *, struct attropl *, char *, int, char **);
-extern int decode_wire_attrl(int, struct attrl **);
-extern int decode_wire_replyCmd(int, struct batch_reply *);
 extern int encode_wire_JobId(int, char *);
 extern int encode_wire_Manage(int, int, int, char *, struct attropl *);
 extern int encode_wire_MessageJob(int, char *, int, char *);
@@ -384,7 +380,6 @@ extern int encode_wire_CopyHookFile(int, int, char *, int, char *);
 extern int encode_wire_DelHookFile(int, char *);
 extern int encode_wire_PreemptJobs(int, char **);
 extern char * PBSD_submit_resv(int, char *, struct attropl *, char *);
-extern int wire_reply_read(int, struct batch_reply *, int);
 extern void pbs_authors(void);
 extern int engage_external_authentication(int, char *, int, int, char *, int);
 extern char * PBSD_modify_resv(int, char *, struct attropl *, char *);

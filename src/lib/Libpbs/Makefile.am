@@ -217,12 +217,7 @@ libpbs_la_SOURCES = \
 	ecl_node_attr_def.c \
 	ecl_queue_attr_def.c \
 	ecl_resc_def_all.c \
-	ecl_resv_attr_def.c \
-	flatbuffers_common_builder.h \
-	flatbuffers_common_reader.h \
-	pbs_ifl_builder.h \
-	pbs_ifl_reader.h \
-	pbs_ifl_verifier.h
+	ecl_resv_attr_def.c
 
 CLEANFILES = \
 	ecl_job_attr_def.c \
@@ -231,12 +226,7 @@ CLEANFILES = \
 	ecl_node_attr_def.c \
 	ecl_queue_attr_def.c \
 	ecl_resc_def_all.c \
-	ecl_resv_attr_def.c \
-	flatbuffers_common_builder.h \
-	flatbuffers_common_reader.h \
-	pbs_ifl_builder.h \
-	pbs_ifl_reader.h \
-	pbs_ifl_verifier.h
+	ecl_resv_attr_def.c
 
 ecl_job_attr_def.c: $(top_srcdir)/src/lib/Libattr/master_job_attr_def.xml
 	@echo Generating $@ from $< ; \
@@ -279,7 +269,3 @@ ecl_resc_def_all.c: $(top_srcdir)/src/lib/Libattr/master_resc_def_all.xml
 	$(PYTHON) $(top_srcdir)/buildutils/attr_parser.py \
 		-m $(top_srcdir)/src/lib/Libattr/master_resc_def_all.xml \
 		-s /dev/null -e $@ -a resc
-
-flatbuffers_common_builder.h flatbuffers_common_reader.h pbs_ifl_builder.h pbs_ifl_reader.h pbs_ifl_verifier.h: $(top_srcdir)/src/lib/Libifl/pbs_ifl.fbs
-	@echo Generating google Flatbuffers code from $< ; \
-	@flatcc_bin@ -a $<
