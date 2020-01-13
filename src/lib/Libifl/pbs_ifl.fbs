@@ -1,12 +1,23 @@
 namespace PBS.ifl;
 
-enum ProtType:byte { Batch, TaskManager }
+enum ProtType:byte { Batch, RescManager, InterMoM, InterSvr }
 enum batch_op:byte { SET, UNSET, INCR, DECR, EQ, NE, GE, GT, LE, LT, DFLT }
 
 table Header {
 	protType: ProtType = Batch;
-	batchId: short;
+	version: short;
+	reqId: short;
 	user: string;
+}
+
+table RmReq {
+	hdr: Header;
+	data: [string];
+}
+
+table RmResp {
+	code: short;
+	data: [string];
 }
 
 table Attribute {

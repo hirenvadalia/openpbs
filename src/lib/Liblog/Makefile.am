@@ -40,7 +40,8 @@ lib_LIBRARIES = liblog.a
 
 liblog_a_CPPFLAGS = \
 	-I$(top_srcdir)/src/include \
-	@KRB5_CFLAGS@
+	@KRB5_CFLAGS@ \
+	@flatcc_inc@
 
 liblog_a_SOURCES = \
 	chk_file_sec.c \

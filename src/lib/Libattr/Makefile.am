@@ -40,7 +40,8 @@ lib_LIBRARIES = libattr.a
 
 libattr_a_CPPFLAGS = \
 	-I$(top_srcdir)/src/include \
-	@KRB5_CFLAGS@
+	@KRB5_CFLAGS@ \
+	@flatcc_inc@
 
 libattr_a_SOURCES = \
 	attr_atomic.c \

@@ -39,6 +39,7 @@
 #include <assert.h>
 #include <stdlib.h>
 #include "pbs_transport.h"
+#include "ifl_internal.h"
 
 /**
  * @brief
@@ -254,7 +255,7 @@ __transport_read(int fd)
  *
  */
 int
-transport_flush(int fd)
+transport_flush(int fd, flatcc_builder_t *B)
 {
 	int (*before_send)(int, void *, int) = transport_chan_get_before_send(fd);
 	pbs_dis_buf_t *tp = dis_get_writebuf(fd);

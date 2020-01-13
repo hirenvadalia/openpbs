@@ -53,7 +53,7 @@
 #include	<arpa/inet.h>
 
 #include	"pbs_ifl.h"
-// #include	"ifl_internal.h"
+#include	"ifl_internal.h"
 #include	"pbs_internal.h"
 #include	"net_connect.h"
 #include	"resmon.h"
@@ -212,6 +212,15 @@ findout(int stream)
 	return op;
 }
 
+static int
+transport_flushrm(int stream, flatcc_builder_t *B)
+{
+	ns(RmReq_data_add(B, flatbuffers_string_vec_end(B)));
+	ns(RmReq_end_as_root(B));
+
+	return transport_flush(stream, B);
+}
+
 /**
  * @brief
  *	start and compose command
@@ -219,29 +228,30 @@ findout(int stream)
  * @param[in] stream - socket descriptor
  * @param[in] com - command
  *
- * @return	int
- * @retval	0	success
- * @retval	!0	error
+ * @return flatcc_builder_t *
+ * @retval NULL - Error
+ * @retval !NULL - Success
  *
  */
-static int
+static flatcc_builder_t *
 startcom(int stream, int com)
 {
-	int	ret;
+	flatcc_builder_t *B = NULL;
 
 	set_transport_to_tpp();
-	ret = diswsi(stream, RM_PROTOCOL);
-	if (ret == DIS_SUCCESS) {
-		ret = diswsi(stream, RM_PROTOCOL_VER);
-		if (ret == DIS_SUCCESS)
-			ret = diswsi(stream, com);
-	}
 
-	if (ret != DIS_SUCCESS) {
-		DBPRT(("startcom: diswsi error %s\n", dis_emsg[ret]))
-		pbs_errno = errno;
-	}
-	return ret;
+	// FIXME: get buf with reset
+	ns(RmReq_start_as_root(B));
+	ns(Header_start(B));
+	ns(Header_protType_add(B, ns(ProtType_RescManager)));
+	ns(Header_version_add(B, RM_PROTOCOL_VER));
+	ns(Header_reqId_add(B, com));
+
+	ns(RmReq_hdr_add(B, ns(Header_end(B))));
+
+	flatbuffers_string_vec_start(B);
+
+	return B;
 }
 
 /**
@@ -258,22 +268,21 @@ startcom(int stream, int com)
  *
  */
 static int
-simplecom(stream, com)
-int	stream;
-int	com;
+simplecom(int stream, int com)
 {
-	struct	out	*op;
+	struct out *op = NULL;
+	flatcc_builder_t *B = NULL;
 
 	if ((op = findout(stream)) == NULL)
 		return -1;
 
 	op->len = -1;
 
-	if (startcom(stream, com) != DIS_SUCCESS) {
+	if ((B = startcom(stream, com)) == NULL) {
 		tpp_close(stream);
 		return -1;
 	}
-	if (transport_flush(stream) == -1) {
+	if (transport_flushrm(stream, B) == -1) {
 		pbs_errno = errno;
 		DBPRT(("simplecom: flush error %d\n", pbs_errno))
 		tpp_close(stream);
@@ -297,11 +306,13 @@ int	com;
 static int
 simpleget(int stream)
 {
-	int	ret, num;
-	fd_set selset;
+	void *buf = NULL;
+	size_t bufsz = 0;
 
 	while(1) {
-		/* since tpp recvs are essentially allways non blocking
+		fd_set selset;
+
+		/* since tpp recvs are essentially always non blocking
 		 * we can call a dis function only if we are sure we have
 		 * data on that tpp fd
 		 */
@@ -314,14 +325,16 @@ simpleget(int stream)
 			break; /* let it flow down and fail in the DIS read */
 	}
 
-	num = disrsi(stream, &ret);
-	if (ret != DIS_SUCCESS) {
-		DBPRT(("simpleget: %s\n", dis_emsg[ret]))
+	// FIXME: get loaded buffer
+
+	if (buf == NULL) {
+		DBPRT(("simpleget: failed to get response\n"))
 		pbs_errno = errno ? errno : EIO;
 		tpp_close(stream);
 		return -1;
 	}
-	if (num != RM_RSP_OK) {
+
+	if ((int) ns(RmResp_code(ns(RmResp_as_root(buf)))) != RM_RSP_OK) {
 #ifdef	ENOMSG
 		pbs_errno = ENOMSG;
 #else
@@ -393,40 +406,26 @@ downrm(int stream)
 int
 configrm(int stream, char *file)
 {
-	int	ret, len;
-	struct	out	*op;
+	struct out *op = NULL;
+	flatcc_builder_t *B = NULL;
 
 	pbs_errno = 0;
 	if ((op = findout(stream)) == NULL)
 		return -1;
+
 	op->len = -1;
 
-	if (file[0] != '/' || (len = strlen(file)) > (size_t)MAXPATHLEN) {
+	if (file == NULL || file[0] != '/' || strlen(file) > (size_t)MAXPATHLEN) {
 		pbs_errno = EINVAL;
 		return -1;
 	}
 
-	if (startcom(stream, RM_CMD_CONFIG) != DIS_SUCCESS)
+	if ((B = startcom(stream, RM_CMD_CONFIG)) == NULL)
 		return -1;
-	ret = diswcs(stream, file, len);
-	if (ret != DIS_SUCCESS) {
-#if	defined(ECOMM)
-		pbs_errno = ECOMM;
-#elif	defined(ENOCONNECT)
-		pbs_errno = ENOCONNECT;
-#else
 
-#ifdef WIN32
-		pbs_errno = ERROR_IO_INCOMPLETE;
-#else
-		pbs_errno = ETXTBSY;
-#endif
+	flatbuffers_string_vec_push(B, flatbuffers_string_create_str(B, file));
 
-#endif
-		DBPRT(("configrm: diswcs %s\n", dis_emsg[ret]))
-		return -1;
-	}
-	if (transport_flush(stream) == -1) {
+	if (transport_flushrm(stream, B) == -1) {
 		pbs_errno = errno;
 		DBPRT(("configrm: flush error %d\n", pbs_errno))
 		return -1;
@@ -454,30 +453,20 @@ configrm(int stream, char *file)
 static int
 doreq(struct out *op, char *line)
 {
-	int	ret;
+	flatcc_builder_t *B = NULL;
 
-	if (op->len == -1) {	/* start new message */
-		if (startcom(op->stream, RM_CMD_REQUEST) != DIS_SUCCESS)
+	if (op->len == -1) {
+		/* start new message */
+		if ((B = startcom(op->stream, RM_CMD_REQUEST)) == NULL)
 			return -1;
-		op->len = 1;
+		op->len = 0;
+	} else {
+		// FIXME: get unchanged - just pointer to buffer here
 	}
-	ret = diswcs(op->stream, line, strlen(line));
-	if (ret != DIS_SUCCESS) {
-#if	defined(ECOMM)
-		pbs_errno = ECOMM;
-#elif	defined(ENOCONNECT)
-		pbs_errno = ENOCONNECT;
-#else
-#ifdef WIN32
-		pbs_errno = ERROR_IO_INCOMPLETE;
-#else
-		pbs_errno = ETXTBSY;
-#endif
 
-#endif
-		DBPRT(("doreq: diswcs %s\n", dis_emsg[ret]))
-		return -1;
-	}
+	flatbuffers_string_vec_push(B, flatbuffers_string_create_str(B, line));
+	op->len++;
+
 	return 0;
 }
 
@@ -567,15 +556,19 @@ allreq(char *line)
 char *
 getreq(int stream)
 {
-	char	*startline;
+	char	*startline = NULL;
 	struct	out	*op;
 	int	ret;
+	flatcc_builder_t *B = NULL;
+
 
 	pbs_errno = 0;
 	if ((op = findout(stream)) == NULL)
 		return NULL;
-	if (op->len >= 0) {	/* there is a message to send */
-		if (transport_flush(stream) == -1) {
+	if (op->len >= 0) {
+		/* there is a message to send */
+		// FIXME: get unchanged - just pointer to buffer here
+		if (transport_flushrm(stream, B) == -1) {
 			pbs_errno = errno;
 			DBPRT(("getreq: flush error %d\n", pbs_errno))
 			(void)delrm(stream);
@@ -590,15 +583,8 @@ getreq(int stream)
 			return NULL;
 		op->len = -1;
 	}
-	startline = disrst(stream, &ret);
-	if (ret == DIS_EOF) {
-		return NULL;
-	}
-	else if (ret != DIS_SUCCESS) {
-		pbs_errno = errno ? errno : EIO;
-		DBPRT(("getreq: cannot read string %s\n", dis_emsg[ret]))
-		return NULL;
-	}
+
+	// FIXME: read startline
 
 	if (!full) {
 		char	*cc, *hold;
@@ -637,6 +623,7 @@ flushreq()
 {
 	struct	out	*op, *prev;
 	int	did, i;
+	flatcc_builder_t *B = NULL;
 
 	pbs_errno = 0;
 	did = 0;
@@ -644,7 +631,7 @@ flushreq()
 		for (op=outs[i]; op; op=op->next) {
 			if (op->len <= 0)	/* no message to send */
 				continue;
-			if (transport_flush(op->stream) == -1) {
+			if (transport_flushrm(op->stream, B) == -1) {
 				pbs_errno = errno;
 				DBPRT(("flushreq: flush error %d\n", pbs_errno))
 				tpp_close(op->stream);

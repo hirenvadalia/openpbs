@@ -64,7 +64,7 @@ extern char	*msg_nosupport;
 
 /**
  * @brief
- *	decode into a list of PBS API "attrl" structures from given flatbuffer
+ *	decode into a list of PBS API "attropl" structures from given flatbuffer
  *	The space for the attrl structures is allocated as needed.
  *
  * @param[in] attrs - flatbuffer attrs vec
@@ -75,11 +75,11 @@ extern char	*msg_nosupport;
  * @retval >0 on failure
  */
 static int
-decode_wire_attrl(ns(Attribute_vec_t) attrs, struct attrl **ppatt)
+decode_wire_attropl(ns(Attribute_vec_t) attrs, struct attropl **ppatt)
 {
 	int i = 0;
-	struct attrl *patprior = NULL;
-	struct attrl *pat = NULL;
+	struct attropl *patprior = NULL;
+	struct attropl *pat = NULL;
 	size_t attrs_len = ns(Attribute_vec_len(attrs));
 
 	for (i = 0; i < attrs_len; i++) {
@@ -112,7 +112,7 @@ decode_wire_attrl(ns(Attribute_vec_t) attrs, struct attrl **ppatt)
 	}
 
 err:
-	PBS_free_aopl((struct attropl *)pat);
+	PBS_free_aopl(pat);
 	return PBSE_SYSTEM;
 }
 
@@ -501,6 +501,7 @@ wire_request_read(int sfds, struct batch_request *request)
 	ns(Req_table_t) req;
 	ns(Header_table_t) hdr;
 	uint16_t proto;
+	uint16_t version;
 
 	if (request->istpp)
 		set_transport_to_tpp();
@@ -515,11 +516,15 @@ wire_request_read(int sfds, struct batch_request *request)
 		return PBSE_PROTOCOL;
 	}
 
-	req = ns(Req_as_root(buf));
-	hdr = ns(Req_hdr(req));
-	proto = ns(Header_protType(hdr));
+	req = (ns(Req_table_t)) ns(Req_as_root(buf));
+	hdr = (ns(Header_table_t)) ns(Req_hdr(req));
+	proto = (uint16_t) ns(Header_protType(hdr));
+	version = (uint16_t) ns(Header_version(hdr));
 
-	request->rq_type = (int)ns(Header_batchId(hdr));
+	if (proto != ns(ProtType_Batch) || version > PBS_BATCH_PROT_VER)
+		return PBSE_PROTOCOL;
+
+	request->rq_type = (int)ns(Header_reqId(hdr));
 
 	strncpy(request->rq_user, (char *)ns(Header_user(hdr)), PBS_MAXUSER);
 	request->rq_user[PBS_MAXUSER + 1] = '\0';

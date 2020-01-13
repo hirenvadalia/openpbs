@@ -507,6 +507,7 @@ enum pbs_auth_method {
  ** This structure is identical to attropl so they can be used
  ** interchangably.  The op field is not used.
  */
+// FIXME: can we get rid of this?
 struct attrl {
 	struct attrl *next;
 	char	     *name;

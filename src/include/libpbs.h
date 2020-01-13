@@ -72,6 +72,8 @@ extern "C" {
 #define PROT_TCP	 0
 #define PROT_TPP	 1
 
+#define PBS_BATCH_PROT_VER	1
+
 #define SCRIPT_CHUNK_Z (65536)
 
 #ifndef TRUE

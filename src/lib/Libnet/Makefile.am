@@ -40,7 +40,8 @@ lib_LIBRARIES = libnet.a
 
 libnet_a_CPPFLAGS = \
 	-I$(top_srcdir)/src/include \
-	@KRB5_CFLAGS@
+	@KRB5_CFLAGS@ \
+	@flatcc_inc@
 
 libnet_a_SOURCES = \
 	get_hostaddr.c \

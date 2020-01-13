@@ -46,6 +46,7 @@ extern "C" {
 #include <float.h>
 #include "Long.h"
 #include "pbs_gss.h"
+#include "ifl_internal.h"
 
 extern void set_transport_to_tcp();
 
@@ -61,7 +62,7 @@ void transport_chan_set_before_send(int, void *);
 void * transport_chan_get_before_send(int);
 void transport_chan_set_after_recv(int, void *);
 void * transport_chan_get_after_recv(int);
-int transport_flush(int);
+int transport_flush(int, flatcc_builder_t *B);
 void transport_setup_chan(int, pbs_transport_chan_t * (*)(int));
 void transport_destroy_chan(int);
 

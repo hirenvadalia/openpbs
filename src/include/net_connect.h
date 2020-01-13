@@ -72,19 +72,14 @@ typedef unsigned long pbs_net_t;        /* for holding host addresses */
 /*
  **	Protocol numbers and versions for PBS communications.
  */
-
-#define RM_PROTOCOL	1	/* resource monitor protocol number */
 #define RM_PROTOCOL_VER	1	/* resmon protocol version number */
 
-#define	TM_PROTOCOL	2	/* task manager protocol number */
 #define	TM_PROTOCOL_VER	2	/* task manager protocol version number */
 #define	TM_PROTOCOL_OLD	1	/* old task manager protocol version number */
 
-#define	IM_PROTOCOL	3	/* inter-mom protocol number */
 #define	IM_PROTOCOL_VER	6	/* inter-mom protocol version number */
 #define	IM_OLD_PROTOCOL_VER 5	/* inter-mom old protocol version number */
 
-#define	IS_PROTOCOL	4	/* inter-server protocol number */
 #define	IS_PROTOCOL_VER	3	/* inter-server protocol version number */
 
 
