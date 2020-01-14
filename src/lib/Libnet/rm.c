@@ -240,7 +240,7 @@ startcom(int stream, int com)
 
 	set_transport_to_tpp();
 
-	// FIXME: get buf with reset
+	// FIXME: get buf with reset for write
 	ns(RmReq_start_as_root(B));
 	ns(Header_start(B));
 	ns(Header_protType_add(B, ns(ProtType_RescManager)));
@@ -325,7 +325,7 @@ simpleget(int stream)
 			break; /* let it flow down and fail in the DIS read */
 	}
 
-	// FIXME: get loaded buffer
+	// FIXME: get loaded buffer for read
 
 	if (buf == NULL) {
 		DBPRT(("simpleget: failed to get response\n"))

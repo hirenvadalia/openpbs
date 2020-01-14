@@ -292,7 +292,7 @@ wire_reply_read(int sock, struct batch_reply *reply, int prot, int forsvr)
 	else
 		set_transport_to_tpp();
 
-	//FIXME: get loaded buf with size here
+	//FIXME: get loaded buf for read with size here
 	rc = ns(Resp_verify_as_root(buf, bufsz));
 	if (rc != 0) {
 		log_eventf(PBSEVENT_ERROR, PBS_EVENTCLASS_REQUEST, LOG_ERR, __func__,
@@ -508,7 +508,7 @@ wire_request_read(int sfds, struct batch_request *request)
 	else
 		set_transport_to_tcp();
 
-	//FIXME: get loaded buf with size here
+	//FIXME: get loaded buf for read with size here
 	rc = ns(Req_verify_as_root(buf, bufsz));
 	if (rc != 0) {
 		log_eventf(PBSEVENT_DEBUG, PBS_EVENTCLASS_REQUEST, LOG_DEBUG, __func__,

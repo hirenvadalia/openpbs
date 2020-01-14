@@ -62,6 +62,7 @@
 #include	"net_connect.h"
 #include	"libsec.h"
 #include 	"pbs_internal.h"
+#include "ifl_internal.h"
 
 /**
  * @file	tm.c
@@ -108,9 +109,7 @@ extern int * __pbs_tcperrno_location(void);
  **	enviornment from MOM.
  */
 static	char		*tm_jobid = NULL;
-static	int		tm_jobid_len = 0;
 static	char		*tm_jobcookie = NULL;
-static	int		tm_jobcookie_len = 0;
 static	tm_task_id	tm_jobtid = TM_NULL_TASK;
 static	tm_node_id	tm_jobndid = TM_ERROR_NODE;
 static	int		tm_momport = 15003;
@@ -543,6 +542,14 @@ failed:
 	return -1;
 }
 
+static int
+transport_flushtm(flatcc_builder_t *B)
+{
+	ns(TmReq_end_as_root(B));
+
+	return transport_flush(local_conn, B);
+}
+
 /**
  * @brief
  *	-startcom() - send request header to local pbs_mom.
@@ -556,47 +563,29 @@ failed:
  * @retval	!0		error
  *
  */
-static int
+static flatcc_builder_t *
 startcom(int com, tm_event_t event)
 {
-	int     ret;
+	flatcc_builder_t *B = NULL;
 
 	if (localmom() == -1)
-		return -1;
+		return NULL;
 
-	ret = diswsi(local_conn, TM_PROTOCOL);
-	if (ret != DIS_SUCCESS)
-		goto done;
-	ret = diswsi(local_conn, TM_PROTOCOL_VER);
-	if (ret != DIS_SUCCESS)
-		goto done;
-	ret = diswcs(local_conn, tm_jobid, tm_jobid_len);
-	if (ret != DIS_SUCCESS)
-		goto done;
-	ret = diswcs(local_conn, tm_jobcookie, tm_jobcookie_len);
-	if (ret != DIS_SUCCESS)
-		goto done;
-	ret = diswsi(local_conn, com);
-	if (ret != DIS_SUCCESS)
-		goto done;
-	ret = diswsi(local_conn, event);
-	if (ret != DIS_SUCCESS)
-		goto done;
-	ret = diswui(local_conn, tm_jobtid);
-	if (ret != DIS_SUCCESS)
-		goto done;
-	return DIS_SUCCESS;
+	// FIXME: get buf with reset for write
 
-done:
-	DBPRT(("startcom: send error %s\n", dis_emsg[ret]))
-	CS_close_socket(local_conn);
-#ifdef WIN32
-	closesocket(local_conn);
-#else
-	close(local_conn);
-#endif
-	local_conn = -1;
-	return ret;
+	ns(TmReq_start_as_root(B));
+	ns(Header_start(B));
+	ns(Header_protType_add(B, ns(ProtType_TaskManager)));
+	ns(Header_version_add(B, TM_PROTOCOL_VER));
+	ns(Header_reqId_add(B, com));
+	ns(TmReq_hdr_add(B, ns(Header_end(B))));
+
+	ns(TmReq_jobId_add(B, flatbuffers_string_create_str(B, tm_jobid)));
+	ns(TmReq_cookie_add(B, flatbuffers_string_create_str(B, tm_jobcookie)));
+	ns(TmReq_event_add(B, (uint16_t) event));
+	ns(TmReq_event_add(B, (uint16_t) tm_jobtid));
+
+	return B;
 }
 
 /**
@@ -618,6 +607,7 @@ tm_init(void *info, struct tm_roots *roots)
 	int			err;
 	int			nerr = 0;
 	extern	int		pbs_tcp_interrupt;
+	flatcc_builder_t *B = NULL;
 
 	if (init_done)
 		return TM_BADINIT;
@@ -630,31 +620,29 @@ tm_init(void *info, struct tm_roots *roots)
 
 	if ((env = getenv("PBS_JOBID")) == NULL)
 		return TM_EBADENVIRONMENT;
-	tm_jobid_len = 0;
 	free(tm_jobid);
 	tm_jobid = strdup(env);
-	if (!tm_jobid)
+	if (tm_jobid == NULL)
 		return TM_ESYSTEM;
-	tm_jobid_len = strlen(tm_jobid);
 
 	if ((env = getenv("PBS_JOBCOOKIE")) == NULL)
 		return TM_EBADENVIRONMENT;
-	tm_jobcookie_len = 0;
 	free(tm_jobcookie);
 	tm_jobcookie = strdup(env);
-	if (!tm_jobcookie)
+	if (tm_jobcookie == NULL)
 		return TM_ESYSTEM;
-	tm_jobcookie_len = strlen(tm_jobcookie);
 
 	if ((env = getenv("PBS_NODENUM")) == NULL)
 		return TM_EBADENVIRONMENT;
 	tm_jobndid = (tm_node_id)strtol(env, &hold, 10);
 	if (env == hold)
 		return TM_EBADENVIRONMENT;
+
 	if ((env = getenv("PBS_TASKNUM")) == NULL)
 		return TM_EBADENVIRONMENT;
 	if ((tm_jobtid = strtoul(env, NULL, 16)) == 0)
 		return TM_EBADENVIRONMENT;
+
 	if ((env = getenv("PBS_MOMPORT")) == NULL)
 		return TM_EBADENVIRONMENT;
 	if ((tm_momport = atoi(env)) == 0)
@@ -668,9 +656,9 @@ tm_init(void *info, struct tm_roots *roots)
 	 *	header		(tm_init)
 	 */
 
-	if (startcom(TM_INIT, nevent) != DIS_SUCCESS)
+	if ((B = startcom(TM_INIT, nevent)) == NULL)
 		return TM_ESYSTEM;
-	transport_flush(local_conn);
+	transport_flushtm(B);
 	add_event(nevent, TM_ERROR_NODE, TM_INIT, (void *)roots);
 
 	if ((err = tm_poll(TM_NULL_EVENT, &revent, 1, &nerr)) != TM_SUCCESS)
@@ -705,29 +693,25 @@ tm_attach(char *jobid, char *cookie, pid_t pid, tm_task_id *tid, char *host, int
 #ifdef WIN32
 	char	                usern[UNLEN + 1] = {'\0'};
 	int		        sz = 0;
-	int		        ret = 0;
 #endif
+	flatcc_builder_t *B = NULL;
 
 	pbs_tcp_interrupt = 1;
 
-	tm_jobid_len = 0;
 	free(tm_jobid);
 	tm_jobid = NULL;
 	if (jobid && (*jobid != '\0')) {
 		tm_jobid = strdup(jobid);
 		if (!tm_jobid)
 			return TM_ESYSTEM;
-		tm_jobid_len = strlen(tm_jobid);
 	}
 
-	tm_jobcookie_len = 0;
 	free(tm_jobcookie);
 	tm_jobcookie = NULL;
 	if (cookie && (*cookie != '\0')) {
 		tm_jobcookie = strdup(cookie);
 		if (!tm_jobcookie)
 			return TM_ESYSTEM;
-		tm_jobcookie_len = strlen(tm_jobcookie);
 	}
 
 	if (host != NULL && *host != '\0')
@@ -743,22 +727,24 @@ tm_attach(char *jobid, char *cookie, pid_t pid, tm_task_id *tid, char *host, int
 	 *	int		pid
 	 */
 
-	if (startcom(TM_ATTACH, nevent) != DIS_SUCCESS)
+	if ((B = startcom(TM_ATTACH, nevent)) == NULL)
 		return TM_ESYSTEM;
+
+	ns(TmAttach_start(B));
+
 #ifdef WIN32
 	sz = sizeof(usern);
-	ret = GetUserName(usern, &sz);
-	if (diswcs(local_conn, usern, strlen(usern)) != DIS_SUCCESS)	/* send uid */
-		return TM_ENOTCONNECTED;
+	GetUserName(usern, &sz);
+	ns(TmAttach_user_add(B, flatbuffers_string_create_str(B, usern)));
 #else
-	if (diswsi(local_conn, getuid()) != DIS_SUCCESS)	/* send uid */
-		return TM_ENOTCONNECTED;
+	ns(TmAttach_uid_add(B, getuid()));
 #endif
 
-	if (diswsi(local_conn, pid) != DIS_SUCCESS)	/* send pid */
-		return TM_ENOTCONNECTED;
+	ns(TmAttach_uid_add(B, (int) pid));
 
-	transport_flush(local_conn);
+	ns(TmReq_body_add(B, ns(TmBody_as_TmAttach(ns(TmAttach_end(B))))));
+
+	transport_flushtm(B);
 	add_event(nevent, TM_ERROR_NODE, TM_ATTACH, (void *)tid);
 
 	init_done = 1;		/* fake having called tm_init */
@@ -825,11 +811,11 @@ tm_nodeinfo(tm_node_id **list, int *nnodes)
  *
  */
 int
-tm_spawn(int argc, char **argv, char **envp,
-		tm_node_id where, tm_task_id *tid, tm_event_t *event)
+tm_spawn(int argc, char **argv, char **envp, tm_node_id where, tm_task_id *tid, tm_event_t *event)
 {
 	char		*cp;
 	int		i;
+	flatcc_builder_t *B = NULL;
 
 	if (!init_done)
 		return TM_BADINIT;
@@ -837,38 +823,34 @@ tm_spawn(int argc, char **argv, char **envp,
 		return TM_ENOTFOUND;
 
 	*event = new_event();
-	if (startcom(TM_SPAWN, *event) != DIS_SUCCESS)
+	if ((B = startcom(TM_SPAWN, *event)) == NULL)
 		return TM_ENOTCONNECTED;
 
-	if (diswsi(local_conn, where) != DIS_SUCCESS)	/* send where */
-		return TM_ENOTCONNECTED;
+	ns(TmSpawn_start(B));
+	ns(TmSpawn_where_add(B, (int) where));
 
-	if (diswsi(local_conn, argc) != DIS_SUCCESS)	/* send argc */
-		return TM_ENOTCONNECTED;
-
-	/* send argv strings across */
-
-	for (i=0; i < argc; i++) {
-		cp = argv[i];
-		if (diswcs(local_conn, cp, strlen(cp)) != DIS_SUCCESS)
-			return TM_ENOTCONNECTED;
+	flatbuffers_string_vec_start(B);
+	for (i = 0; i < argc; i++) {
+		flatbuffers_string_vec_push(B, flatbuffers_string_create_str(B, argv[i]));
 	}
+	ns(TmSpawn_argv_add(B, flatbuffers_string_vec_end(B)));
 
-	/* send envp strings across */
 	if (envp != NULL) {
-		for (i=0; (cp = envp[i]) != NULL; i++) {
+		flatbuffers_string_vec_start(B);
+		for (i = 0; envp[i] != NULL; i++) {
 #if defined(PBS_SECURITY) && (PBS_SECURITY == KRB5)
 			/* never send KRB5CCNAME; it would rewrite the value on target host */
 			if (strncmp(envp[i], "KRB5CCNAME", strlen("KRB5CCNAME")) == 0)
 				continue;
 #endif
-			if (diswcs(local_conn, cp, strlen(cp)) != DIS_SUCCESS)
-				return TM_ENOTCONNECTED;
+			flatbuffers_string_vec_push(B, flatbuffers_string_create_str(B, envp[i]));
 		}
+		ns(TmSpawn_envp_add(B, flatbuffers_string_vec_end(B)));
 	}
-	if (diswcs(local_conn, "", 0) != DIS_SUCCESS)
-		return TM_ENOTCONNECTED;
-	transport_flush(local_conn);
+
+	ns(TmReq_body_add(B, ns(TmBody_as_TmSpawn(ns(TmSpawn_end(B))))));
+
+	transport_flushtm(B);
 	add_event(*event, where, TM_SPAWN, (void *)tid);
 	return TM_SUCCESS;
 }
@@ -891,21 +873,25 @@ int
 tm_kill(tm_task_id tid, int sig, tm_event_t *event)
 {
 	task_info	*tp;
+	flatcc_builder_t *B = NULL;
 
 	if (!init_done)
 		return TM_BADINIT;
 	if ((tp = find_task(tid)) == NULL)
 		return TM_ENOTFOUND;
+
 	*event = new_event();
-	if (startcom(TM_SIGNAL, *event) != DIS_SUCCESS)
+	if ((B = startcom(TM_SIGNAL, *event)) == NULL)
 		return TM_ENOTCONNECTED;
-	if (diswsi(local_conn, tp->t_node) != DIS_SUCCESS)
-		return TM_ENOTCONNECTED;
-	if (diswui(local_conn, tid) != DIS_SUCCESS)
-		return TM_ENOTCONNECTED;
-	if (diswsi(local_conn, sig) != DIS_SUCCESS)
-		return TM_ENOTCONNECTED;
-	transport_flush(local_conn);
+
+	ns(TmSignal_start(B));
+	ns(TmSignal_nid_add(B, (int) tp->t_node));
+	ns(TmSignal_tid_add(B, (int) tid));
+	ns(TmSignal_sig_add(B, sig));
+
+	ns(TmReq_body_add(B, ns(TmBody_as_TmSignal(ns(TmSignal_end(B))))));
+
+	transport_flushtm(B);
 	add_event(*event, tp->t_node, TM_SIGNAL, NULL);
 	return TM_SUCCESS;
 }
@@ -928,19 +914,24 @@ int
 tm_obit(tm_task_id tid, int *obitval, tm_event_t *event)
 {
 	task_info	*tp;
+	flatcc_builder_t *B = NULL;
 
 	if (!init_done)
 		return TM_BADINIT;
 	if ((tp = find_task(tid)) == NULL)
 		return TM_ENOTFOUND;
 	*event = new_event();
-	if (startcom(TM_OBIT, *event) != DIS_SUCCESS)
+
+	if ((B = startcom(TM_OBIT, *event)) == NULL)
 		return TM_ESYSTEM;
-	if (diswsi(local_conn, tp->t_node) != DIS_SUCCESS)
-		return TM_ESYSTEM;
-	if (diswui(local_conn, tid) != DIS_SUCCESS)
-		return TM_ESYSTEM;
-	transport_flush(local_conn);
+
+	ns(TmObit_start(B));
+	ns(TmObit_nid_add(B, (int) tp->t_node));
+	ns(TmObit_tid_add(B, (int) tid));
+
+	ns(TmReq_body_add(B, ns(TmBody_as_TmObit(ns(TmObit_end(B))))));
+
+	transport_flushtm(B);
 	add_event(*event, tp->t_node, TM_OBIT, (void *)obitval);
 	return TM_SUCCESS;
 }
@@ -973,17 +964,22 @@ tm_taskinfo(tm_node_id node, tm_task_id *tid_list,
 		int list_size, int *ntasks, tm_event_t *event)
 {
 	struct	taskhold	*thold;
+	flatcc_builder_t *B = NULL;
 
 	if (!init_done)
 		return TM_BADINIT;
 	if (tid_list == NULL || list_size == 0 || ntasks == NULL)
 		return TM_EBADENVIRONMENT;
 	*event = new_event();
-	if (startcom(TM_TASKS, *event) != DIS_SUCCESS)
+	if ((B = startcom(TM_TASKS, *event)) == NULL)
 		return TM_ESYSTEM;
-	if (diswsi(local_conn, node) != DIS_SUCCESS)
-		return TM_ESYSTEM;
-	transport_flush(local_conn);
+
+	ns(TmInfo_start(B));
+	ns(TmInfo_nid_add(B, (int) node));
+
+	ns(TmReq_body_add(B, ns(TmBody_as_TmInfo(ns(TmInfo_end(B))))));
+
+	transport_flushtm(B);
 
 	thold = (struct taskhold *)malloc(sizeof(struct taskhold));
 	assert(thold != NULL);
@@ -1046,17 +1042,23 @@ int
 tm_rescinfo(tm_node_id node, char *resource, int len, tm_event_t *event)
 {
 	struct	reschold	*rhold;
+	flatcc_builder_t *B = NULL;
+
 
 	if (!init_done)
 		return TM_BADINIT;
 	if (resource == NULL || len == 0)
 		return TM_EBADENVIRONMENT;
 	*event = new_event();
-	if (startcom(TM_RESOURCES, *event) != DIS_SUCCESS)
+	if ((B = startcom(TM_RESOURCES, *event)) == NULL)
 		return TM_ESYSTEM;
-	if (diswsi(local_conn, node) != DIS_SUCCESS)
-		return TM_ESYSTEM;
-	transport_flush(local_conn);
+
+	ns(TmInfo_start(B));
+	ns(TmInfo_nid_add(B, (int) node));
+
+	ns(TmReq_body_add(B, ns(TmBody_as_TmInfo(ns(TmInfo_end(B))))));
+
+	transport_flushtm(B);
 
 	rhold = (struct reschold *)malloc(sizeof(struct reschold));
 	assert(rhold != NULL);
@@ -1190,11 +1192,9 @@ tm_finalize()
 	init_done = 0;
 	free(tm_jobid);
 	tm_jobid = NULL;
-	tm_jobid_len = 0;
 	free(tm_jobcookie);
 	tm_jobcookie = NULL;
-	tm_jobcookie_len = 0;
-	return TM_SUCCESS;	/* what else */
+	return TM_SUCCESS;
 }
 
 /**
