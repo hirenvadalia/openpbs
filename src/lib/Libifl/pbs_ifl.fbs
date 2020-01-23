@@ -47,7 +47,18 @@ table TmInfo {
 	nid: short;
 }
 
-union TmBody { TmAttach, TmSpawn, TmSignal, TmObit, TmInfo }
+table TmPublish {
+	name: string;
+	info: string;
+}
+
+table TmSubscribe {
+	nid: short;
+	tid: short;
+	name: string;
+}
+
+union TmBody { TmAttach, TmSpawn, TmSignal, TmObit, TmInfo, TmPublish, TmSubscribe }
 
 table TmReq {
 	hdr: Header;

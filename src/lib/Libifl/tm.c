@@ -1089,18 +1089,21 @@ tm_rescinfo(tm_node_id node, char *resource, int len, tm_event_t *event)
 int
 tm_publish(char *name, void *info, int len, tm_event_t *event)
 {
+	flatcc_builder_t *B = NULL;
 
 	if (!init_done)
 		return TM_BADINIT;
 	*event = new_event();
-	if (startcom(TM_POSTINFO, *event) != DIS_SUCCESS)
-		return TM_ESYSTEM;
-	if (diswst(local_conn, name) != DIS_SUCCESS)
-		return TM_ESYSTEM;
-	if (diswcs(local_conn, info, len) != DIS_SUCCESS)
+	if ((B = startcom(TM_POSTINFO, *event)) == NULL)
 		return TM_ESYSTEM;
 
-	transport_flush(local_conn);
+	ns(TmPublish_start(B));
+	ns(TmPublish_name_add(B, flatbuffers_string_create_str(B, name)));
+	ns(TmPublish_info_add(B, flatbuffers_string_create(B, info, len)));
+
+	ns(TmReq_body_add(B, ns(TmBody_as_TmPublish(ns(TmPublish_end(B))))));
+
+	transport_flushtm(B);
 	add_event(*event, TM_ERROR_NODE, TM_POSTINFO, NULL);
 	return TM_SUCCESS;
 }
@@ -1134,21 +1137,24 @@ tm_subscribe(tm_task_id tid, char *name, void *info, int len, int *info_len, tm_
 {
 	task_info		*tp;
 	struct	infohold	*ihold;
+	flatcc_builder_t *B = NULL;
 
 	if (!init_done)
 		return TM_BADINIT;
 	if ((tp = find_task(tid)) == NULL)
 		return TM_ENOTFOUND;
 	*event = new_event();
-	if (startcom(TM_GETINFO, *event) != DIS_SUCCESS)
+	if ((B = startcom(TM_GETINFO, *event)) == NULL)
 		return TM_ESYSTEM;
-	if (diswsi(local_conn, tp->t_node) != DIS_SUCCESS)
-		return TM_ESYSTEM;
-	if (diswui(local_conn, tid) != DIS_SUCCESS)
-		return TM_ESYSTEM;
-	if (diswst(local_conn, name) != DIS_SUCCESS)
-		return TM_ESYSTEM;
-	transport_flush(local_conn);
+
+	ns(TmSubscribe_start(B));
+	ns(TmSubscribe_name_add(B, flatbuffers_string_create_str(B, name)));
+	ns(TmSubscribe_nid_add(B, (int)tp->t_node));
+	ns(TmSubscribe_tid_add(B, (int)tid));
+
+	ns(TmReq_body_add(B, ns(TmBody_as_TmSubscribe(ns(TmSubscribe_end(B))))));
+
+	transport_flushtm(B);
 
 	ihold = (struct infohold *)malloc(sizeof(struct infohold));
 	assert(ihold != NULL);
