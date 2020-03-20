@@ -36,7 +36,9 @@
 # trademark licensing policies.
 #
 
-SUBDIRS = scripts
+SUBDIRS = \
+	scripts \
+	flatbuf_test
 
 bin_PROGRAMS = \
 	pbsdsh \

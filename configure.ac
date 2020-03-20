@@ -307,8 +307,7 @@ m4_ifdef([PKG_INSTALLDIR],
 
 
 # PBS macros (order matters for some of these)
-# FIXME: enable below when done
-# PBS_AC_WITH_FLATCC
+PBS_AC_WITH_FLATCC
 PBS_AC_PBS_VERSION
 PBS_AC_MACHINE_TYPE
 PBS_AC_DECL_H_ERRNO
@@ -369,6 +368,7 @@ AC_CONFIG_FILES([
 	src/cmds/pbsrun_unwrap
 	src/cmds/pbsrun_wrap
 	src/cmds/pbsrun
+	src/cmds/flatbuf_test/Makefile
 	src/cmds/scripts/Makefile
 	src/cmds/scripts/au-nodeupdate
 	src/cmds/scripts/modulefile
