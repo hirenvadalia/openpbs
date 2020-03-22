@@ -440,7 +440,6 @@ issue_Drequest(int conn, struct batch_request *request, void (*func)(), struct w
 	/* the request is bound to another server, encode/send the request */
 	switch (request->rq_type) {
 
-#ifndef PBS_MOM
 		case PBS_BATCH_DeleteJob:
 			rc =   PBSD_mgr_put(conn,
 				PBS_BATCH_DeleteJob,
@@ -691,23 +690,6 @@ issue_Drequest(int conn, struct batch_request *request, void (*func)(), struct w
 				prot,
 				&msgid);
 			break;
-
-#else	/* PBS_MOM */
-
-		case PBS_BATCH_JobObit:
-			rc = encode_DIS_ReqHdr(sock, PBS_BATCH_JobObit, pbs_current_user);
-			if (rc != 0)
-				break;
-			rc = encode_DIS_JobObit(sock, request);
-			if (rc != 0)
-				break;
-			rc = encode_DIS_ReqExtend(sock, 0);
-			if (rc != 0)
-				break;
-			rc = dis_flush(sock);
-			break;
-
-#endif	/* PBS_MOM */
 
 		default:
 			(void)sprintf(log_buffer, msg_issuebad, request->rq_type);

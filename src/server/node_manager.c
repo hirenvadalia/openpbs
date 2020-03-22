@@ -2206,7 +2206,7 @@ find_vnode_in_execvnode(char *big, char *little)
  * @return	int
  * @return	return code
  */
-
+// FIXME: move this to wire_decode.c
 static int
 decode_stat_update(int stream, struct resc_used_update *prused)
 {

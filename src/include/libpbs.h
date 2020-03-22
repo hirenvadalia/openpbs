@@ -52,6 +52,9 @@ extern "C" {
 #include "pbs_client_thread.h"
 #include "net_connect.h"
 #include "dis.h"
+#include "batch_request.h"
+
+// FIXME: merge this with batch_request.h
 
 /* Protocol types when connecting to another server (eg mom) */
 #define PROT_INVALID -1
@@ -326,6 +329,49 @@ extern struct batch_status *PBSD_status(int, int, char *, struct attrl *, char *
 extern preempt_job_info *PBSD_preempt_jobs(int, char **);
 extern struct batch_status *PBSD_status_get(int);
 extern char * PBSD_queuejob(int, char *, char *, struct attropl *, char *, int, char **);
+/* PBS Batch Request Decode/Encode routines */
+extern int decode_DIS_Authenticate(int, struct batch_request *);
+extern int decode_DIS_CopyFiles(int, struct batch_request *);
+extern int decode_DIS_CopyFiles_Cred(int, struct batch_request *);
+extern int decode_DIS_JobCred(int, struct batch_request *);
+extern int decode_DIS_UserCred(int, struct batch_request *);
+extern int decode_DIS_UserMigrate(int, struct batch_request *);
+extern int decode_DIS_JobFile(int, struct batch_request *);
+extern int decode_DIS_CopyHookFile(int, struct batch_request *);
+extern int decode_DIS_DelHookFile(int, struct batch_request *);
+extern int decode_DIS_JobObit(int, struct batch_request *);
+extern int decode_DIS_Manage(int, struct batch_request *);
+extern int decode_DIS_MoveJob(int, struct batch_request *);
+extern int decode_DIS_MessageJob(int, struct batch_request *);
+extern int decode_DIS_ModifyResv(int, struct batch_request *);
+extern int decode_DIS_PySpawn(int, struct batch_request *);
+extern int decode_DIS_QueueJob(int, struct batch_request *);
+extern int decode_DIS_Register(int, struct batch_request *);
+extern int decode_DIS_RelnodesJob(int, struct batch_request *);
+extern int decode_DIS_ReqExtend(int, struct batch_request *);
+extern int decode_DIS_ReqHdr(int, struct batch_request *, int *, int *);
+extern int decode_DIS_Rescl(int, struct batch_request *);
+extern int decode_DIS_Rescq(int, struct batch_request *);
+extern int decode_DIS_Run(int, struct batch_request *);
+extern int decode_DIS_ShutDown(int, struct batch_request *);
+extern int decode_DIS_SignalJob(int, struct batch_request *);
+extern int decode_DIS_Status(int, struct batch_request *);
+extern int decode_DIS_TrackJob(int, struct batch_request *);
+extern int decode_DIS_replySvr(int, struct batch_reply *);
+extern int decode_DIS_svrattrl(int, pbs_list_head *);
+extern int decode_DIS_Cred(int, struct batch_request *);
+extern int encode_DIS_failover(int, struct batch_request *);
+extern int encode_DIS_CopyFiles(int, struct batch_request *);
+extern int encode_DIS_CopyFiles_Cred(int, struct batch_request *);
+extern int encode_DIS_Register(int, struct batch_request *);
+extern int encode_DIS_TrackJob(int, struct batch_request *);
+extern int encode_DIS_reply(int, struct batch_reply *);
+extern int encode_DIS_replyTPP(int, char *, struct batch_reply *);
+extern int encode_DIS_svrattrl(int, svrattrl *);
+extern int encode_DIS_Cred(int, char *, char *, int, char *, size_t, long);
+extern int dis_request_read(int, struct batch_request *);
+extern int dis_reply_read(int, struct batch_reply *, int);
+extern int decode_DIS_PreemptJobs(int, struct batch_request *);
 extern int decode_DIS_svrattrl(int, pbs_list_head *);
 extern int decode_DIS_attrl(int, struct attrl **);
 extern int decode_DIS_JobId(int, char *);

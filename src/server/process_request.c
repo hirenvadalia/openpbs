@@ -63,7 +63,6 @@
  *	free_rescrq()
  *	arrayfree()
  *	read_carray()
- *	decode_DIS_PySpawn()
  *	free_br()
  *	freebr_manage()
  *	freebr_cpyfile()
@@ -1253,63 +1252,6 @@ read_carray(int stream, char ***arrloc)
 	carr[i] = NULL;
 	*arrloc = carr;
 	return ret;
-}
-
-/**
- * @brief
- *		Read a python spawn request off the wire.
- *		Each of the argv and envp arrays is sent by writing a counted
- *		string followed by a zero length string ("").
- *
- * @param[in]	sock	- socket where you reads the request.
- * @param[in]	preq	- the batch_request structure to free up.
- */
-int
-decode_DIS_PySpawn(int sock, struct batch_request *preq)
-{
-	int	rc;
-
-	rc = disrfst(sock, sizeof(preq->rq_ind.rq_py_spawn.rq_jid),
-		preq->rq_ind.rq_py_spawn.rq_jid);
-	if (rc)
-		return rc;
-
-	rc = read_carray(sock, &preq->rq_ind.rq_py_spawn.rq_argv);
-	if (rc)
-		return rc;
-
-	rc = read_carray(sock, &preq->rq_ind.rq_py_spawn.rq_envp);
-	if (rc)
-		return rc;
-
-	return rc;
-}
-
-/**
- * @brief
- *		Read a release nodes from job request off the wire.
- *
- * @param[in]	sock	- socket where you reads the request.
- * @param[in]	preq	- the batch_request structure containing the request details.
- *
- * @return int
- *
- * @retval	0	- if successful
- * @retval	!= 0	- if not successful (an error encountered along the way)
- */
-int
-decode_DIS_RelnodesJob(int sock, struct batch_request *preq)
-{
-	int rc;
-
-	preq->rq_ind.rq_relnodes.rq_node_list = NULL;
-
-	rc = disrfst(sock, PBS_MAXSVRJOBID+1, preq->rq_ind.rq_relnodes.rq_jid);
-	if (rc)
-		return rc;
-
-	preq->rq_ind.rq_relnodes.rq_node_list = disrst(sock, &rc);
-	return rc;
 }
 
 
