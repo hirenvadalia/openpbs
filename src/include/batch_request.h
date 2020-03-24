@@ -371,6 +371,9 @@ extern void req_cred(struct batch_request *);
 #endif
 #endif
 
+#define wire_reply_read_cmd(x, y, z) wire_reply_read(x, y, z, 0)
+#define wire_reply_read_svr(x, y, z) wire_reply_read(x, y, z, 1)
+
 #ifdef __cplusplus
 }
 #endif

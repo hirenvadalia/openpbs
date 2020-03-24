@@ -40,12 +40,8 @@
 #include "pbs_ifl.h"
 #include "libpbs.h"
 #include "log.h"
-#include "placementsets.h"
 
 extern char *msg_nosupport;
-
-static int wire_decode_attropl(ns(Attribute_vec_t), struct attropl **);
-static int wire_decode_CopyFiles(ns(CopyFile_table_t), struct rq_cpyfile *);
 
 #define COPYSTR(dest, src, len) { \
 	memset(dest, '\0', len); \
@@ -66,6 +62,9 @@ static int wire_decode_CopyFiles(ns(CopyFile_table_t), struct rq_cpyfile *);
 	if (dest == NULL) \
 		return PBSE_SYSTEM; \
 }
+
+static int wire_decode_attropl(ns(Attribute_vec_t), struct attropl **);
+static int wire_decode_CopyFiles(ns(CopyFile_table_t), struct rq_cpyfile *);
 
 /**
  * @brief
@@ -261,61 +260,6 @@ wire_decode_CopyFiles(ns(CopyFile_table_t) B, struct rq_cpyfile *pcf)
 
 /**
  * @brief
- *      Decode PBS batch request to authenticate based on external (non-resv-port) mechanisms.
- *      The batch request contains type and the auth data.
- *
- * @param [in] sock socket connection
- * @param [in] preq PBS bath request
- * @return in
- * @retval 0 on success
- * @retval > 0 on failure
- */
-int
-decode_DIS_Authenticate(int sock, struct batch_request *preq)
-{
-	int rc;
-	int len = 0;
-
-
-	len = disrsi(sock, &rc);
-	if (rc != DIS_SUCCESS)
-		return (rc);
-	if (len <= 0) {
-		return DIS_PROTO;
-	}
-	rc = disrfst(sock, len, preq->rq_ind.rq_auth.rq_auth_method);
-	if (rc != DIS_SUCCESS)
-		return (rc);
-	preq->rq_ind.rq_auth.rq_auth_method[MAXAUTHNAME] = '\0';
-
-	preq->rq_ind.rq_auth.rq_encrypt_mode = disrui(sock, &rc);
-	if (rc != DIS_SUCCESS)
-		return (rc);
-
-	if (preq->rq_ind.rq_auth.rq_encrypt_mode != ENCRYPT_DISABLE) {
-		len = disrsi(sock, &rc);
-		if (rc != DIS_SUCCESS)
-			return (rc);
-		if (len <= 0) {
-			return DIS_PROTO;
-		}
-		rc = disrfst(sock, len, preq->rq_ind.rq_auth.rq_encrypt_method);
-		if (rc != DIS_SUCCESS)
-			return (rc);
-		preq->rq_ind.rq_auth.rq_encrypt_method[MAXAUTHNAME] = '\0';
-	} else {
-		preq->rq_ind.rq_auth.rq_encrypt_method[0] = '\0';
-	}
-
-	preq->rq_ind.rq_auth.rq_port = disrui(sock, &rc);
-	if (rc != DIS_SUCCESS)
-		return (rc);
-
-	return (rc);
-}
-
-/**
- * @brief
  * 	Read in an DIS encoded request from the network
  * 	and decodes it:
  *	Read and decode the request into the request structures
@@ -333,7 +277,7 @@ decode_DIS_Authenticate(int sock, struct batch_request *preq)
  */
 // FIXME: Move this to wire_decode_batch_request.c
 int
-dis_request_read(int sfds, struct batch_request *request)
+wire_request_read(int sfds, struct batch_request *request)
 {
 	int rc = 0;
 	void *buf = NULL;
@@ -526,7 +470,17 @@ dis_request_read(int sfds, struct batch_request *request)
 			}
 
 			break;
-		// FIXME: Add PBS_BATCH_Authenticate
+
+		case PBS_BATCH_Authenticate:
+			ns(Auth_table_t) B = (ns(Auth_table_t)) ns(Req_body(req));
+
+			request->rq_ind.rq_auth.rq_encrypt_mode = (unsigned int) ns(Auth_encryptMode(B));
+			request->rq_ind.rq_auth.rq_port = (unsigned int) ns(Auth_port(B));
+			COPYSTR_B(request->rq_ind.rq_auth.rq_auth_method, ns(Auth_authMethod(B)));
+			if (ns(Auth_encryptMethod_is_present(B)))
+				COPYSTR_B(request->rq_ind.rq_auth.rq_encrypt_method, ns(Auth_encryptMethod(B)));
+
+			break;
 
 #ifndef PBS_MOM
 		case PBS_BATCH_RelnodesJob:
@@ -716,426 +670,196 @@ dis_request_read(int sfds, struct batch_request *request)
 	return (rc);
 }
 
-// FIXME: move this to wire_decode_im/is_request.c
-static vnl_t	*vn_decode_DIS_V3(int, int *);
-static vnl_t	*vn_decode_DIS_V4(int, int *);
-static int	vn_encode_DIS_V4(int, vnl_t *);
-static vnl_t	*free_and_return(vnl_t *);	/* expedient error function */
-/**
- * @file	ps_dis.c
- */
 /**
  * @brief
- *	vn_decode_DIS - read verison 3 or 4 vnode definition information from
- * Mom.
- * @par Functionality:
- *	The V4 over-the-wire representation of a placement set list (vnl_t) is
- *	a superset of V3.  V4 adds the ability to specify the type of an
- *	attribute/resource (and reserves a place in the protocol for flags).
- *	The V3 over-the-wire representation of a placement set list (vnl_t) is
+ *	Read an PBS Batch reply from the network
  *
- *	version		unsigned integer	the version of the following
- *						information
+ * @param[in] sock - socket connection from which to read reply
+ * @param[out] reply - The reply structure to be returned
+ * @param[in] prot - PROT_TCP pr PROT_TPP
+ * @param[in] forsvr - is read reply for server or client?
  *
- *	Version PS_DIS_V3 consists of
- *
- *	vnl_modtime	signed long		this OTW format could be
- *						problematic:   the Open Group
- *						Base Specifications Issue 6
- *						says that time_t ``shall be
- *						integer or real-floating''
- *
- *	vnl_used	unsigned integer	number of entries in the vnal_t
- *						array to follow
- *
- *
- *	There follows, for each element of the vnal_t array,
- *
- *	vnal_id		string
- *
- *	vnal_used	unsigned integer	number of entries in the vna_t
- *						array to follow
- *
- *	vna_name	string			name of resource
- *	vna_val		string			value of resource
- *		Following added in V4
- *	vna_type	int			type of attribute/resource
- *	vna_flag	int			flag of attribute/resource (-h)
- *
- *
- * @param[in]	fd  - file (socket) descriptor from which to read
- * @param[out]	rcp - pointer to int into which to return the error value,
- *			either DIS_SUCCESS or some DIS_* error.
- *
- * @return	vnl_t *
- * @retval	pointer to decoded vnode information which has been malloc-ed.
- * @retval	NULL on error, see rcp value
- *
- * @par Side Effects: None
- *
- * @par MT-safe: yes
- *
- */
-vnl_t *
-vn_decode_DIS(int fd, int *rcp)
-{
-	unsigned int	vers;
-
-	vers = disrui(fd, rcp);
-	if (*rcp != DIS_SUCCESS)
-		return NULL;
-
-	switch (vers) {
-		case PS_DIS_V3:
-			return (vn_decode_DIS_V3(fd, rcp));
-		case PS_DIS_V4:
-			return (vn_decode_DIS_V4(fd, rcp));
-
-		default:
-			*rcp = DIS_PROTO;
-			return NULL;
-	}
-}
-
-/**
- * @brief
- *	vn_decode_DIS_V4 - decode version 4 vnode information from Mom
- *
- * @par Functionality:
- *	See vn_decode_DIS() above, This is called from there to decode
- *	V4 information.
- *
- * @param[in]	fd  -     socket descriptor from which to read
- * @param[out]	rcp -     pointer to place to return error code if error.
- *
- * @return	vnl_t *
- * @retval	pointer to decoded vnode information which has been malloc-ed.
- * @retval	NULL on error, see rcp value
- *
- * @par Side Effects: None
- *
- * @par MT-safe: yes
- *
- */
-static vnl_t *
-vn_decode_DIS_V4(int fd, int *rcp)
-{
-	unsigned int	i, j;
-	unsigned int	size;
-	time_t		t;
-	vnl_t		*vnlp;
-
-	if ((vnlp = calloc(1, sizeof(vnl_t))) == NULL) {
-		*rcp = DIS_NOMALLOC;
-		return NULL;
-	}
-
-	t = (time_t) disrsl(fd, rcp);
-	if (*rcp != DIS_SUCCESS) {
-		free(vnlp);
-		return NULL;
-	} else {
-		vnlp->vnl_modtime = t;
-	}
-	size = disrui(fd, rcp);
-	if (*rcp != DIS_SUCCESS) {
-		free(vnlp);
-		return NULL;
-	} else {
-		vnlp->vnl_nelem = vnlp->vnl_used = size;
-	}
-
-	if ((vnlp->vnl_list = calloc(vnlp->vnl_nelem,
-		sizeof(vnal_t))) == NULL) {
-		free(vnlp);
-		*rcp = DIS_NOMALLOC;
-		return NULL;
-	}
-
-	for (i = 0; i < vnlp->vnl_used; i++) {
-		vnal_t		*curreslist = VNL_NODENUM(vnlp, i);
-
-		/*
-		 *	In case an error occurs and we need to free
-		 *	whatever's been allocated so far, we use the
-		 *	vnl_cur entry to record the number of vnal_t
-		 *	entries to free.
-		 */
-		vnlp->vnl_cur = i;
-
-		curreslist->vnal_id = disrst(fd, rcp);
-		if (*rcp != DIS_SUCCESS)
-			return (free_and_return(vnlp));
-
-		size = disrui(fd, rcp);
-		if (*rcp != DIS_SUCCESS)
-			return (free_and_return(vnlp));
-		else
-			curreslist->vnal_nelem = curreslist->vnal_used = size;
-		if ((curreslist->vnal_list = calloc(curreslist->vnal_nelem,
-			sizeof(vna_t))) == NULL)
-			return (free_and_return(vnlp));
-
-		for (j = 0; j < size; j++) {
-			vna_t	*curres = VNAL_NODENUM(curreslist, j);
-
-			/*
-			 *	In case an error occurs and we need to free
-			 *	whatever's been allocated so far, we use the
-			 *	vnal_cur entry to record the number of vna_t
-			 *	entries to free.
-			 */
-			curreslist->vnal_cur = j;
-
-			curres->vna_name = disrst(fd, rcp);
-			if (*rcp != DIS_SUCCESS)
-				return (free_and_return(vnlp));
-			curres->vna_val = disrst(fd, rcp);
-			if (*rcp != DIS_SUCCESS)
-				return (free_and_return(vnlp));
-			curres->vna_type = disrsi(fd, rcp);
-			if (*rcp != DIS_SUCCESS)
-				return (free_and_return(vnlp));
-			curres->vna_flag = disrsi(fd, rcp);
-			if (*rcp != DIS_SUCCESS)
-				return (free_and_return(vnlp));
-		}
-	}
-
-	*rcp = DIS_SUCCESS;
-	return (vnlp);
-}
-
-/**
- * @brief
- *	vn_decode_DIS_V3 - decode version 3 vnode information from Mom
- *
- * @par Functionality:
- *	See vn_decode_DIS() above, This is called from there to decode
- *	V3 information.
- *
- * @param[in]	fd  -     socket descriptor from which to read
- * @param[out]	rcp -     pointer to place to return error code if error.
- *
- * @return	vnl_t *
- * @retval	pointer to decoded vnode information which has been malloc-ed.
- * @retval	NULL on error, see rcp value
- *
- * @par Side Effects: None
- *
- * @par MT-safe: yes
- *
- */
-static vnl_t *
-vn_decode_DIS_V3(int fd, int *rcp)
-{
-	unsigned int	i, j;
-	unsigned int	size;
-	time_t		t;
-	vnl_t		*vnlp;
-
-	if ((vnlp = calloc(1, sizeof(vnl_t))) == NULL) {
-		*rcp = DIS_NOMALLOC;
-		return NULL;
-	}
-
-	t = (time_t) disrsl(fd, rcp);
-	if (*rcp != DIS_SUCCESS) {
-		free(vnlp);
-		return NULL;
-	}
-	else
-		vnlp->vnl_modtime = t;
-	size = disrui(fd, rcp);
-	if (*rcp != DIS_SUCCESS) {
-		free(vnlp);
-		return NULL;
-	}
-	else
-		vnlp->vnl_nelem = vnlp->vnl_used = size;
-
-	if ((vnlp->vnl_list = calloc(vnlp->vnl_nelem,
-		sizeof(vnal_t))) == NULL) {
-		free(vnlp);
-		*rcp = DIS_NOMALLOC;
-		return NULL;
-	}
-
-	for (i = 0; i < vnlp->vnl_used; i++) {
-		vnal_t		*curreslist = VNL_NODENUM(vnlp, i);
-
-		/*
-		 *	In case an error occurs and we need to free
-		 *	whatever's been allocated so far, we use the
-		 *	vnal_cur entry to record the number of vnal_t
-		 *	entries to free.
-		 */
-		vnlp->vnl_cur = i;
-
-		curreslist->vnal_id = disrst(fd, rcp);
-		if (*rcp != DIS_SUCCESS)
-			return (free_and_return(vnlp));
-
-		size = disrui(fd, rcp);
-		if (*rcp != DIS_SUCCESS)
-			return (free_and_return(vnlp));
-		else
-			curreslist->vnal_nelem = curreslist->vnal_used = size;
-		if ((curreslist->vnal_list = calloc(curreslist->vnal_nelem,
-			sizeof(vna_t))) == NULL)
-			return (free_and_return(vnlp));
-
-		for (j = 0; j < size; j++) {
-			vna_t	*curres = VNAL_NODENUM(curreslist, j);
-
-			/*
-			 *	In case an error occurs and we need to free
-			 *	whatever's been allocated so far, we use the
-			 *	vnal_cur entry to record the number of vna_t
-			 *	entries to free.
-			 */
-			curreslist->vnal_cur = j;
-
-			curres->vna_name = disrst(fd, rcp);
-			if (*rcp != DIS_SUCCESS)
-				return (free_and_return(vnlp));
-			curres->vna_val = disrst(fd, rcp);
-			if (*rcp != DIS_SUCCESS)
-				return (free_and_return(vnlp));
-		}
-	}
-
-	*rcp = DIS_SUCCESS;
-	return (vnlp);
-}
-
-/**
- * @brief
- *	vn_encode_DIS - encode vnode information, used by Mom.
- *
- * @par Functionality:
- *	Used to encode vnode information.  See vn_decode_DIS() above for a
- *	description of the information encoded/decoded.  Only the latest
- *	version of information is currently supported for encode.
- *
- * @param[in]	fd   - socket descriptor to which to write the encode info.
- * @param[in]	vnlp - structure to encode and send.
- *
- * @return	int
- * @retval	DIS_SUCCESS (0) on success
- * @retval	DIS_* on error.
- *
- * @par Side Effects: None
- *
- * @par MT-safe: No, the structure pointed to by vnlp needs to be locked
- *
+ * @return int
+ * @retval 0 - success
+ * @retval !0 - error
  */
 int
-vn_encode_DIS(int fd, vnl_t *vnlp)
+wire_reply_read(int sock, struct batch_reply *reply, int prot, int forsvr)
 {
-	switch (PS_DIS_CURVERSION) {
-		case PS_DIS_V4:
-			return (vn_encode_DIS_V4(fd, vnlp));
+	int i = 0;
+	size_t len = 0;
+	int rc = 0;
+	void *buf = NULL;
+	size_t bufsz = 0;
+	ns(Resp_table_t) resp;
+
+	if (prot == PROT_TCP)
+		DIS_tcp_funcs();
+	else
+		DIS_tpp_funcs();
+
+	//FIXME: get loaded buf for read with size here
+	rc = ns(Resp_verify_as_root(buf, bufsz));
+	if (rc != 0) {
+		log_eventf(PBSEVENT_ERROR, PBS_EVENTCLASS_REQUEST, LOG_ERR, __func__,
+				"Bad reply, errno %d, wire error %d", errno, rc);
+		return PBSE_PROTOCOL;
+	}
+
+	resp = ns(Resp_as_root(buf));
+	reply->brp_code = ns(Resp_code(resp));
+	reply->brp_auxcode = ns(Resp_auxCode(resp));
+	reply->brp_choice = ns(Resp_choice(resp));
+
+	switch (reply->brp_choice) {
+
+		case BATCH_REPLY_CHOICE_NULL:
+			break;	/* no more to do */
+
+		case BATCH_REPLY_CHOICE_Queue:
+		case BATCH_REPLY_CHOICE_RdytoCom:
+		case BATCH_REPLY_CHOICE_Commit:
+			ns(TextResp_table_t) B = (ns(TextResp_table_t)) ns(Resp_body(resp));
+
+			COPYSTR_B(reply->brp_un.brp_jid, ns(TextResp_txt(B)));
+
+			break;
+
+		case BATCH_REPLY_CHOICE_Select:
+			ns(SelectResp_table_t) B = (ns(SelectResp_table_t)) ns(Resp_body(resp));
+			flatbuffers_string_vec_t ids = ns(SelectResp_ids(B));
+			struct brp_select **pselx = &(reply->brp_un.brp_select);
+
+			*pselx = NULL;
+			len = flatbuffers_string_vec_len(ids);
+
+			for (i = 0; i < len; i++) {
+				struct brp_select *psel = (struct brp_select *)malloc(sizeof(struct brp_select));
+				if (psel == NULL)
+					return PBSE_SYSTEM;
+
+				psel->brp_next = NULL;
+				COPYSTR_B(psel->brp_jobid, flatbuffers_string_vec_at(ids, i));
+
+				*pselx = psel;
+				pselx = &(psel->brp_next);
+			}
+
+			break;
+
+		case BATCH_REPLY_CHOICE_Status:
+			ns(StatResp_table_t) B = (ns(StatResp_table_t)) ns(Resp_body(resp));
+			ns(StatRespStat_vec_t) stats = ns(StatResp_stats(B));
+
+			CLEAR_HEAD(reply->brp_un.brp_status);
+
+			len = ns(StatRespStat_vec_len(stats));
+			rc = 0;
+			for (i = 0; i < len && rc == 0; i++) {
+				ns(StatRespStat_table_t) stat = ns(StatRespStat_vec_at(stats, i));
+				struct brp_status *pstsvr = (struct brp_status *)malloc(sizeof(struct brp_status));
+
+				if (pstsvr == NULL)
+					return PBSE_SYSTEM;
+
+				CLEAR_LINK(pstsvr->brp_stlink);
+				pstsvr->brp_objtype = ns(StatRespStat_type(stat));
+				COPYSTR_B(pstsvr->brp_objname, ns(StatRespStat_name(stat)));
+				if (forsvr)
+					rc = wire_decode_svrattrl(ns(StatRespStat_attrs(stat)), &(pstsvr->brp_attr));
+				else
+					rc = wire_decode_attropl(ns(StatRespStat_attrs(stat)), &(pstsvr->brp_attr));
+				append_link(&(reply->brp_un.brp_status), &(pstsvr->brp_stlink), pstsvr);
+			}
+
+			break;
+
+		case BATCH_REPLY_CHOICE_Text:
+			ns(TextResp_table_t) B = (ns(TextResp_table_t)) ns(Resp_body(resp));
+
+			COPYSTR_S(reply->brp_un.brp_txt.brp_str, ns(TextResp_txt(B)));
+			reply->brp_un.brp_txt.brp_txtlen = strlen(reply->brp_un.brp_txt.brp_str);
+
+			break;
+
+		case BATCH_REPLY_CHOICE_Locate:
+			ns(TextResp_table_t) B = (ns(TextResp_table_t)) ns(Resp_body(resp));
+
+			strncpy(reply->brp_un.brp_locate, (char *) ns(TextResp_txt(B)), PBS_MAXDEST);
+			reply->brp_un.brp_locate[PBS_MAXDEST + 1] = '\0';
+
+			break;
+
+		case BATCH_REPLY_CHOICE_RescQuery:
+			ns(RescQueryResp_table_t) B = (ns (RescQueryResp_table_t)) ns(Resp_body(resp));
+			flatbuffers_int16_vec_t avails = ns(RescQueryResp_avail(B));
+			flatbuffers_int16_vec_t allocs = ns(RescQueryResp_alloc(B));
+			flatbuffers_int16_vec_t resvds = ns(RescQueryResp_resvd(B));
+			flatbuffers_int16_vec_t downs = ns(RescQueryResp_down(B));
+
+			reply->brp_un.brp_rescq.brq_avail = NULL;
+			reply->brp_un.brp_rescq.brq_alloc = NULL;
+			reply->brp_un.brp_rescq.brq_resvd = NULL;
+			reply->brp_un.brp_rescq.brq_down  = NULL;
+
+			len = flatbuffers_int16_vec_len(avails);
+			reply->brp_un.brp_rescq.brq_number = len;
+
+			reply->brp_un.brp_rescq.brq_avail = (int *)malloc(sizeof(int) * len);
+			reply->brp_un.brp_rescq.brq_alloc = (int *)malloc(sizeof(int) * len);
+			reply->brp_un.brp_rescq.brq_resvd = (int *)malloc(sizeof(int) * len);
+			reply->brp_un.brp_rescq.brq_down = (int *)malloc(sizeof(int) * len);
+			if (reply->brp_un.brp_rescq.brq_avail == NULL ||
+				reply->brp_un.brp_rescq.brq_alloc == NULL ||
+				reply->brp_un.brp_rescq.brq_resvd == NULL ||
+				reply->brp_un.brp_rescq.brq_down == NULL) {
+				if (reply->brp_un.brp_rescq.brq_alloc)
+					free(reply->brp_un.brp_rescq.brq_alloc);
+				if (reply->brp_un.brp_rescq.brq_avail)
+					free(reply->brp_un.brp_rescq.brq_avail);
+				if (reply->brp_un.brp_rescq.brq_resvd)
+					free(reply->brp_un.brp_rescq.brq_resvd);
+				if (reply->brp_un.brp_rescq.brq_down)
+					free(reply->brp_un.brp_rescq.brq_down);
+				reply->brp_un.brp_rescq.brq_alloc = NULL;
+				reply->brp_un.brp_rescq.brq_avail = NULL;
+				reply->brp_un.brp_rescq.brq_resvd = NULL;
+				return PBSE_SYSTEM;
+			}
+
+			for (i = 0; i < len; i++) {
+				*(reply->brp_un.brp_rescq.brq_avail + i) = (int) flatbuffers_int16_vec_at(avails, i);
+				*(reply->brp_un.brp_rescq.brq_alloc + i) = (int) flatbuffers_int16_vec_at(allocs, i);
+				*(reply->brp_un.brp_rescq.brq_resvd + i) = (int) flatbuffers_int16_vec_at(resvds, i);
+				*(reply->brp_un.brp_rescq.brq_down + i) = (int) flatbuffers_int16_vec_at(downs, i);
+			}
+
+			break;
+
+		case BATCH_REPLY_CHOICE_PreemptJobs:
+			ns(Preempt_table_t) B = (ns(Preempt_table_t)) ns(Resp_body(resp));
+			ns(PreemptJob_vec_t) preempts = ns(Preempt_infos(B));
+
+			len = ns(PreemptJob_vec_len(preempts));
+			reply->brp_un.brp_preempt_jobs.count = (int) len;
+
+			reply->brp_un.brp_preempt_jobs.ppj_list = NULL;
+			reply->brp_un.brp_preempt_jobs.ppj_list = (preempt_job_info *)calloc(sizeof(struct preempt_job_info), len);
+			if (reply->brp_un.brp_preempt_jobs.ppj_list == NULL)
+				return PBSE_SYSTEM;
+
+			for (i = 0; i < len; i++) {
+				ns(PreemptJob_table_t) p = (ns(PreemptJob_table_t)) flatbuffers_string_vec_at(preempts, i);
+
+				COPYSTR_B(reply->brp_un.brp_preempt_jobs.ppj_list[i].job_id, ns(PreemptJob_jid(p)));
+				COPYSTR_B(reply->brp_un.brp_preempt_jobs.ppj_list[i].order, ns(PreemptJob_order(p)));
+			}
+
+			break;
 
 		default:
-			return (DIS_PROTO);
-	}
-}
-
-/**
- * @brief
- *	vn_encode_DIS_V4 - encode version 4 vnode information, used by Mom.
- *
- * @par Functionality:
- *	Used to encode vnode information.  See vn_encode_DIS() above for a
- *	description of the information.  Supports version 4 only.
- *
- * @param[in]	fd   - socket descriptor to which to write the encode info.
- * @param[in]	vnlp - structure to encode and send.
- *
- * @return	int
- * @retval	DIS_SUCCESS (0) on success
- * @retval	DIS_* on error.
- *
- * @par Side Effects: None
- *
- * @par MT-safe: No, the structure pointed to by vnlp needs to be locked
- *
- */
-static int
-vn_encode_DIS_V4(int fd, vnl_t *vnlp)
-{
-	int		rc;
-	unsigned int	i, j;
-
-	if (((rc = diswui(fd, PS_DIS_V4)) != 0) ||
-		((rc = diswsl(fd, (long) vnlp->vnl_modtime)) != 0) ||
-		((rc = diswui(fd, vnlp->vnl_used)) != 0))
-			return (rc);
-
-	for (i = 0; i < vnlp->vnl_used; i++) {
-		vnal_t	*curreslist = VNL_NODENUM(vnlp, i);
-
-		if ((rc = diswst(fd, curreslist->vnal_id)) != 0)
-			return (rc);
-		if ((rc = diswui(fd, curreslist->vnal_used)) != 0)
-			return (rc);
-
-		for (j = 0; j < curreslist->vnal_used; j++) {
-			vna_t	*curres = VNAL_NODENUM(curreslist, j);
-
-			if ((rc = diswst(fd, curres->vna_name)) != 0)
-				return (rc);
-			if ((rc = diswst(fd, curres->vna_val)) != 0)
-				return (rc);
-			if ((rc = diswsi(fd, curres->vna_type)) != 0)
-				return (rc);
-			if ((rc = diswsi(fd, curres->vna_flag)) != 0)
-				return (rc);
-		}
+			return -1;
 	}
 
-	return (DIS_SUCCESS);
-}
-
-/**
- * @brief
- *	free_and_return - free a vnl_t data structure.
- *
- * @par Functionality:
- *	Note that this function is nearly identical to vnl_free() (q.v.),
- *	with the exception of using the *_cur values to free partially-
- *
- * @param[in]	vnlp - pointer to structure to free
- *
- * @return	vnl_t *
- * @retval	NULL
- *
- * @par Side Effects: None
- *
- * @par MT-safe: No, vnlp needs to be locked.
- *
- */
-static vnl_t *
-free_and_return(vnl_t *vnlp)
-{
-	unsigned int	i, j;
-
-	/* N.B. <=, not < because we may have a partially-allocated ith one */
-	for (i = 0; i <= vnlp->vnl_cur; i++) {
-		vnal_t	*vnrlp = VNL_NODENUM(vnlp, i);
-
-		/* N.B. <=, not < (as above) for partially-allocated jth one */
-		for (j = 0; j <= vnrlp->vnal_cur; j++) {
-			vna_t	*vnrp = VNAL_NODENUM(vnrlp, j);
-			free(vnrp->vna_name);
-			free(vnrp->vna_val);
-		}
-		free(vnrlp->vnal_list);
-		free(vnrlp->vnal_id);
-	}
-	free(vnlp->vnl_list);
-	free(vnlp);
-
-	return NULL;
+	return rc;
 }

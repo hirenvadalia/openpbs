@@ -107,18 +107,6 @@ typedef const struct PBS_ifl_Spawn_table *PBS_ifl_Spawn_table_t;
 typedef struct PBS_ifl_Spawn_table *PBS_ifl_Spawn_mutable_table_t;
 typedef const flatbuffers_uoffset_t *PBS_ifl_Spawn_vec_t;
 typedef flatbuffers_uoffset_t *PBS_ifl_Spawn_mutable_vec_t;
-typedef const struct PBS_ifl_AuthMunge_table *PBS_ifl_AuthMunge_table_t;
-typedef struct PBS_ifl_AuthMunge_table *PBS_ifl_AuthMunge_mutable_table_t;
-typedef const flatbuffers_uoffset_t *PBS_ifl_AuthMunge_vec_t;
-typedef flatbuffers_uoffset_t *PBS_ifl_AuthMunge_mutable_vec_t;
-typedef const struct PBS_ifl_AuthResvPort_table *PBS_ifl_AuthResvPort_table_t;
-typedef struct PBS_ifl_AuthResvPort_table *PBS_ifl_AuthResvPort_mutable_table_t;
-typedef const flatbuffers_uoffset_t *PBS_ifl_AuthResvPort_vec_t;
-typedef flatbuffers_uoffset_t *PBS_ifl_AuthResvPort_mutable_vec_t;
-typedef const struct PBS_ifl_AuthExternal_table *PBS_ifl_AuthExternal_table_t;
-typedef struct PBS_ifl_AuthExternal_table *PBS_ifl_AuthExternal_mutable_table_t;
-typedef const flatbuffers_uoffset_t *PBS_ifl_AuthExternal_vec_t;
-typedef flatbuffers_uoffset_t *PBS_ifl_AuthExternal_mutable_vec_t;
 typedef const struct PBS_ifl_Auth_table *PBS_ifl_Auth_table_t;
 typedef struct PBS_ifl_Auth_table *PBS_ifl_Auth_mutable_table_t;
 typedef const flatbuffers_uoffset_t *PBS_ifl_Auth_vec_t;
@@ -413,33 +401,6 @@ typedef flatbuffers_uoffset_t *PBS_ifl_Resp_mutable_vec_t;
 #endif
 #define PBS_ifl_Spawn_type_hash ((flatbuffers_thash_t)0xddc881de)
 #define PBS_ifl_Spawn_type_identifier "\xde\x81\xc8\xdd"
-#ifndef PBS_ifl_AuthMunge_file_identifier
-#define PBS_ifl_AuthMunge_file_identifier flatbuffers_identifier
-#endif
-/* deprecated, use PBS_ifl_AuthMunge_file_identifier */
-#ifndef PBS_ifl_AuthMunge_identifier
-#define PBS_ifl_AuthMunge_identifier flatbuffers_identifier
-#endif
-#define PBS_ifl_AuthMunge_type_hash ((flatbuffers_thash_t)0x67a93763)
-#define PBS_ifl_AuthMunge_type_identifier "\x63\x37\xa9\x67"
-#ifndef PBS_ifl_AuthResvPort_file_identifier
-#define PBS_ifl_AuthResvPort_file_identifier flatbuffers_identifier
-#endif
-/* deprecated, use PBS_ifl_AuthResvPort_file_identifier */
-#ifndef PBS_ifl_AuthResvPort_identifier
-#define PBS_ifl_AuthResvPort_identifier flatbuffers_identifier
-#endif
-#define PBS_ifl_AuthResvPort_type_hash ((flatbuffers_thash_t)0x9de7464e)
-#define PBS_ifl_AuthResvPort_type_identifier "\x4e\x46\xe7\x9d"
-#ifndef PBS_ifl_AuthExternal_file_identifier
-#define PBS_ifl_AuthExternal_file_identifier flatbuffers_identifier
-#endif
-/* deprecated, use PBS_ifl_AuthExternal_file_identifier */
-#ifndef PBS_ifl_AuthExternal_identifier
-#define PBS_ifl_AuthExternal_identifier flatbuffers_identifier
-#endif
-#define PBS_ifl_AuthExternal_type_hash ((flatbuffers_thash_t)0x59e6b5aa)
-#define PBS_ifl_AuthExternal_type_identifier "\xaa\xb5\xe6\x59"
 #ifndef PBS_ifl_Auth_file_identifier
 #define PBS_ifl_Auth_file_identifier flatbuffers_identifier
 #endif
@@ -1041,66 +1002,6 @@ __flatbuffers_define_string_field(0, PBS_ifl_Spawn, jobId, 0)
 __flatbuffers_define_vector_field(1, PBS_ifl_Spawn, argv, flatbuffers_string_vec_t, 0)
 __flatbuffers_define_vector_field(2, PBS_ifl_Spawn, envp, flatbuffers_string_vec_t, 0)
 
-struct PBS_ifl_AuthMunge_table { uint8_t unused__; };
-
-static inline size_t PBS_ifl_AuthMunge_vec_len(PBS_ifl_AuthMunge_vec_t vec)
-__flatbuffers_vec_len(vec)
-static inline PBS_ifl_AuthMunge_table_t PBS_ifl_AuthMunge_vec_at(PBS_ifl_AuthMunge_vec_t vec, size_t i)
-__flatbuffers_offset_vec_at(PBS_ifl_AuthMunge_table_t, vec, i, 0)
-__flatbuffers_table_as_root(PBS_ifl_AuthMunge)
-
-__flatbuffers_define_string_field(0, PBS_ifl_AuthMunge, key, 0)
-
-struct PBS_ifl_AuthResvPort_table { uint8_t unused__; };
-
-static inline size_t PBS_ifl_AuthResvPort_vec_len(PBS_ifl_AuthResvPort_vec_t vec)
-__flatbuffers_vec_len(vec)
-static inline PBS_ifl_AuthResvPort_table_t PBS_ifl_AuthResvPort_vec_at(PBS_ifl_AuthResvPort_vec_t vec, size_t i)
-__flatbuffers_offset_vec_at(PBS_ifl_AuthResvPort_table_t, vec, i, 0)
-__flatbuffers_table_as_root(PBS_ifl_AuthResvPort)
-
-__flatbuffers_define_scalar_field(0, PBS_ifl_AuthResvPort, port, flatbuffers_int16, int16_t, INT16_C(0))
-
-struct PBS_ifl_AuthExternal_table { uint8_t unused__; };
-
-static inline size_t PBS_ifl_AuthExternal_vec_len(PBS_ifl_AuthExternal_vec_t vec)
-__flatbuffers_vec_len(vec)
-static inline PBS_ifl_AuthExternal_table_t PBS_ifl_AuthExternal_vec_at(PBS_ifl_AuthExternal_vec_t vec, size_t i)
-__flatbuffers_offset_vec_at(PBS_ifl_AuthExternal_table_t, vec, i, 0)
-__flatbuffers_table_as_root(PBS_ifl_AuthExternal)
-
-__flatbuffers_define_string_field(0, PBS_ifl_AuthExternal, cred, 0)
-typedef uint8_t PBS_ifl_AuthInfo_union_type_t;
-__flatbuffers_define_integer_type(PBS_ifl_AuthInfo, PBS_ifl_AuthInfo_union_type_t, 8)
-__flatbuffers_define_union(flatbuffers_, PBS_ifl_AuthInfo)
-#define PBS_ifl_AuthInfo_NONE ((PBS_ifl_AuthInfo_union_type_t)UINT8_C(0))
-#define PBS_ifl_AuthInfo_AuthMunge ((PBS_ifl_AuthInfo_union_type_t)UINT8_C(1))
-#define PBS_ifl_AuthInfo_AuthResvPort ((PBS_ifl_AuthInfo_union_type_t)UINT8_C(2))
-#define PBS_ifl_AuthInfo_AuthExternal ((PBS_ifl_AuthInfo_union_type_t)UINT8_C(3))
-
-static inline const char *PBS_ifl_AuthInfo_type_name(PBS_ifl_AuthInfo_union_type_t type)
-{
-    switch (type) {
-    case PBS_ifl_AuthInfo_NONE: return "NONE";
-    case PBS_ifl_AuthInfo_AuthMunge: return "AuthMunge";
-    case PBS_ifl_AuthInfo_AuthResvPort: return "AuthResvPort";
-    case PBS_ifl_AuthInfo_AuthExternal: return "AuthExternal";
-    default: return "";
-    }
-}
-
-static inline int PBS_ifl_AuthInfo_is_known_type(PBS_ifl_AuthInfo_union_type_t type)
-{
-    switch (type) {
-    case PBS_ifl_AuthInfo_NONE: return 1;
-    case PBS_ifl_AuthInfo_AuthMunge: return 1;
-    case PBS_ifl_AuthInfo_AuthResvPort: return 1;
-    case PBS_ifl_AuthInfo_AuthExternal: return 1;
-    default: return 0;
-    }
-}
-
-
 struct PBS_ifl_Auth_table { uint8_t unused__; };
 
 static inline size_t PBS_ifl_Auth_vec_len(PBS_ifl_Auth_vec_t vec)
@@ -1109,8 +1010,10 @@ static inline PBS_ifl_Auth_table_t PBS_ifl_Auth_vec_at(PBS_ifl_Auth_vec_t vec, s
 __flatbuffers_offset_vec_at(PBS_ifl_Auth_table_t, vec, i, 0)
 __flatbuffers_table_as_root(PBS_ifl_Auth)
 
-__flatbuffers_define_scalar_field(0, PBS_ifl_Auth, type, flatbuffers_int16, int16_t, INT16_C(0))
-__flatbuffers_define_union_field(flatbuffers_, 2, PBS_ifl_Auth, info, PBS_ifl_AuthInfo, 0)
+__flatbuffers_define_string_field(0, PBS_ifl_Auth, authMethod, 0)
+__flatbuffers_define_string_field(1, PBS_ifl_Auth, encryptMethod, 0)
+__flatbuffers_define_scalar_field(2, PBS_ifl_Auth, encryptMode, flatbuffers_uint16, uint16_t, UINT16_C(0))
+__flatbuffers_define_scalar_field(3, PBS_ifl_Auth, port, flatbuffers_uint16, uint16_t, UINT16_C(0))
 
 struct PBS_ifl_Move_table { uint8_t unused__; };
 

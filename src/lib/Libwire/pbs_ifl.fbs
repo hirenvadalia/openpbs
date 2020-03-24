@@ -131,23 +131,11 @@ table Spawn {
 	envp: [string];
 }
 
-table AuthMunge {
-	key: string;
-}
-
-table AuthResvPort {
-	port: short;
-}
-
-table AuthExternal {
-	cred: string;
-}
-
-union AuthInfo {AuthMunge, AuthResvPort, AuthExternal}
-
 table Auth {
-	type: short;
-	info: AuthInfo;
+	authMethod: string;
+	encryptMethod: string;
+	encryptMode: ushort;
+	port: ushort;
 }
 
 table Move {

@@ -31,9 +31,6 @@ static int PBS_ifl_DmnCmd_verify_table(flatcc_table_verifier_descriptor_t *td);
 static int PBS_ifl_Signal_verify_table(flatcc_table_verifier_descriptor_t *td);
 static int PBS_ifl_Stat_verify_table(flatcc_table_verifier_descriptor_t *td);
 static int PBS_ifl_Spawn_verify_table(flatcc_table_verifier_descriptor_t *td);
-static int PBS_ifl_AuthMunge_verify_table(flatcc_table_verifier_descriptor_t *td);
-static int PBS_ifl_AuthResvPort_verify_table(flatcc_table_verifier_descriptor_t *td);
-static int PBS_ifl_AuthExternal_verify_table(flatcc_table_verifier_descriptor_t *td);
 static int PBS_ifl_Auth_verify_table(flatcc_table_verifier_descriptor_t *td);
 static int PBS_ifl_Move_verify_table(flatcc_table_verifier_descriptor_t *td);
 static int PBS_ifl_Run_verify_table(flatcc_table_verifier_descriptor_t *td);
@@ -69,16 +66,6 @@ static int PBS_ifl_TmBody_union_verifier(flatcc_union_verifier_descriptor_t *ud)
     case 5: return flatcc_verify_union_table(ud, PBS_ifl_TmInfo_verify_table); /* TmInfo */
     case 6: return flatcc_verify_union_table(ud, PBS_ifl_TmPublish_verify_table); /* TmPublish */
     case 7: return flatcc_verify_union_table(ud, PBS_ifl_TmSubscribe_verify_table); /* TmSubscribe */
-    default: return flatcc_verify_ok;
-    }
-}
-
-static int PBS_ifl_AuthInfo_union_verifier(flatcc_union_verifier_descriptor_t *ud)
-{
-    switch (ud->type) {
-    case 1: return flatcc_verify_union_table(ud, PBS_ifl_AuthMunge_verify_table); /* AuthMunge */
-    case 2: return flatcc_verify_union_table(ud, PBS_ifl_AuthResvPort_verify_table); /* AuthResvPort */
-    case 3: return flatcc_verify_union_table(ud, PBS_ifl_AuthExternal_verify_table); /* AuthExternal */
     default: return flatcc_verify_ok;
     }
 }
@@ -758,92 +745,13 @@ static inline int PBS_ifl_Spawn_verify_as_root_with_type_hash(const void *buf, s
     return flatcc_verify_table_as_typed_root(buf, bufsiz, thash, &PBS_ifl_Spawn_verify_table);
 }
 
-static int PBS_ifl_AuthMunge_verify_table(flatcc_table_verifier_descriptor_t *td)
-{
-    int ret;
-    if ((ret = flatcc_verify_string_field(td, 0, 0) /* key */)) return ret;
-    return flatcc_verify_ok;
-}
-
-static inline int PBS_ifl_AuthMunge_verify_as_root(const void *buf, size_t bufsiz)
-{
-    return flatcc_verify_table_as_root(buf, bufsiz, PBS_ifl_AuthMunge_identifier, &PBS_ifl_AuthMunge_verify_table);
-}
-
-static inline int PBS_ifl_AuthMunge_verify_as_typed_root(const void *buf, size_t bufsiz)
-{
-    return flatcc_verify_table_as_root(buf, bufsiz, PBS_ifl_AuthMunge_type_identifier, &PBS_ifl_AuthMunge_verify_table);
-}
-
-static inline int PBS_ifl_AuthMunge_verify_as_root_with_identifier(const void *buf, size_t bufsiz, const char *fid)
-{
-    return flatcc_verify_table_as_root(buf, bufsiz, fid, &PBS_ifl_AuthMunge_verify_table);
-}
-
-static inline int PBS_ifl_AuthMunge_verify_as_root_with_type_hash(const void *buf, size_t bufsiz, flatbuffers_thash_t thash)
-{
-    return flatcc_verify_table_as_typed_root(buf, bufsiz, thash, &PBS_ifl_AuthMunge_verify_table);
-}
-
-static int PBS_ifl_AuthResvPort_verify_table(flatcc_table_verifier_descriptor_t *td)
-{
-    int ret;
-    if ((ret = flatcc_verify_field(td, 0, 2, 2) /* port */)) return ret;
-    return flatcc_verify_ok;
-}
-
-static inline int PBS_ifl_AuthResvPort_verify_as_root(const void *buf, size_t bufsiz)
-{
-    return flatcc_verify_table_as_root(buf, bufsiz, PBS_ifl_AuthResvPort_identifier, &PBS_ifl_AuthResvPort_verify_table);
-}
-
-static inline int PBS_ifl_AuthResvPort_verify_as_typed_root(const void *buf, size_t bufsiz)
-{
-    return flatcc_verify_table_as_root(buf, bufsiz, PBS_ifl_AuthResvPort_type_identifier, &PBS_ifl_AuthResvPort_verify_table);
-}
-
-static inline int PBS_ifl_AuthResvPort_verify_as_root_with_identifier(const void *buf, size_t bufsiz, const char *fid)
-{
-    return flatcc_verify_table_as_root(buf, bufsiz, fid, &PBS_ifl_AuthResvPort_verify_table);
-}
-
-static inline int PBS_ifl_AuthResvPort_verify_as_root_with_type_hash(const void *buf, size_t bufsiz, flatbuffers_thash_t thash)
-{
-    return flatcc_verify_table_as_typed_root(buf, bufsiz, thash, &PBS_ifl_AuthResvPort_verify_table);
-}
-
-static int PBS_ifl_AuthExternal_verify_table(flatcc_table_verifier_descriptor_t *td)
-{
-    int ret;
-    if ((ret = flatcc_verify_string_field(td, 0, 0) /* cred */)) return ret;
-    return flatcc_verify_ok;
-}
-
-static inline int PBS_ifl_AuthExternal_verify_as_root(const void *buf, size_t bufsiz)
-{
-    return flatcc_verify_table_as_root(buf, bufsiz, PBS_ifl_AuthExternal_identifier, &PBS_ifl_AuthExternal_verify_table);
-}
-
-static inline int PBS_ifl_AuthExternal_verify_as_typed_root(const void *buf, size_t bufsiz)
-{
-    return flatcc_verify_table_as_root(buf, bufsiz, PBS_ifl_AuthExternal_type_identifier, &PBS_ifl_AuthExternal_verify_table);
-}
-
-static inline int PBS_ifl_AuthExternal_verify_as_root_with_identifier(const void *buf, size_t bufsiz, const char *fid)
-{
-    return flatcc_verify_table_as_root(buf, bufsiz, fid, &PBS_ifl_AuthExternal_verify_table);
-}
-
-static inline int PBS_ifl_AuthExternal_verify_as_root_with_type_hash(const void *buf, size_t bufsiz, flatbuffers_thash_t thash)
-{
-    return flatcc_verify_table_as_typed_root(buf, bufsiz, thash, &PBS_ifl_AuthExternal_verify_table);
-}
-
 static int PBS_ifl_Auth_verify_table(flatcc_table_verifier_descriptor_t *td)
 {
     int ret;
-    if ((ret = flatcc_verify_field(td, 0, 2, 2) /* type */)) return ret;
-    if ((ret = flatcc_verify_union_field(td, 2, 0, &PBS_ifl_AuthInfo_union_verifier) /* info */)) return ret;
+    if ((ret = flatcc_verify_string_field(td, 0, 0) /* authMethod */)) return ret;
+    if ((ret = flatcc_verify_string_field(td, 1, 0) /* encryptMethod */)) return ret;
+    if ((ret = flatcc_verify_field(td, 2, 2, 2) /* encryptMode */)) return ret;
+    if ((ret = flatcc_verify_field(td, 3, 2, 2) /* port */)) return ret;
     return flatcc_verify_ok;
 }
 

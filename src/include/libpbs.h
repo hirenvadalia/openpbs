@@ -139,6 +139,8 @@ pthread_mutex_t * get_conn_mutex(int);
 
 /* reply to Select Job Request */
 struct brp_select {
+	// FIXME: do we absoutly need this link list?
+	// see preemt_info, we have something similar here
 	struct brp_select *brp_next;
 	char brp_jobid[PBS_MAXSVRJOBID + 1];
 };

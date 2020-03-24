@@ -27,9 +27,6 @@ __flatbuffers_build_scalar(flatbuffers_, PBS_ifl_batch_op, PBS_ifl_batch_op_enum
 typedef flatbuffers_union_ref_t PBS_ifl_TmBody_union_ref_t;
 typedef flatbuffers_union_vec_ref_t PBS_ifl_TmBody_union_vec_ref_t;
 static PBS_ifl_TmBody_union_ref_t PBS_ifl_TmBody_clone(flatbuffers_builder_t *B, PBS_ifl_TmBody_union_t t);
-typedef flatbuffers_union_ref_t PBS_ifl_AuthInfo_union_ref_t;
-typedef flatbuffers_union_vec_ref_t PBS_ifl_AuthInfo_union_vec_ref_t;
-static PBS_ifl_AuthInfo_union_ref_t PBS_ifl_AuthInfo_clone(flatbuffers_builder_t *B, PBS_ifl_AuthInfo_union_t t);
 typedef flatbuffers_union_ref_t PBS_ifl_ReqBody_union_ref_t;
 typedef flatbuffers_union_vec_ref_t PBS_ifl_ReqBody_union_vec_ref_t;
 static PBS_ifl_ReqBody_union_ref_t PBS_ifl_ReqBody_clone(flatbuffers_builder_t *B, PBS_ifl_ReqBody_union_t t);
@@ -147,25 +144,10 @@ typedef flatbuffers_ref_t PBS_ifl_Spawn_ref_t;
 static PBS_ifl_Spawn_ref_t PBS_ifl_Spawn_clone(flatbuffers_builder_t *B, PBS_ifl_Spawn_table_t t);
 __flatbuffers_build_table(flatbuffers_, PBS_ifl_Spawn, 3)
 
-static const flatbuffers_voffset_t __PBS_ifl_AuthMunge_required[] = { 0 };
-typedef flatbuffers_ref_t PBS_ifl_AuthMunge_ref_t;
-static PBS_ifl_AuthMunge_ref_t PBS_ifl_AuthMunge_clone(flatbuffers_builder_t *B, PBS_ifl_AuthMunge_table_t t);
-__flatbuffers_build_table(flatbuffers_, PBS_ifl_AuthMunge, 1)
-
-static const flatbuffers_voffset_t __PBS_ifl_AuthResvPort_required[] = { 0 };
-typedef flatbuffers_ref_t PBS_ifl_AuthResvPort_ref_t;
-static PBS_ifl_AuthResvPort_ref_t PBS_ifl_AuthResvPort_clone(flatbuffers_builder_t *B, PBS_ifl_AuthResvPort_table_t t);
-__flatbuffers_build_table(flatbuffers_, PBS_ifl_AuthResvPort, 1)
-
-static const flatbuffers_voffset_t __PBS_ifl_AuthExternal_required[] = { 0 };
-typedef flatbuffers_ref_t PBS_ifl_AuthExternal_ref_t;
-static PBS_ifl_AuthExternal_ref_t PBS_ifl_AuthExternal_clone(flatbuffers_builder_t *B, PBS_ifl_AuthExternal_table_t t);
-__flatbuffers_build_table(flatbuffers_, PBS_ifl_AuthExternal, 1)
-
 static const flatbuffers_voffset_t __PBS_ifl_Auth_required[] = { 0 };
 typedef flatbuffers_ref_t PBS_ifl_Auth_ref_t;
 static PBS_ifl_Auth_ref_t PBS_ifl_Auth_clone(flatbuffers_builder_t *B, PBS_ifl_Auth_table_t t);
-__flatbuffers_build_table(flatbuffers_, PBS_ifl_Auth, 3)
+__flatbuffers_build_table(flatbuffers_, PBS_ifl_Auth, 4)
 
 static const flatbuffers_voffset_t __PBS_ifl_Move_required[] = { 0 };
 typedef flatbuffers_ref_t PBS_ifl_Move_ref_t;
@@ -396,23 +378,8 @@ __flatbuffers_build_table_prolog(flatbuffers_, PBS_ifl_Stat, PBS_ifl_Stat_file_i
 static inline PBS_ifl_Spawn_ref_t PBS_ifl_Spawn_create(flatbuffers_builder_t *B __PBS_ifl_Spawn_formal_args);
 __flatbuffers_build_table_prolog(flatbuffers_, PBS_ifl_Spawn, PBS_ifl_Spawn_file_identifier, PBS_ifl_Spawn_type_identifier)
 
-#define __PBS_ifl_AuthMunge_formal_args , flatbuffers_string_ref_t v0
-#define __PBS_ifl_AuthMunge_call_args , v0
-static inline PBS_ifl_AuthMunge_ref_t PBS_ifl_AuthMunge_create(flatbuffers_builder_t *B __PBS_ifl_AuthMunge_formal_args);
-__flatbuffers_build_table_prolog(flatbuffers_, PBS_ifl_AuthMunge, PBS_ifl_AuthMunge_file_identifier, PBS_ifl_AuthMunge_type_identifier)
-
-#define __PBS_ifl_AuthResvPort_formal_args , int16_t v0
-#define __PBS_ifl_AuthResvPort_call_args , v0
-static inline PBS_ifl_AuthResvPort_ref_t PBS_ifl_AuthResvPort_create(flatbuffers_builder_t *B __PBS_ifl_AuthResvPort_formal_args);
-__flatbuffers_build_table_prolog(flatbuffers_, PBS_ifl_AuthResvPort, PBS_ifl_AuthResvPort_file_identifier, PBS_ifl_AuthResvPort_type_identifier)
-
-#define __PBS_ifl_AuthExternal_formal_args , flatbuffers_string_ref_t v0
-#define __PBS_ifl_AuthExternal_call_args , v0
-static inline PBS_ifl_AuthExternal_ref_t PBS_ifl_AuthExternal_create(flatbuffers_builder_t *B __PBS_ifl_AuthExternal_formal_args);
-__flatbuffers_build_table_prolog(flatbuffers_, PBS_ifl_AuthExternal, PBS_ifl_AuthExternal_file_identifier, PBS_ifl_AuthExternal_type_identifier)
-
-#define __PBS_ifl_Auth_formal_args , int16_t v0, PBS_ifl_AuthInfo_union_ref_t v2
-#define __PBS_ifl_Auth_call_args , v0, v2
+#define __PBS_ifl_Auth_formal_args , flatbuffers_string_ref_t v0, flatbuffers_string_ref_t v1, uint16_t v2, uint16_t v3
+#define __PBS_ifl_Auth_call_args , v0, v1, v2, v3
 static inline PBS_ifl_Auth_ref_t PBS_ifl_Auth_create(flatbuffers_builder_t *B __PBS_ifl_Auth_formal_args);
 __flatbuffers_build_table_prolog(flatbuffers_, PBS_ifl_Auth, PBS_ifl_Auth_file_identifier, PBS_ifl_Auth_type_identifier)
 
@@ -568,26 +535,6 @@ static PBS_ifl_TmBody_union_ref_t PBS_ifl_TmBody_clone(flatbuffers_builder_t *B,
     case 6: return PBS_ifl_TmBody_as_TmPublish(PBS_ifl_TmPublish_clone(B, (PBS_ifl_TmPublish_table_t)u.value));
     case 7: return PBS_ifl_TmBody_as_TmSubscribe(PBS_ifl_TmSubscribe_clone(B, (PBS_ifl_TmSubscribe_table_t)u.value));
     default: return PBS_ifl_TmBody_as_NONE();
-    }
-}
-
-static inline PBS_ifl_AuthInfo_union_ref_t PBS_ifl_AuthInfo_as_NONE()
-{ PBS_ifl_AuthInfo_union_ref_t uref; uref.type = PBS_ifl_AuthInfo_NONE; uref.value = 0; return uref; }
-static inline PBS_ifl_AuthInfo_union_ref_t PBS_ifl_AuthInfo_as_AuthMunge(PBS_ifl_AuthMunge_ref_t ref)
-{ PBS_ifl_AuthInfo_union_ref_t uref; uref.type = PBS_ifl_AuthInfo_AuthMunge; uref.value = ref; return uref; }
-static inline PBS_ifl_AuthInfo_union_ref_t PBS_ifl_AuthInfo_as_AuthResvPort(PBS_ifl_AuthResvPort_ref_t ref)
-{ PBS_ifl_AuthInfo_union_ref_t uref; uref.type = PBS_ifl_AuthInfo_AuthResvPort; uref.value = ref; return uref; }
-static inline PBS_ifl_AuthInfo_union_ref_t PBS_ifl_AuthInfo_as_AuthExternal(PBS_ifl_AuthExternal_ref_t ref)
-{ PBS_ifl_AuthInfo_union_ref_t uref; uref.type = PBS_ifl_AuthInfo_AuthExternal; uref.value = ref; return uref; }
-__flatbuffers_build_union_vector(flatbuffers_, PBS_ifl_AuthInfo)
-
-static PBS_ifl_AuthInfo_union_ref_t PBS_ifl_AuthInfo_clone(flatbuffers_builder_t *B, PBS_ifl_AuthInfo_union_t u)
-{
-    switch (u.type) {
-    case 1: return PBS_ifl_AuthInfo_as_AuthMunge(PBS_ifl_AuthMunge_clone(B, (PBS_ifl_AuthMunge_table_t)u.value));
-    case 2: return PBS_ifl_AuthInfo_as_AuthResvPort(PBS_ifl_AuthResvPort_clone(B, (PBS_ifl_AuthResvPort_table_t)u.value));
-    case 3: return PBS_ifl_AuthInfo_as_AuthExternal(PBS_ifl_AuthExternal_clone(B, (PBS_ifl_AuthExternal_table_t)u.value));
-    default: return PBS_ifl_AuthInfo_as_NONE();
     }
 }
 
@@ -1284,81 +1231,18 @@ static PBS_ifl_Spawn_ref_t PBS_ifl_Spawn_clone(flatbuffers_builder_t *B, PBS_ifl
     __flatbuffers_memoize_end(B, t, PBS_ifl_Spawn_end(B));
 }
 
-__flatbuffers_build_string_field(0, flatbuffers_, PBS_ifl_AuthMunge_key, PBS_ifl_AuthMunge)
-
-static inline PBS_ifl_AuthMunge_ref_t PBS_ifl_AuthMunge_create(flatbuffers_builder_t *B __PBS_ifl_AuthMunge_formal_args)
-{
-    if (PBS_ifl_AuthMunge_start(B)
-        || PBS_ifl_AuthMunge_key_add(B, v0)) {
-        return 0;
-    }
-    return PBS_ifl_AuthMunge_end(B);
-}
-
-static PBS_ifl_AuthMunge_ref_t PBS_ifl_AuthMunge_clone(flatbuffers_builder_t *B, PBS_ifl_AuthMunge_table_t t)
-{
-    __flatbuffers_memoize_begin(B, t);
-    if (PBS_ifl_AuthMunge_start(B)
-        || PBS_ifl_AuthMunge_key_pick(B, t)) {
-        return 0;
-    }
-    __flatbuffers_memoize_end(B, t, PBS_ifl_AuthMunge_end(B));
-}
-
-__flatbuffers_build_scalar_field(0, flatbuffers_, PBS_ifl_AuthResvPort_port, flatbuffers_int16, int16_t, 2, 2, INT16_C(0), PBS_ifl_AuthResvPort)
-
-static inline PBS_ifl_AuthResvPort_ref_t PBS_ifl_AuthResvPort_create(flatbuffers_builder_t *B __PBS_ifl_AuthResvPort_formal_args)
-{
-    if (PBS_ifl_AuthResvPort_start(B)
-        || PBS_ifl_AuthResvPort_port_add(B, v0)) {
-        return 0;
-    }
-    return PBS_ifl_AuthResvPort_end(B);
-}
-
-static PBS_ifl_AuthResvPort_ref_t PBS_ifl_AuthResvPort_clone(flatbuffers_builder_t *B, PBS_ifl_AuthResvPort_table_t t)
-{
-    __flatbuffers_memoize_begin(B, t);
-    if (PBS_ifl_AuthResvPort_start(B)
-        || PBS_ifl_AuthResvPort_port_pick(B, t)) {
-        return 0;
-    }
-    __flatbuffers_memoize_end(B, t, PBS_ifl_AuthResvPort_end(B));
-}
-
-__flatbuffers_build_string_field(0, flatbuffers_, PBS_ifl_AuthExternal_cred, PBS_ifl_AuthExternal)
-
-static inline PBS_ifl_AuthExternal_ref_t PBS_ifl_AuthExternal_create(flatbuffers_builder_t *B __PBS_ifl_AuthExternal_formal_args)
-{
-    if (PBS_ifl_AuthExternal_start(B)
-        || PBS_ifl_AuthExternal_cred_add(B, v0)) {
-        return 0;
-    }
-    return PBS_ifl_AuthExternal_end(B);
-}
-
-static PBS_ifl_AuthExternal_ref_t PBS_ifl_AuthExternal_clone(flatbuffers_builder_t *B, PBS_ifl_AuthExternal_table_t t)
-{
-    __flatbuffers_memoize_begin(B, t);
-    if (PBS_ifl_AuthExternal_start(B)
-        || PBS_ifl_AuthExternal_cred_pick(B, t)) {
-        return 0;
-    }
-    __flatbuffers_memoize_end(B, t, PBS_ifl_AuthExternal_end(B));
-}
-
-__flatbuffers_build_scalar_field(0, flatbuffers_, PBS_ifl_Auth_type, flatbuffers_int16, int16_t, 2, 2, INT16_C(0), PBS_ifl_Auth)
-__flatbuffers_build_union_field(2, flatbuffers_, PBS_ifl_Auth_info, PBS_ifl_AuthInfo, PBS_ifl_Auth)
-__flatbuffers_build_union_table_value_field(flatbuffers_, PBS_ifl_Auth_info, PBS_ifl_AuthInfo, AuthMunge, PBS_ifl_AuthMunge)
-__flatbuffers_build_union_table_value_field(flatbuffers_, PBS_ifl_Auth_info, PBS_ifl_AuthInfo, AuthResvPort, PBS_ifl_AuthResvPort)
-__flatbuffers_build_union_table_value_field(flatbuffers_, PBS_ifl_Auth_info, PBS_ifl_AuthInfo, AuthExternal, PBS_ifl_AuthExternal)
+__flatbuffers_build_string_field(0, flatbuffers_, PBS_ifl_Auth_authMethod, PBS_ifl_Auth)
+__flatbuffers_build_string_field(1, flatbuffers_, PBS_ifl_Auth_encryptMethod, PBS_ifl_Auth)
+__flatbuffers_build_scalar_field(2, flatbuffers_, PBS_ifl_Auth_encryptMode, flatbuffers_uint16, uint16_t, 2, 2, UINT16_C(0), PBS_ifl_Auth)
+__flatbuffers_build_scalar_field(3, flatbuffers_, PBS_ifl_Auth_port, flatbuffers_uint16, uint16_t, 2, 2, UINT16_C(0), PBS_ifl_Auth)
 
 static inline PBS_ifl_Auth_ref_t PBS_ifl_Auth_create(flatbuffers_builder_t *B __PBS_ifl_Auth_formal_args)
 {
     if (PBS_ifl_Auth_start(B)
-        || PBS_ifl_Auth_info_add_value(B, v2)
-        || PBS_ifl_Auth_type_add(B, v0)
-        || PBS_ifl_Auth_info_add_type(B, v2.type)) {
+        || PBS_ifl_Auth_authMethod_add(B, v0)
+        || PBS_ifl_Auth_encryptMethod_add(B, v1)
+        || PBS_ifl_Auth_encryptMode_add(B, v2)
+        || PBS_ifl_Auth_port_add(B, v3)) {
         return 0;
     }
     return PBS_ifl_Auth_end(B);
@@ -1368,8 +1252,10 @@ static PBS_ifl_Auth_ref_t PBS_ifl_Auth_clone(flatbuffers_builder_t *B, PBS_ifl_A
 {
     __flatbuffers_memoize_begin(B, t);
     if (PBS_ifl_Auth_start(B)
-        || PBS_ifl_Auth_info_pick(B, t)
-        || PBS_ifl_Auth_type_pick(B, t)) {
+        || PBS_ifl_Auth_authMethod_pick(B, t)
+        || PBS_ifl_Auth_encryptMethod_pick(B, t)
+        || PBS_ifl_Auth_encryptMode_pick(B, t)
+        || PBS_ifl_Auth_port_pick(B, t)) {
         return 0;
     }
     __flatbuffers_memoize_end(B, t, PBS_ifl_Auth_end(B));
