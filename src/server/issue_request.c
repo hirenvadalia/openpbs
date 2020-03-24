@@ -684,9 +684,9 @@ issue_Drequest(int conn, struct batch_request *request, void (*func)(), struct w
 			rc = PBSD_cred(conn,
 				request->rq_ind.rq_cred.rq_credid,
 				request->rq_ind.rq_cred.rq_jobid,
-				request->rq_ind.rq_cred.rq_cred_type,
-				request->rq_ind.rq_cred.rq_cred_data,
-				request->rq_ind.rq_cred.rq_cred_validity,
+				request->rq_ind.rq_cred.rq_type,
+				request->rq_ind.rq_cred.rq_data,
+				request->rq_ind.rq_cred.rq_validity,
 				prot,
 				&msgid);
 			break;

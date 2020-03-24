@@ -39,91 +39,75 @@
 #include <errno.h>
 #include "pbs_ifl.h"
 #include "libpbs.h"
-#include "dis.h"
 #include "log.h"
 #include "placementsets.h"
 
 extern char *msg_nosupport;
 
+static int wire_decode_attropl(ns(Attribute_vec_t), struct attropl **);
+static int wire_decode_CopyFiles(ns(CopyFile_table_t), struct rq_cpyfile *);
+
+#define COPYSTR(dest, src, len) { \
+	memset(dest, '\0', len); \
+	strncpy(dest, (char *)src, len - 1); \
+}
+
+#define COPYSTR_B(dest, src) COPYSTR(dest, src, sizeof(dest))
+
+#define COPYSTR_M(dest, src, len) { \
+	dest = (char *)malloc(len); \
+	if (dest == NULL) \
+		return PBSE_SYSTEM; \
+	memcpy(dest, src, len); \
+}
+
+#define COPYSTR_S(dest, src) { \
+	dest = strdup((char *)src); \
+	if (dest == NULL) \
+		return PBSE_SYSTEM; \
+}
+
 /**
  * @brief
- *	decode into a list of PBS API "attropl" structures
+ *	decode a list of PBS API "attropl" structures from given flatbuffer
+ *	The space for the attrl structures is allocated as needed.
  *
- *	The space for the attropl structures is allocated as needed.
- *
- *	The first item is a unsigned integer, a count of the
- *	number of attropl entries in the linked list.  This is encoded
- *	even when there are no entries in the list.
- *
- *	Each individual entry is encoded as:
- *		u int	size of the three strings (name, resource, value)
- *			including the terminating nulls, see dec_svrattrl.c
- *		string	attribute name
- *		u int	1 or 0 if resource name does or does not follow
- *		string	resource name (if one)
- *		string  value of attribute/resource
- *		u int	"op" of attrlop (also flag of svrattrl)
- *
- *	Note, the encoding of a attropl is the same as the encoding of
- *	the pbs_ifl.h structures "attrl" and the server struct svrattrl.
- *	Any one of the three forms can be decoded into any of the three with
- *	the possible loss of the "flags" field (which is the "op" of the
- *	attrlop).
- *
- * @param[in]   sock - socket descriptor
- * @param[in]   ppatt - pointer to list of attributes
+ * @param[in] attrs - flatbuffer attrs vec
+ * @param[in] ppatt - pointer to list of attributes to be filled
  *
  * @return int
- * @retval 0 on SUCCESS
- * @retval >0 on failure
+ * @retval PBS_NONE  - Success
+ * @retval !PBS_NONE - Failure
  */
-
-int
-decode_DIS_attropl(int sock, struct attropl **ppatt)
+static int
+wire_decode_attropl(ns(Attribute_vec_t) attrs, struct attropl **ppatt)
 {
-	int		 hasresc;
-	int		 i;
-	unsigned int	 numpat;
-	struct attropl  *pat      = 0;
-	struct attropl  *patprior = 0;
-	int		 rc;
+	int i = 0;
+	struct attropl *patprior = NULL;
+	struct attropl *pat = NULL;
+	size_t attrs_len = ns(Attribute_vec_len(attrs));
 
-
-	numpat = disrui(sock, &rc);
-	if (rc) return rc;
-
-	for (i=0; i < numpat; ++i) {
-
-		(void) disrui(sock, &rc);
-		if (rc) break;
-
+	for (i = 0; i < attrs_len; i++) {
+		ns(Attribute_table_t) attr = ns(Attribute_vec_at(attrs, i));
 		pat = malloc(sizeof(struct attropl));
 		if (pat == 0)
-			return DIS_NOMALLOC;
+			return PBSE_SYSTEM;
 
-		pat->next     = NULL;
-		pat->name     = NULL;
-		pat->resource = NULL;
-		pat->value    = NULL;
+		pat->name = strdup((char *) ns(Attribute_name(attr)));
+		if (pat->name != NULL)
+			goto dwa_err;
 
-		pat->name = disrst(sock, &rc);
-		if (rc)	break;
-
-		hasresc = disrui(sock, &rc);
-		if (rc) break;
-		if (hasresc) {
-			pat->resource = disrst(sock, &rc);
-			if (rc) break;
+		if (ns(Attribute_resc_is_present(attr))) {
+			pat->resource = strdup((char *) ns(Attribute_resc(attr)));
+			if (pat->resource != NULL)
+				goto dwa_err;
 		}
 
-		pat->value = disrst(sock, &rc);
-		if (rc) break;
-
-		pat->op = (enum batch_op)disrui(sock, &rc);
-		if (rc) break;
-
+		pat->value = strdup((char *) ns(Attribute_value(attr)));
+		if (pat->value != NULL)
+			goto dwa_err;
+		pat->op = (enum batch_op) ns(Attribute_op(attr));
 		if (i == 0) {
-			/* first one, link to passing in pointer */
 			*ppatt = pat;
 		} else {
 			patprior->next = pat;
@@ -131,580 +115,149 @@ decode_DIS_attropl(int sock, struct attropl **ppatt)
 		patprior = pat;
 	}
 
-	if (rc)
-		PBS_free_aopl(pat);
-	return rc;
+	return PBSE_NONE;
+
+dwa_err:
+	// FIXME: rename this to small case
+	PBS_free_aopl(pat);
+	return PBSE_SYSTEM;
 }
 
 /**
  * @brief
- *	decode into a list of PBS API "attrl" structures
+ *	decode a list of svrattrl structures from given flatbuffer
+ *	The space for the svrattrl structures is allocated as needed.
  *
- *	The space for the attrl structures is allocated as needed.
- *
- *	The first item is a unsigned integer, a count of the
- *	number of attrl entries in the linked list.  This is encoded
- *	even when there are no entries in the list.
- *
- *	Each individual entry is encoded as:
- *		u int	size of the three strings (name, resource, value)
- *			including the terminating nulls, see dec_svrattrl.c
- *		string	attribute name
- *		u int	1 or 0 if resource name does or does not follow
- *		string	resource name (if one)
- *		string  value of attribute/resource
- *		u int	"op" of attrlop (also flag of svrattrl)
- *
- *	Note, the encoding of a attrl is the same as the encoding of
- *	the pbs_ifl.h structures "attropl" and the server struct svrattrl.
- *	Any one of the three forms can be decoded into any of the three with
- *	the possible loss of the "flags" field (which is the "op" of the
- *	attrlop).
- *
- * @param[in]   sock - socket descriptor
- * @param[in]   ppatt - pointer to list of attributes
+ * @param[in] attrs - flatbuffer attrs vec
+ * @param[in] phead - pointer to list of attributes to be filled
  *
  * @return int
- * @retval 0 on SUCCESS
- * @retval >0 on failure
+ * @retval PBS_NONE  - Success
+ * @retval !PBS_NONE - Failure
  */
 int
-decode_DIS_attrl(int sock, struct attrl **ppatt)
+wire_decode_svrattrl(ns(Attribute_vec_t) attrs, pbs_list_head *phead)
 {
-	return decode_DIS_attropl(sock, (struct attropl **)ppatt);
-}
+	unsigned int hasresc;
+	size_t ls;
+	unsigned int data_len;
+	unsigned int numattr;
+	int rc;
+	size_t tsize;
+	int i = 0;
+	size_t attrs_len = ns(Attribute_vec_len(attrs));
 
-/**
- * @brief-
- *	 decode into a list of server "svrattrl" structures
- *
- * @par	Functionality:
- *		The space for the svrattrl structures is allocated as needed.
- *
- *      The first item is a unsigned integer, a count of the
- *      number of svrattrl entries in the linked list.  This is encoded
- *      even when there are no entries in the list.
- *
- * @par	Each individual entry is encoded as:\n
- *			u int	- size of the three strings (name, resource, value)
- *                      	  including the terminating nulls\n
- *			string  - attribute name\n
- *			u int   - 1 or 0 if resource name does or does not follow\n
- *			string  - resource name (if one)\n
- *			string  - value of attribute/resource\n
- *			u int   - "op" of attrlop\n
- *
- * NOTE:
- *	the encoding of a svrattrl is the same as the encoding of
- *      the pbs_ifl.h structures "attrl" and "attropl".  Any one of
- *      the three forms can be decoded into any of the three with the
- *      possible loss of the "flags" field (which is the "op" of the attrlop).
- *
- * @param[in] sock - socket descriptor
- * @param[in] phead - head pointer to list entry list sub-structure
- *
- * @return      int
- * @retval      DIS_SUCCESS(0)  success
- * @retval      error code      error
- *
- */
-int
-decode_DIS_svrattrl(int sock, pbs_list_head *phead)
-{
-	int		i;
-	unsigned int	hasresc;
-	size_t		ls;
-	unsigned int	data_len;
-	unsigned int	numattr;
-	svrattrl       *psvrat;
-	int		rc;
-	size_t		tsize;
+	CLEAR_HEAD((*phead));
 
+	for (i = 0; i < attrs_len; i++) {
+		ns(Attribute_table_t) attr = ns(Attribute_vec_at(attrs, i));
+		svrattrl *psvrat = NULL;
+		char *name = (char *) ns(Attribute_name(attr));
+		size_t nlen = strlen(name) + 1;
+		char *value = (char *) ns(Attribute_value(attr));
+		size_t vlen = strlen(value) + 1;
+		char *resc = NULL;
+		size_t rlen = 0;
+		size_t tsize = sizeof(svrattrl) + nlen + vlen;
 
-	numattr = disrui(sock, &rc);	/* number of attributes in set */
-	if (rc) return rc;
+		if (ns(Attribute_resc_is_present(attr))) {
+			resc = (char *) ns(Attribute_resc(attr));
+			rlen = strlen(resc) + 1;
+			tsize += rlen;
+		}
 
-	for (i=0; i<numattr; ++i) {
-
-		data_len = disrui(sock, &rc);	/* here it is used */
-		if (rc) return rc;
-
-		tsize = sizeof(svrattrl) + data_len;
-		if ((psvrat = (svrattrl *)malloc(tsize)) == 0)
-			return DIS_NOMALLOC;
+		if ((psvrat = (svrattrl *)malloc(tsize)) == NULL)
+			return PBSE_SYSTEM;
 
 		CLEAR_LINK(psvrat->al_link);
 		psvrat->al_sister = NULL;
-		psvrat->al_atopl.next = 0;
+		psvrat->al_atopl.next = NULL;
 		psvrat->al_tsize = tsize;
-		psvrat->al_name  = (char *)psvrat + sizeof(svrattrl);
-		psvrat->al_resc  = 0;
-		psvrat->al_value = 0;
-		psvrat->al_nameln = 0;
-		psvrat->al_rescln = 0;
-		psvrat->al_valln  = 0;
-		psvrat->al_flags  = 0;
-		psvrat->al_refct  = 1;
+		psvrat->al_name = (char *)psvrat + sizeof(svrattrl);
+		psvrat->al_resc = psvrat->al_name + nlen;
+		psvrat->al_value = psvrat->al_resc + rlen;
+		psvrat->al_nameln = nlen;
+		psvrat->al_rescln = rlen;
+		psvrat->al_valln = vlen;
+		psvrat->al_flags = 0;
+		psvrat->al_refct = 1;
+		psvrat->al_op = (enum batch_op) ns(Attribute_op(attr));
 
-		if ((rc = disrfcs(sock, &ls, data_len, psvrat->al_name)) != 0)
-			break;
-		*(psvrat->al_name + ls++) = '\0';
-		psvrat->al_nameln = (int)ls;
-		data_len -= ls;
+		COPYSTR(psvrat->al_name, name, nlen);
 
-		hasresc = disrui(sock, &rc);
-		if (rc) break;
-		if (hasresc) {
-			psvrat->al_resc = psvrat->al_name + ls;
-			rc = disrfcs(sock, &ls, data_len, psvrat->al_resc);
-			if (rc)
-				break;
-			*(psvrat->al_resc + ls++) = '\0';
-			psvrat->al_rescln = (int)ls;
-			data_len -= ls;
+		if (rlen > 0) {
+			COPYSTR(psvrat->al_resc, resc, rlen);
 		}
 
-		psvrat->al_value  = psvrat->al_name + psvrat->al_nameln +
-			psvrat->al_rescln;
-		if ((rc = disrfcs(sock, &ls, data_len, psvrat->al_value)) != 0)
-			break;
-		*(psvrat->al_value + ls++) = '\0';
-		psvrat->al_valln = (int)ls;
+		COPYSTR(psvrat->al_value, value, vlen);
 
-		psvrat->al_op = (enum batch_op)disrui(sock, &rc);
-		if (rc) break;
-
-		append_link(phead, &psvrat->al_link, psvrat);
+		append_link(phead, &(psvrat->al_link), psvrat);
 	}
-
-	if (rc) {
-		(void)free(psvrat);
-	}
-
-	return (rc);
-}
-
-/**
- * @brief-
- *	Decode the Request Header Fields
- *      common to all requests
- *
- * @param[in] sock - socket descriptor
- * @param[out] preq - pointer to batch_request structure
- *
- * @return	int
- * @retval	-1    on EOF (end of file on first read only)
- * @retval	0    on success
- * @retval	>0    a DIS error return, see dis.h
- *
- */
-int
-decode_DIS_ReqHdr(int sock, struct batch_request *preq, int *proto_type, int *proto_ver)
-{
-	int rc;
-
-	*proto_type = disrui(sock, &rc);
-	if (rc) {
-		return rc;
-	}
-	if (*proto_type != PBS_BATCH_PROT_TYPE)
-		return  DIS_PROTO;
-	*proto_ver = disrui(sock, &rc);
-	if (rc) {
-		return rc;
-	}
-
-	preq->rq_type = disrui(sock, &rc);
-	if (rc) {
-		return rc;
-	}
-
-	return (disrfst(sock, PBS_MAXUSER+1, preq->rq_user));
-}
-
-/**
- * @brief -
- *	decode a batch_request Extend string
- *
- * @par	Functionality:
- *		The batch_request structure must already exist (be allocated by the
- *      	caller.   It is assumed that the header fields (protocol type,
- *		protocol version, request type, and user name) and the request body
- *		have already be decoded.
- *
- * Note:The next field is an unsigned integer which is 1 if there is an
- *      extension string and zero if not.
- *
- * @param[in] sock - socket descriptor
- * @param[out] preq - pointer to batch_request structure
- *
- * @return      int
- * @retval      DIS_SUCCESS(0)  success
- * @retval      error code      error
- *
- */
-int
-decode_DIS_ReqExtend(int sock, struct batch_request *preq)
-{
-	int i;
-	int rc;
-
-	i = disrui(sock, &rc);	/* indicates if an extension exists */
-
-	if (rc == 0) {
-		if (i != 0) {
-			preq->rq_extend = disrst(sock, &rc);
-		}
-	}
-	return (rc);
-}
-
-/**
- * @brief-
- *	decode a Batch Protocol Reply Structure for a Command
- *
- * @par	Functionality:
- *		This routine decodes a batch reply into the form used by commands.
- *      	The only difference between this and the server version is on status
- *      	replies.  For commands, the attributes are decoded into a list of
- *      	attrl structure rather than the server's svrattrl.
- *
- * Note: batch_reply structure defined in libpbs.h, it must be allocated
- *       by the caller.
- *
- * @param[in] sock - socket descriptor
- * @param[in] reply - pointer to batch_reply structure
- *
- * @return	int
- * @retval	-1	error
- * @retval	0	Success
- *
- */
-int
-decode_DIS_replyCmd(int sock, struct batch_reply *reply)
-{
-	int		      ct;
-	int		      i;
-	struct brp_select    *psel;
-	struct brp_select   **pselx;
-	struct brp_cmdstat   *pstcmd;
-	struct brp_cmdstat  **pstcx;
-	int		      rc = 0;
-	size_t		      txtlen;
-	preempt_job_info 	*ppj = NULL;
-
-	/* first decode "header" consisting of protocol type and version */
-
-	i = disrui(sock, &rc);
-	if (rc != 0) return rc;
-	if (i != PBS_BATCH_PROT_TYPE) return DIS_PROTO;
-	i = disrui(sock, &rc);
-	if (rc != 0) return rc;
-	if (i != PBS_BATCH_PROT_VER) return DIS_PROTO;
-
-	/* next decode code, auxcode and choice (union type identifier) */
-
-	reply->brp_code    = disrsi(sock, &rc);
-	if (rc) return rc;
-	reply->brp_auxcode = disrsi(sock, &rc);
-	if (rc) return rc;
-	reply->brp_choice  = disrui(sock, &rc);
-	if (rc) return rc;
-
-
-	switch (reply->brp_choice) {
-
-		case BATCH_REPLY_CHOICE_NULL:
-			break;	/* no more to do */
-
-		case BATCH_REPLY_CHOICE_Queue:
-		case BATCH_REPLY_CHOICE_RdytoCom:
-		case BATCH_REPLY_CHOICE_Commit:
-			disrfst(sock, PBS_MAXSVRJOBID+1, reply->brp_un.brp_jid);
-			if (rc)
-				return (rc);
-			break;
-
-		case BATCH_REPLY_CHOICE_Select:
-
-			/* have to get count of number of strings first */
-
-			reply->brp_un.brp_select = NULL;
-			pselx = &reply->brp_un.brp_select;
-			ct = disrui(sock, &rc);
-			if (rc) return rc;
-
-			while (ct--) {
-				psel = (struct brp_select *)malloc(sizeof(struct brp_select));
-				if (psel == 0) return DIS_NOMALLOC;
-				psel->brp_next = NULL;
-				psel->brp_jobid[0] = '\0';
-				rc = disrfst(sock, PBS_MAXSVRJOBID+1, psel->brp_jobid);
-				if (rc) {
-					(void)free(psel);
-					return rc;
-				}
-				*pselx = psel;
-				pselx  = &psel->brp_next;
-			}
-			break;
-
-		case BATCH_REPLY_CHOICE_Status:
-
-			/* have to get count of number of status objects first */
-
-			reply->brp_un.brp_statc = NULL;
-			pstcx = &reply->brp_un.brp_statc;
-			ct = disrui(sock, &rc);
-			if (rc) return rc;
-
-			while (ct--) {
-				pstcmd = (struct brp_cmdstat *)malloc(sizeof(struct brp_cmdstat));
-				if (pstcmd == 0) return DIS_NOMALLOC;
-
-				pstcmd->brp_stlink = NULL;
-				pstcmd->brp_objname[0] = '\0';
-				pstcmd->brp_attrl = NULL;
-
-				pstcmd->brp_objtype = disrui(sock, &rc);
-				if (rc == 0) {
-					rc = disrfst(sock, PBS_MAXSVRJOBID+1,
-						pstcmd->brp_objname);
-				}
-				if (rc) {
-					(void)free(pstcmd);
-					return rc;
-				}
-				rc = decode_DIS_attrl(sock, &pstcmd->brp_attrl);
-				if (rc) {
-					(void)free(pstcmd);
-					return rc;
-				}
-				*pstcx = pstcmd;
-				pstcx  = &pstcmd->brp_stlink;
-			}
-			break;
-
-		case BATCH_REPLY_CHOICE_Text:
-
-			/* text reply */
-
-		  	reply->brp_un.brp_txt.brp_str = disrcs(sock, &txtlen, &rc);
-			reply->brp_un.brp_txt.brp_txtlen = txtlen;
-			break;
-
-		case BATCH_REPLY_CHOICE_Locate:
-
-			/* Locate Job Reply */
-
-			rc = disrfst(sock, PBS_MAXDEST+1, reply->brp_un.brp_locate);
-			break;
-
-		case BATCH_REPLY_CHOICE_RescQuery:
-
-			/* Resource Query Reply */
-
-			reply->brp_un.brp_rescq.brq_avail = NULL;
-			reply->brp_un.brp_rescq.brq_alloc = NULL;
-			reply->brp_un.brp_rescq.brq_resvd = NULL;
-			reply->brp_un.brp_rescq.brq_down  = NULL;
-			ct = disrui(sock, &rc);
-			if (rc) break;
-			reply->brp_un.brp_rescq.brq_number = ct;
-			reply->brp_un.brp_rescq.brq_avail  =
-				(int *)malloc(ct * sizeof(int));
-			if (reply->brp_un.brp_rescq.brq_avail == NULL)
-				return DIS_NOMALLOC;
-			reply->brp_un.brp_rescq.brq_alloc  =
-				(int *)malloc(ct * sizeof(int));
-			if (reply->brp_un.brp_rescq.brq_alloc == NULL)
-				return DIS_NOMALLOC;
-			reply->brp_un.brp_rescq.brq_resvd  =
-				(int *)malloc(ct * sizeof(int));
-			if (reply->brp_un.brp_rescq.brq_resvd == NULL)
-				return DIS_NOMALLOC;
-			reply->brp_un.brp_rescq.brq_down   =
-				(int *)malloc(ct * sizeof(int));
-			if (reply->brp_un.brp_rescq.brq_down == NULL)
-				return DIS_NOMALLOC;
-
-			for (i=0; (i < ct) && (rc == 0); ++i)
-				*(reply->brp_un.brp_rescq.brq_avail+i) = disrui(sock, &rc);
-			for (i=0; (i < ct) && (rc == 0); ++i)
-				*(reply->brp_un.brp_rescq.brq_alloc+i) = disrui(sock, &rc);
-			for (i=0; (i < ct) && (rc == 0); ++i)
-				*(reply->brp_un.brp_rescq.brq_resvd+i) = disrui(sock, &rc);
-			for (i=0; (i < ct) && (rc == 0); ++i)
-				*(reply->brp_un.brp_rescq.brq_down+i)  = disrui(sock, &rc);
-			break;
-
-		case BATCH_REPLY_CHOICE_PreemptJobs:
-
-			/* Preempt Jobs Reply */
-			ct = disrui(sock, &rc);
-			reply->brp_un.brp_preempt_jobs.count = ct;
-			if (rc) break;
-
-			ppj = calloc(sizeof(struct preempt_job_info), ct);
-			reply->brp_un.brp_preempt_jobs.ppj_list = ppj;
-
-			for (i = 0; i < ct; i++) {
-				if (((rc = disrfst(sock, PBS_MAXSVRJOBID + 1, ppj[i].job_id)) != 0) ||
-					((rc = disrfst(sock, PREEMPT_METHOD_HIGH + 1, ppj[i].order)) != 0))
-						return rc;
-			}
-
-			break;
-
-		default:
-			return -1;
-	}
-
-	return rc;
+	return PBSE_NONE;
 }
 
 /**
  * @brief
- *	-decode a Batch Protocol Reply Structure for Server
+ * 	decode a Copy Files Dependency Batch Request
  *
- * @par Functionality:
- *	This routine decodes a batch reply into the form used by server.
- *      The only difference between this and the command version is on status
- *      replies.  For the server,  the attributes are decoded into a list of
- *      server svrattrl structures rather than a commands's attrl.
+ *	This request is used by the server ONLY.
+ *	The rq_cpyfile structure pointed to by pcf must already exist.
  *
- * @param[in] sock - socket descriptor
- * @param[in] reply - pointer to batch_reply structure
+ * @param[in] B - copy file table ref from flatbuffer
+ * @param[in] pcf - pointer to rq_cpyfile structure
  *
- * @par	Note:
- *	batch_reply structure defined in libpbs.h, it must be allocated
- *      by the caller.
- *
- * @return	int
- * @retval	0	success
- * @retval	!0	error
- *
+ * @return int
+ * @retval 0 - success
+ * @retval !0 - error
  */
-int
-decode_DIS_replySvr(int sock, struct batch_reply *reply)
+static int
+wire_decode_CopyFiles(ns(CopyFile_table_t) B, struct rq_cpyfile *pcf)
 {
-	int		      ct;
-	int		      i;
-	struct brp_select    *psel;
-	struct brp_select   **pselx;
-	struct brp_status    *pstsvr;
-	int		      rc = 0;
-	size_t		      txtlen;
+	int pair_ct = 0;
+	struct rqfpair *ppair = NULL;
+	ns(FilePair_vec_t) pairs;
+	int i = 0;
 
-	/* first decode "header" consisting of protocol type and version */
+	CLEAR_HEAD(pcf->rq_pair);
 
-	i = disrui(sock, &rc);
-	if (rc != 0) return rc;
-	if (i != PBS_BATCH_PROT_TYPE) return DIS_PROTO;
-	i = disrui(sock, &rc);
-	if (rc != 0) return rc;
-	if (i != PBS_BATCH_PROT_VER) return DIS_PROTO;
+	COPYSTR_B(pcf->rq_jobid, ns(CopyFile_jobId(B)));
+	COPYSTR_B(pcf->rq_owner, ns(CopyFile_owner(B)));
+	COPYSTR_B(pcf->rq_user, ns(CopyFile_user(B)));
+	COPYSTR(pcf->rq_group, ns(CopyFile_group(B)), sizeof(pcf->rq_group));
 
-	/* next decode code, auxcode and choice (union type identifier) */
+	pcf->rq_dir = (int) ns(CopyFile_flags(B));
 
-	reply->brp_code    = disrsi(sock, &rc);
-	if (rc) return rc;
-	reply->brp_auxcode = disrsi(sock, &rc);
-	if (rc) return rc;
-	reply->brp_choice  = disrui(sock, &rc);
-	if (rc) return rc;
+	pairs = ns(CopyFile_pairs(B));
+	pair_ct = (int) ns(FilePair_vec_len(pairs));
 
+	for (i = 0; i < pair_ct; i++) {
+		ns(FilePair_table_t) pair = ns(FilePair_vec_at(pairs, i));
 
-	switch (reply->brp_choice) {
+		ppair = (struct rqfpair *) calloc(sizeof(struct rqfpair), 1);
+		if (ppair == NULL)
+			return PBSE_SYSTEM;
 
-		case BATCH_REPLY_CHOICE_NULL:
-			break;	/* no more to do */
+		CLEAR_LINK(ppair->fp_link);
 
-		case BATCH_REPLY_CHOICE_Queue:
-		case BATCH_REPLY_CHOICE_RdytoCom:
-		case BATCH_REPLY_CHOICE_Commit:
-			rc = disrfst(sock, PBS_MAXSVRJOBID+1, reply->brp_un.brp_jid);
-			if (rc)
-				return (rc);
-			break;
+		ppair->fp_flag = (int) ns(FilePair_flag(pair));
 
-		case BATCH_REPLY_CHOICE_Select:
+		ppair->fp_rmt = strdup((char *) ns(FilePair_remote(pair)));
+		if (ppair->fp_rmt == NULL) {
+			free(ppair);
+			return PBSE_SYSTEM;
+		}
 
-			/* have to get count of number of strings first */
+		ppair->fp_local = strdup((char *) ns(FilePair_local(pair)));
+		if (ppair->fp_local == NULL) {
+			free(ppair->fp_rmt);
+			free(ppair);
+			return PBSE_SYSTEM;
+		}
 
-			reply->brp_un.brp_select = NULL;
-			pselx = &reply->brp_un.brp_select;
-			ct = disrui(sock, &rc);
-			if (rc) return rc;
-
-			while (ct--) {
-				psel = (struct brp_select *)malloc(sizeof(struct brp_select));
-				if (psel == 0) return DIS_NOMALLOC;
-				psel->brp_next = NULL;
-				psel->brp_jobid[0] = '\0';
-				rc = disrfst(sock, PBS_MAXSVRJOBID+1, psel->brp_jobid);
-				if (rc) {
-					(void)free(psel);
-					return rc;
-				}
-				*pselx = psel;
-				pselx = &psel->brp_next;
-			}
-			break;
-
-		case BATCH_REPLY_CHOICE_Status:
-
-			/* have to get count of number of status objects first */
-
-			CLEAR_HEAD(reply->brp_un.brp_status);
-			ct = disrui(sock, &rc);
-			if (rc) return rc;
-
-			while (ct--) {
-				pstsvr = (struct brp_status *)malloc(sizeof(struct brp_status));
-				if (pstsvr == 0) return DIS_NOMALLOC;
-
-				CLEAR_LINK(pstsvr->brp_stlink);
-				pstsvr->brp_objname[0] = '\0';
-				CLEAR_HEAD(pstsvr->brp_attr);
-
-				pstsvr->brp_objtype = disrui(sock, &rc);
-				if (rc == 0) {
-					rc = disrfst(sock, PBS_MAXSVRJOBID+1,
-						pstsvr->brp_objname);
-				}
-				if (rc) {
-					(void)free(pstsvr);
-					return rc;
-				}
-				append_link(&reply->brp_un.brp_status,
-					&pstsvr->brp_stlink, pstsvr);
-				rc = decode_DIS_svrattrl(sock, &pstsvr->brp_attr);
-			}
-			break;
-
-		case BATCH_REPLY_CHOICE_Text:
-
-			/* text reply */
-
-		  	reply->brp_un.brp_txt.brp_str = disrcs(sock, &txtlen, &rc);
-			reply->brp_un.brp_txt.brp_txtlen = txtlen;
-			break;
-
-		case BATCH_REPLY_CHOICE_Locate:
-
-			/* Locate Job Reply */
-
-			rc = disrfst(sock, PBS_MAXDEST+1, reply->brp_un.brp_locate);
-			break;
-
-		default:
-			return -1;
+		append_link(&(pcf->rq_pair), &(ppair->fp_link), ppair);
 	}
-
-	return rc;
+	return 0;
 }
-
 
 /**
  * @brief
@@ -762,1268 +315,6 @@ decode_DIS_Authenticate(int sock, struct batch_request *preq)
 }
 
 /**
- *
- * @brief
- *	Decode the data items needed for a Copy Hook Filecopy request as:
- * 			u int	block sequence number
- *			u int	size of data in block
- *			string	hook file name
- *			cnt str	file data contents
- *
- * @param[in]	sock	- the connection to get data from.
- * @param[in]	preq	- a request structure
- *
- * @return	int
- * @retval	0 for success
- *		non-zero otherwise
- */
-int
-decode_DIS_CopyHookFile(int sock, struct batch_request *preq)
-{
-	int   rc=0;
-	size_t amt;
-
-	if (preq == NULL)
-		return 0;
-
-	preq->rq_ind.rq_hookfile.rq_data = 0;
-
-	preq->rq_ind.rq_hookfile.rq_sequence = disrui(sock, &rc);
-	if (rc) return rc;
-
-	preq->rq_ind.rq_hookfile.rq_size = disrui(sock, &rc);
-	if (rc) return rc;
-
-	if ((rc = disrfst(sock, MAXPATHLEN+1,
-		preq->rq_ind.rq_hookfile.rq_filename)) != 0)
-		return rc;
-
-	preq->rq_ind.rq_hookfile.rq_data = disrcs(sock, &amt, &rc);
-	if ((amt != preq->rq_ind.rq_hookfile.rq_size) && (rc == 0))
-		rc = DIS_EOD;
-	if (rc) {
-		if (preq->rq_ind.rq_hookfile.rq_data)
-			(void)free(preq->rq_ind.rq_hookfile.rq_data);
-		preq->rq_ind.rq_hookfile.rq_data = 0;
-	}
-
-	return rc;
-}
-
-/**
- * @brief
- *	decode a Job Credential batch request
- *
- * @param[in] sock - socket descriptor
- * @param[out] preq - pointer to batch_request structure
- *
- * NOTE:The batch_request structure must already exist (be allocated by the
- *      caller.   It is assumed that the header fields (protocol type,
- *      protocol version, request type, and user name) have already be decoded.
- *
- * @return      int
- * @retval      DIS_SUCCESS(0)  success
- * @retval      error code      error
- *
- */
-int
-decode_DIS_Cred(int sock, struct batch_request *preq)
-{
-	int		rc;
-
-	preq->rq_ind.rq_cred.rq_cred_data = NULL;
-
-	rc = disrfst(sock, PBS_MAXSVRJOBID + 1, preq->rq_ind.rq_cred.rq_jobid);
-	if (rc)
-		return rc;
-
-	rc = disrfst(sock, PBS_MAXUSER + 1, preq->rq_ind.rq_cred.rq_credid);
-	if (rc)
-		return rc;
-
-	preq->rq_ind.rq_cred.rq_cred_type = disrui(sock, &rc);
-	if (rc)
-		return rc;
-
-	preq->rq_ind.rq_cred.rq_cred_data = disrcs(sock, (size_t *)&preq->rq_ind.rq_cred.rq_cred_size, &rc);
-	if (rc)
-		return rc;
-
-	preq->rq_ind.rq_cred.rq_cred_validity = disrul(sock, &rc);
-	return rc;
-}
-
-/**
- * @brief
- *	Decode data item(s) needed for a Delete Hook File request.
- *
- *	Data item is:	string	hook  filename
- *			cnt str	data
- *
- * @param[in]		sock - communication channel
- * @param[in/out]	preq - request structure to fill in
- *
- * @return 	int
- * @retval 	0 for success
- * @retval 	non-zero otherwise
- */
-int
-decode_DIS_DelHookFile(int sock, struct batch_request *preq)
-{
-	int   rc;
-
-	if ((rc = disrfst(sock, MAXPATHLEN+1,
-		preq->rq_ind.rq_hookfile.rq_filename)) != 0)
-		return rc;
-
-	return 0;
-}
-
-/**
- * @brief
- *	decode a Job Credential batch request
- *
- * @param[in] sock - socket descriptor
- * @param[out] preq - pointer to batch_request structure
- *
- * NOTE:The batch_request structure must already exist (be allocated by the
- *      caller.   It is assumed that the header fields (protocol type,
- *      protocol version, request type, and user name) have already be decoded.
- *
- * @return      int
- * @retval      DIS_SUCCESS(0)  success
- * @retval      error code      error
- *
- */
-int
-decode_DIS_JobCred(int sock, struct batch_request *preq)
-{
-	int rc;
-
-	preq->rq_ind.rq_jobcred.rq_data = 0;
-	preq->rq_ind.rq_jobcred.rq_type = disrui(sock, &rc);
-	if (rc) return rc;
-
-	preq->rq_ind.rq_jobcred.rq_data = disrcs(sock,
-		(size_t *)&preq->rq_ind.rq_jobcred.rq_size,
-		&rc);
-	return rc;
-}
-
-/**
- * @brief -
- *	decode a Job Related Job File Move request
- *
- * @param[in] sock - socket descriptor
- * @param[out] preq - pointer to batch_request structure
- *
- *
- * @par Data items are:
- *			u int -	block sequence number\n
- *		 	u int -  file type (stdout, stderr, ...)\n
- *		 	u int -  size of data in block\n
- *		 	string - job id\n
- *		 	cnt str - data\n
- *
- * @return      int
- * @retval      DIS_SUCCESS(0)  success
- * @retval      error code      error
- *
- */
-int
-decode_DIS_JobFile(int sock, struct batch_request *preq)
-{
-	int   rc;
-	size_t amt;
-
-	preq->rq_ind.rq_jobfile.rq_data = 0;
-
-	preq->rq_ind.rq_jobfile.rq_sequence = disrui(sock, &rc);
-	if (rc) return rc;
-
-	preq->rq_ind.rq_jobfile.rq_type = disrui(sock, &rc);
-	if (rc) return rc;
-
-	preq->rq_ind.rq_jobfile.rq_size = disrui(sock, &rc);
-	if (rc) return rc;
-
-	if ((rc = disrfst(sock, PBS_MAXSVRJOBID+1, preq->rq_ind.rq_jobfile.rq_jobid)) != 0)
-		return rc;
-
-	preq->rq_ind.rq_jobfile.rq_data = disrcs(sock, &amt, &rc);
-	if ((amt != preq->rq_ind.rq_jobfile.rq_size) && (rc == 0))
-		rc = DIS_EOD;
-	if (rc) {
-		if (preq->rq_ind.rq_jobfile.rq_data)
-			(void)free(preq->rq_ind.rq_jobfile.rq_data);
-		preq->rq_ind.rq_jobfile.rq_data = 0;
-	}
-
-	return rc;
-}
-
-/**
- * @brief
- *	decode_DIS_JobId() - decode a Job ID string into a batch_request
- *
- * @par Functionality:
- *		This is used for the following batch requests:\n
- *              	Ready_to_Commit\n
- *              	Commit\n
- *              	Locate Job\n
- *              	Rerun Job
- *
- * @param[in] sock - socket descriptor
- * @param[out] preq - pointer to batch_request structure
- *
- * @return      int
- * @retval      DIS_SUCCESS(0)  success
- * @retval      error code      error
- *
- */
-int
-decode_DIS_JobId(int sock, char *jobid)
-{
-	return (disrfst(sock, PBS_MAXSVRJOBID+1, jobid));
-}
-
-/**
- * @brief
- *	-decode a Manager Batch Request
- *
- * @par	Functionality:
- *	This request is used for most operations where an object is being
- *      created, deleted, or altered.
- *
- *      The batch_request structure must already exist (be allocated by the
- *      caller.   It is assumed that the header fields (protocol type,
- *      protocol version, request type, and user name) have already be decoded.
- *
- * @par	Data items are:\n
- *		unsigned int    command\n
- *              unsigned int    object type\n
- *              string          object name\n
- *              attropl         attributes
- *
- * @param[in] sock - socket descriptor
- * @param[out] preq - pointer to batch_request structure
- *
- * @return      int
- * @retval      DIS_SUCCESS(0)  success
- * @retval      error code      error
- *
- */
-int
-decode_DIS_Manage(int sock, struct batch_request *preq)
-{
-	int rc;
-
-	CLEAR_HEAD(preq->rq_ind.rq_manager.rq_attr);
-	preq->rq_ind.rq_manager.rq_cmd = disrui(sock, &rc);
-	if (rc) return rc;
-	preq->rq_ind.rq_manager.rq_objtype = disrui(sock, &rc);
-	if (rc) return rc;
-	rc = disrfst(sock, PBS_MAXSVRJOBID+1, preq->rq_ind.rq_manager.rq_objname);
-	if (rc) return rc;
-	return (decode_DIS_svrattrl(sock, &preq->rq_ind.rq_manager.rq_attr));
-}
-
-/**
- * @brief Read the modify request for a reservation.
- *
- * @param[in] sock - connection identifier
- * @param[out] preq - batch_request that the information will be read into.
- *
- * @return 0 - on success
- * @return DIS error
- */
-int
-decode_DIS_ModifyResv(int sock, struct batch_request *preq)
-{
-	int rc = 0;
-
-	CLEAR_HEAD(preq->rq_ind.rq_modify.rq_attr);
-	preq->rq_ind.rq_modify.rq_objtype = disrui(sock, &rc);
-	if (rc)
-		return rc;
-	rc = disrfst(sock, PBS_MAXSVRJOBID+1, preq->rq_ind.rq_modify.rq_objname);
-	if (rc)
-		return rc;
-	return (decode_DIS_svrattrl(sock, &preq->rq_ind.rq_modify.rq_attr));
-}
-
-/**
- * @brief -
- *	decode a Move Job batch request
- *	also used for an Order Job batch request
- *
- * @par	Functionality:
- *		The batch_request structure must already exist (be allocated by the
- *		caller.   It is assumed that the header fields (protocol type,
- *		protocol version, request type, and user name) have already be decoded.
- *
- * @par	 Data items are:
- *		string          job id\n
- *		string          destination
- *
- * @param[in] sock - socket descriptor
- * @param[out] preq - pointer to batch_request structure
- *
- * @return      int
- * @retval      DIS_SUCCESS(0)  success
- * @retval      error code      error
- *
- */
-int
-decode_DIS_MoveJob(int sock, struct batch_request *preq)
-{
-	int rc;
-
-	rc = disrfst(sock, PBS_MAXSVRJOBID+1, preq->rq_ind.rq_move.rq_jid);
-	if (rc) return rc;
-
-	rc = disrfst(sock, PBS_MAXDEST+1, preq->rq_ind.rq_move.rq_destin);
-
-	return rc;
-}
-
-/**
- * @brief-
- *	decode a Message Job batch request
- *
- * @par	Functionality:
- *		The batch_request structure must already exist (be allocated by the
- *      	caller.   It is assumed that the header fields (protocol type,
- *      	protocol version, request type, and user name) have already be decoded.
- *
- * @par	 Data items are:
- *		string          job id
- *		unsigned int    which file
- *		string          the message
- *
- * @param[in] sock - socket descriptor
- * @param[out] preq - pointer to batch_request structure
- *
- * @return      int
- * @retval      DIS_SUCCESS(0)  success
- * @retval      error code      error
- *
- */
-int
-decode_DIS_MessageJob(int sock, struct batch_request *preq)
-{
-	int rc;
-
-	preq->rq_ind.rq_message.rq_text = 0;
-
-	rc = disrfst(sock, PBS_MAXSVRJOBID+1, preq->rq_ind.rq_message.rq_jid);
-	if (rc) return rc;
-
-	preq->rq_ind.rq_message.rq_file = disrui(sock, &rc);
-	if (rc) return rc;
-
-	preq->rq_ind.rq_message.rq_text = disrst(sock, &rc);
-	return rc;
-}
-
-/**
- * @brief Read the preempt multiple jobs request.
- *
- * @param[in] sock - connection identifier
- * @param[out] preq - batch_request that the information will be read into.
- *
- * @return 0 - on success
- * @return DIS error
- */
-int
-decode_DIS_PreemptJobs(int sock, struct batch_request *preq)
-{
-	int			rc = 0;
-	int			i = 0;
-	int			count = 0;
-	preempt_job_info 	*ppj = NULL;
-
-	preq->rq_ind.rq_preempt.count = disrui(sock, &rc);
-	if (rc)
-		return rc;
-
-        count = preq->rq_ind.rq_preempt.count;
-
-	ppj = calloc(sizeof(struct preempt_job_info), count);
-	if (ppj == NULL)
-		return DIS_NOMALLOC;
-
-	for (i = 0; i < count; i++) {
-		if ((rc = disrfst(sock, PBS_MAXSVRJOBID+1, ppj[i].job_id))) {
-			free(ppj);
-			return rc;
-		}
-	}
-
-	preq->rq_ind.rq_preempt.ppj_list = ppj;
-
-	return rc;
-}
-
-/**
- * @brief -
- *	decode a Queue Job Batch Request
- *
- * @par	Functionality:
- *		string  job id\n
- *		string  destination\n
- *		list of attributes (attropl)
- *
- * @param[in] sock - socket descriptor
- * @param[out] preq - pointer to batch_request structure
- *
- * @return      int
- * @retval      DIS_SUCCESS(0)  success
- * @retval      error code      error
- *
- */
-int
-decode_DIS_QueueJob(int sock, struct batch_request *preq)
-{
-	int rc;
-
-	CLEAR_HEAD(preq->rq_ind.rq_queuejob.rq_attr);
-	rc = disrfst(sock, PBS_MAXSVRJOBID+1, preq->rq_ind.rq_queuejob.rq_jid);
-	if (rc) return rc;
-
-	rc = disrfst(sock, PBS_MAXSVRJOBID+1, preq->rq_ind.rq_queuejob.rq_destin);
-	if (rc) return rc;
-
-	return (decode_DIS_svrattrl(sock, &preq->rq_ind.rq_queuejob.rq_attr));
-}
-
-/**
- * @brief -
- *	decode a Register Dependency Batch Request
- *
- * @par	Functionality:
- *		The batch_request structure must already exist (be allocated by the
- *      	caller.   It is assumed that the header fields (protocol type,
- *      	protocol version, request type, and user name) have already be decoded
- *
- * @par	Data items are:
- *		string          job owner\n
- *		string          parent job id\n
- *		string          child job id\n
- *		unsigned int    dependency type\n
- *		unsigned int    operation\n
- *		signed long     cost\n
- *
- * @param[in] sock - socket descriptor
- * @param[out] preq - pointer to batch_request structure
- *
- * @return      int
- * @retval      DIS_SUCCESS(0)  success
- * @retval      error code      error
- *
- */
-int
-decode_DIS_Register(int sock, struct batch_request *preq)
-{
-	int   rc;
-
-	rc = disrfst(sock, PBS_MAXUSER, preq->rq_ind.rq_register.rq_owner);
-	if (rc)
-		return rc;
-	rc = disrfst(sock, PBS_MAXSVRJOBID, preq->rq_ind.rq_register.rq_parent);
-	if (rc)
-		return rc;
-	rc = disrfst(sock, PBS_MAXCLTJOBID, preq->rq_ind.rq_register.rq_child);
-	if (rc)
-		return rc;
-	preq->rq_ind.rq_register.rq_dependtype = disrui(sock, &rc);
-
-	if (rc)
-		return rc;
-
-	preq->rq_ind.rq_register.rq_op = disrui(sock, &rc);
-	if (rc)
-		return rc;
-
-	preq->rq_ind.rq_register.rq_cost = disrsl(sock, &rc);
-
-	return rc;
-}
-
-/**
- * @brief-
- *	decode a resource request
- *
- * @par	Functionality:
- *		Used for resource query, resource reserver, resource free.
- *
- *		The batch_request structure must already exist (be allocated by the
- *		caller.   It is assumed that the header fields (protocol type,
- *		protocol version, request type, and user name) have been decoded.
- *
- * @par	Data items are:\n
- *		signed int	resource handle\n
- *		unsigned int	count of resource queries\n
- *	followed by that number of:\n
- *		string		resource list
- *
- * @param[in] sock - socket descriptor
- * @param[out] preq - pointer to batch_request structure
- *
- * @return      int
- * @retval      DIS_SUCCESS(0)  success
- * @retval      error code      error
- *
- */
-int
-decode_DIS_Rescl(int sock, struct batch_request *preq)
-{
-	int    ct;
-	int    i;
-	char **ppc;
-	int    rc;
-
-	/* first, the resource handle (even if not used in request) */
-
-	preq->rq_ind.rq_rescq.rq_rhandle = disrsi(sock, &rc);
-	if (rc) return rc;
-
-	/* next need to know how many query strings */
-
-	ct = disrui(sock, &rc);
-	if (rc) return rc;
-	preq->rq_ind.rq_rescq.rq_num = ct;
-	if (ct) {
-		if ((ppc = (char **)malloc(ct * sizeof(char *))) == 0)
-			return PBSE_RMSYSTEM;
-
-		for (i=0; i<ct; i++)
-			*(ppc + i) = NULL;
-
-		preq->rq_ind.rq_rescq.rq_list = ppc;
-		for (i=0; i<ct; i++) {
-			*(ppc+i) = disrst(sock, &rc);
-			if (rc)
-				break;
-		}
-	}
-
-	return rc;
-}
-
-/**
- * @brief-
- *	decode a Run Job batch request
- *
- * @par	Functionality:
- *		The batch_request structure must already exist (be allocated by the
- *      	caller.   It is assumed that the header fields (protocol type,
- *      	protocol version, request type, and user name) have already be decoded.
- *
- * @par	Data items are:\n
- *		string          job id\n
- *		string          destination\n
- *		unsigned int    resource_handle\n
- *
- * @param[in] sock - socket descriptor
- * @param[out] preq - pointer to batch_request structure
- *
- * @return      int
- * @retval      DIS_SUCCESS(0)  success
- * @retval      error code      error
- *
- */
-int
-decode_DIS_Run(int sock, struct batch_request *preq)
-{
-	int rc;
-
-	/* job id */
-	rc = disrfst(sock, PBS_MAXSVRJOBID+1, preq->rq_ind.rq_run.rq_jid);
-	if (rc) return rc;
-
-	/* variable length list of vnodes (destination) */
-	preq->rq_ind.rq_run.rq_destin = disrst(sock, &rc);
-	if (rc) return rc;
-
-	/* an optional flag, used by reservations */
-	preq->rq_ind.rq_run.rq_resch = disrul(sock, &rc);
-	return rc;
-}
-
-/**
- * @brief-
- *	decode a Server Shut Down batch request
- *
- * @par	Functionality:
- *		The batch_request structure must already exist (be allocated by the
- *      	caller.   It is assumed that the header fields (protocol type,
- *		protocol version, request type, and user name) have already be decoded.
- *
- * @par	 Data items are:\n
- *		u int           manner
- *
- * @param[in] sock - socket descriptor
- * @param[out] preq - pointer to batch_request structure
- *
- * @return      int
- * @retval      DIS_SUCCESS(0)  success
- * @retval      error code      error
- *
- */
-int
-decode_DIS_ShutDown(int sock, struct batch_request *preq)
-{
-	int rc;
-
-	preq->rq_ind.rq_shutdown = disrui(sock, &rc);
-
-	return rc;
-}
-
-/**
- * @brief-
- *	decode a Signal Job batch request
- *
- * @par	Functionality:
- *		The batch_request structure must already exist (be allocated by the
- *      	caller.   It is assumed that the header fields (protocol type,
- *      	protocol version, request type, and user name) have already be decoded.
- *
- * @par	Data items are:\n
- *		string          job id\n
- *		string          signal (name)
- *
- * @param[in] sock - socket descriptor
- * @param[out] preq - pointer to batch_request structure
- *
- * @return      int
- * @retval      DIS_SUCCESS(0)  success
- * @retval      error code      error
- *
- */
-int
-decode_DIS_SignalJob(int sock, struct batch_request *preq)
-{
-	int rc;
-
-	rc = disrfst(sock, PBS_MAXSVRJOBID+1, preq->rq_ind.rq_signal.rq_jid);
-	if (rc) return rc;
-
-	rc = disrfst(sock, PBS_SIGNAMESZ+1, preq->rq_ind.rq_signal.rq_signame);
-	return rc;
-}
-
-/**
- * @brief
- *	Decode a Status batch request
- *
- * @par
- *	The batch_request structure must already exist (be allocated by the
- *	caller).   It is assumed that the header fields (protocol type,
- *	protocol version, request type, and user name) have already be decoded.
- *
- * @param[in]     sock - socket handle from which to read.
- * @param[in,out] preq - pointer to the batch request structure. The following
- *		elements of the rq_ind.rq_status union are updated:
- *		rq_id     - object id, a variable length string.
- *		rq_status - the linked list of attribute structures
- *
- * @return int
- * @retval 0 - request read and decoded successfully.
- * @retval non-zero - DIS decode error.
- */
-int
-decode_DIS_Status(int sock, struct batch_request *preq)
-{
-	int    rc;
-	size_t nchars = 0;
-
-	preq->rq_ind.rq_status.rq_id = NULL;
-
-	CLEAR_HEAD(preq->rq_ind.rq_status.rq_attr);
-
-	/*
-	 * call the disrcs function to allocate and return a string of all ids
-	 * freed in free_br()
-	 */
-	preq->rq_ind.rq_status.rq_id = disrcs(sock, &nchars, &rc);
-	if (rc) return rc;
-
-	rc = decode_DIS_svrattrl(sock, &preq->rq_ind.rq_status.rq_attr);
-	return rc;
-}
-
-/**
- * @brief-
- *	decode a Track Job batch request
- *
- * @par	NOTE:
- *	The batch_request structure must already exist (be allocated by the
- *      caller.   It is assumed that the header fields (protocol type,
- *      protocol version, request type, and user name) have already be decoded.
- *
- * @par	 Data items are:\n
- *		string          job id\n
- *		unsigned int    hopcount\n
- *		string          location\n
- *		u char          state\n
- *
- * @param[in] sock - socket descriptor
- * @param[out] preq - pointer to batch_request structure
- *
- * @return      int
- * @retval      DIS_SUCCESS(0)  success
- * @retval      error code      error
- *
- */
-int
-decode_DIS_TrackJob(int sock, struct batch_request *preq)
-{
-	int rc;
-
-	rc = disrfst(sock, PBS_MAXSVRJOBID+1, preq->rq_ind.rq_track.rq_jid);
-	if (rc) return rc;
-
-	preq->rq_ind.rq_track.rq_hopcount = disrui(sock, &rc);
-	if (rc) return rc;
-
-	rc = disrfst(sock, PBS_MAXDEST+1, preq->rq_ind.rq_track.rq_location);
-	if (rc) return rc;
-
-	preq->rq_ind.rq_track.rq_state[0] = disruc(sock, &rc);
-	return rc;
-}
-
-/**
- * @brief-
- *	decode a User Credential batch request
- *
- * @par	NOTE:
- *	The batch_request structure must already exist (be allocated by the
- *	caller.   It is assumed that the header fields (protocol type,
- *	protocol version, request type, and user name) have already be decoded.
- *
- * @par	Data items are:\n
- *		string          user whose credential is being set\n
- *		unsigned int	credential type\n
- *		counted string	the credential data
- *
- * @param[in] sock - socket descriptor
- * @param[out] preq - pointer to batch_request structure
- *
- * @return      int
- * @retval      DIS_SUCCESS(0)  success
- * @retval      error code      error
- *
- */
-int
-decode_DIS_UserCred(int sock, struct batch_request *preq)
-{
-	int rc;
-
-	rc = disrfst(sock, PBS_MAXUSER+1, preq->rq_ind.rq_usercred.rq_user);
-	if (rc) return rc;
-
-	preq->rq_ind.rq_usercred.rq_type = disrui(sock, &rc);
-	if (rc) return rc;
-
-	preq->rq_ind.rq_usercred.rq_data = 0;
-	preq->rq_ind.rq_usercred.rq_data = disrcs(sock,
-		(size_t *)&preq->rq_ind.rq_usercred.rq_size,
-		&rc);
-	return rc;
-}
-
-/**
- * @brief-
- * 	decode a User Migrate batch request
- *
- * @par	NOTE:
- *	The batch_request structure must already exist (be allocated by the
- *	caller.   It is assumed that the header fields (protocol type,
- *	protocol version, request type, and user name) have already be decoded.
- *
- * @par	Data items are:\n
- *		string         the destination host to migrate users to
- *
- *
- * @param[in] sock - socket descriptor
- * @param[out] preq - pointer to batch_request structure
- *
- * @return      int
- * @retval      DIS_SUCCESS(0)  success
- * @retval      error code      error
- *
- */
-int
-decode_DIS_UserMigrate(int sock, struct batch_request *preq)
-{
-	int rc;
-
-	rc = disrfst(sock, PBS_MAXHOSTNAME+1,
-		preq->rq_ind.rq_user_migrate.rq_tohost);
-
-	return rc;
-}
-
-/*	Data items are:	string		job id			(may be null)
- *			string		job owner		(may be null)
- *			string		execution user name
- *			string		execution group name	(may be null)
- *			unsigned int	direction & sandbox flag
- *			unsigned int	count of file pairs in set
- *			set of		file pairs:
- *				unsigned int	flag
- *				string		local path name
- *				string		remote path name (may be null)
- */
-/**
- * @brief
- * 		decode_DIS_CopyFiles() - decode a Copy Files Dependency Batch Request
- *
- *		This request is used by the server ONLY.
- *		The batch request structure pointed to by preq must already exist.
- *
- * @see
- * dis_request_read
- *
- * @param[in] sock - socket of connection from Mom
- * @param[in] preq - pointer to the batch request structure to be filled in
- *
- * @return int
- * @retval 0 - success
- * @retval non-zero - decode failure error from a DIS routine
- */
-int
-decode_DIS_CopyFiles(int sock, struct batch_request *preq)
-{
-	int   pair_ct;
-	struct rq_cpyfile *pcf;
-	struct rqfpair    *ppair;
-	int   rc;
-
-	pcf = &preq->rq_ind.rq_cpyfile;
-	CLEAR_HEAD(pcf->rq_pair);
-	if ((rc = disrfst(sock, PBS_MAXSVRJOBID, pcf->rq_jobid)) != 0)
-		return rc;
-	if ((rc = disrfst(sock, PBS_MAXUSER, pcf->rq_owner)) != 0)
-		return rc;
-	if ((rc = disrfst(sock, PBS_MAXUSER, pcf->rq_user))  != 0)
-		return rc;
-	if ((rc = disrfst(sock, PBS_MAXGRPN, pcf->rq_group)) != 0)
-		return rc;
-	pcf->rq_dir = disrui(sock, &rc);
-	if (rc) return rc;
-
-	pair_ct = disrui(sock, &rc);
-	if (rc) return rc;
-
-	while (pair_ct--) {
-
-		ppair = (struct rqfpair *)malloc(sizeof(struct rqfpair));
-		if (ppair == NULL)
-			return DIS_NOMALLOC;
-		CLEAR_LINK(ppair->fp_link);
-		ppair->fp_local = 0;
-		ppair->fp_rmt   = 0;
-
-		ppair->fp_flag = disrui(sock, &rc);
-		if (rc) {
-			(void)free(ppair);
-			return rc;
-		}
-		ppair->fp_local = disrst(sock, &rc);
-		if (rc) {
-			(void)free(ppair);
-			return rc;
-		}
-		ppair->fp_rmt = disrst(sock, &rc);
-		if (rc) {
-			(void)free(ppair->fp_local);
-			(void)free(ppair);
-			return rc;
-		}
-		append_link(&pcf->rq_pair, &ppair->fp_link, ppair);
-	}
-	return 0;
-}
-
- /*	Data items are:	string		job id			(may be null)
- *			string		job owner		(may be null)
- *			string		execution user name
- *			string		execution group name	(may be null)
- *			unsigned int	direction & sandbox flag
- *			unsigned int	count of file pairs in set
- *			set of		file pairs:
- *				unsigned int	flag
- *				string		local path name
- *				string		remote path name (may be null)
- *			unsigned int	credential length (bytes)
- *			byte string	credential
- */
-/**
- * @brief
- * 		decode_DIS_CopyFiles_Cred() - decode a Copy Files with Credential
- *				 Dependency Batch Request
- *
- *		This request is used by the server ONLY.
- *		The batch request structure pointed to by preq must already exist.
- *
- * @see
- * 		dis_request_read
- *
- * @param[in] sock - socket of connection from Mom
- * @param[in] preq - pointer to the batch request structure to be filled in
- *
- * @return int
- * @retval 0 - success
- * @retval non-zero - decode failure error from a DIS routine
- */
-int
-decode_DIS_CopyFiles_Cred(int sock, struct batch_request *preq)
-{
-	int			pair_ct;
-	struct rq_cpyfile_cred	*pcfc;
-	struct rqfpair		*ppair;
-	int			rc;
-
-	pcfc = &preq->rq_ind.rq_cpyfile_cred;
-	CLEAR_HEAD(pcfc->rq_copyfile.rq_pair);
-	if ((rc = disrfst(sock, PBS_MAXSVRJOBID, pcfc->rq_copyfile.rq_jobid))
-		!= 0)
-		return rc;
-	if ((rc = disrfst(sock, PBS_MAXUSER, pcfc->rq_copyfile.rq_owner)) != 0)
-		return rc;
-	if ((rc = disrfst(sock, PBS_MAXUSER, pcfc->rq_copyfile.rq_user))  != 0)
-		return rc;
-	if ((rc = disrfst(sock, PBS_MAXGRPN, pcfc->rq_copyfile.rq_group)) != 0)
-		return rc;
-	pcfc->rq_copyfile.rq_dir = disrui(sock, &rc);
-	if (rc) return rc;
-
-	pair_ct = disrui(sock, &rc);
-	if (rc) return rc;
-
-	while (pair_ct--) {
-
-		ppair = (struct rqfpair *)malloc(sizeof(struct rqfpair));
-		if (ppair == NULL)
-			return DIS_NOMALLOC;
-		CLEAR_LINK(ppair->fp_link);
-		ppair->fp_local = 0;
-		ppair->fp_rmt   = 0;
-
-		ppair->fp_flag = disrui(sock, &rc);
-		if (rc) {
-			(void)free(ppair);
-			return rc;
-		}
-		ppair->fp_local = disrst(sock, &rc);
-		if (rc) {
-			(void)free(ppair);
-			return rc;
-		}
-		ppair->fp_rmt = disrst(sock, &rc);
-		if (rc) {
-			(void)free(ppair->fp_local);
-			(void)free(ppair);
-			return rc;
-		}
-		append_link(&pcfc->rq_copyfile.rq_pair,
-			&ppair->fp_link, ppair);
-	}
-
-	pcfc->rq_credtype = disrui(sock, &rc);
-	if (rc) return rc;
-	pcfc->rq_pcred = disrcs(sock, &pcfc->rq_credlen, &rc);
-	if (rc) return rc;
-
-	return 0;
-}
-
-/**
- * @brief
- *		Read a python spawn request off the wire.
- *		Each of the argv and envp arrays is sent by writing a counted
- *		string followed by a zero length string ("").
- *
- * @param[in]	sock	- socket where you reads the request.
- * @param[in]	preq	- the batch_request structure to free up.
- */
-int
-decode_DIS_PySpawn(int sock, struct batch_request *preq)
-{
-	int	rc;
-
-	rc = disrfst(sock, sizeof(preq->rq_ind.rq_py_spawn.rq_jid),
-		preq->rq_ind.rq_py_spawn.rq_jid);
-	if (rc)
-		return rc;
-
-	rc = read_carray(sock, &preq->rq_ind.rq_py_spawn.rq_argv);
-	if (rc)
-		return rc;
-
-	rc = read_carray(sock, &preq->rq_ind.rq_py_spawn.rq_envp);
-	if (rc)
-		return rc;
-
-	return rc;
-}
-
-/**
- * @brief
- *		Read a release nodes from job request off the wire.
- *
- * @param[in]	sock	- socket where you reads the request.
- * @param[in]	preq	- the batch_request structure containing the request details.
- *
- * @return int
- *
- * @retval	0	- if successful
- * @retval	!= 0	- if not successful (an error encountered along the way)
- */
-int
-decode_DIS_RelnodesJob(int sock, struct batch_request *preq)
-{
-	int rc;
-
-	preq->rq_ind.rq_relnodes.rq_node_list = NULL;
-
-	rc = disrfst(sock, PBS_MAXSVRJOBID+1, preq->rq_ind.rq_relnodes.rq_jid);
-	if (rc)
-		return rc;
-
-	preq->rq_ind.rq_relnodes.rq_node_list = disrst(sock, &rc);
-	return rc;
-}
-
-/**
- * @brief
- * 		decode_DIS_replySvr_inner() - decode a Batch Protocol Reply Structure for Server
- *
- *		This routine decodes a batch reply into the form used by server.
- *		The only difference between this and the command version is on status
- *		replies.  For the server,  the attributes are decoded into a list of
- *		server svrattrl structures rather than a commands's attrl.
- *
- * @see
- * 		decode_DIS_replySvrTPP
- *
- * @param[in] sock - socket connection from which to read reply
- * @param[in,out] reply - batch_reply structure defined in libpbs.h, it must be allocated
- *					  by the caller.
- *
- * @return int
- * @retval 0 - success
- * @retval -1 - if brp_choice is wrong
- * @retval non-zero - decode failure error from a DIS routine
- */
-
-static int
-decode_DIS_replySvr_inner(int sock, struct batch_reply *reply)
-{
-	int		      ct;
-	struct brp_select    *psel;
-	struct brp_select   **pselx;
-	struct brp_status    *pstsvr;
-	int		      rc = 0;
-	size_t		      txtlen;
-
-	/* next decode code, auxcode and choice (union type identifier) */
-
-	reply->brp_code    = disrsi(sock, &rc);
-	if (rc) return rc;
-	reply->brp_auxcode = disrsi(sock, &rc);
-	if (rc) return rc;
-	reply->brp_choice  = disrui(sock, &rc);
-	if (rc) return rc;
-
-
-	switch (reply->brp_choice) {
-
-		case BATCH_REPLY_CHOICE_NULL:
-			break;	/* no more to do */
-
-		case BATCH_REPLY_CHOICE_Queue:
-		case BATCH_REPLY_CHOICE_RdytoCom:
-		case BATCH_REPLY_CHOICE_Commit:
-			rc = disrfst(sock, PBS_MAXSVRJOBID+1, reply->brp_un.brp_jid);
-			if (rc)
-				return (rc);
-			break;
-
-		case BATCH_REPLY_CHOICE_Select:
-
-			/* have to get count of number of strings first */
-
-			reply->brp_un.brp_select = NULL;
-			pselx = &reply->brp_un.brp_select;
-			ct = disrui(sock, &rc);
-			if (rc) return rc;
-
-			while (ct--) {
-				psel = (struct brp_select *)malloc(sizeof(struct brp_select));
-				if (psel == 0) return DIS_NOMALLOC;
-				psel->brp_next = NULL;
-				psel->brp_jobid[0] = '\0';
-				rc = disrfst(sock, PBS_MAXSVRJOBID+1, psel->brp_jobid);
-				if (rc) {
-					(void)free(psel);
-					return rc;
-				}
-				*pselx = psel;
-				pselx = &psel->brp_next;
-			}
-			break;
-
-		case BATCH_REPLY_CHOICE_Status:
-
-			/* have to get count of number of status objects first */
-
-			CLEAR_HEAD(reply->brp_un.brp_status);
-			ct = disrui(sock, &rc);
-			if (rc) return rc;
-
-			while (ct--) {
-				pstsvr = (struct brp_status *)malloc(sizeof(struct brp_status));
-				if (pstsvr == 0) return DIS_NOMALLOC;
-
-				CLEAR_LINK(pstsvr->brp_stlink);
-				pstsvr->brp_objname[0] = '\0';
-				CLEAR_HEAD(pstsvr->brp_attr);
-
-				pstsvr->brp_objtype = disrui(sock, &rc);
-				if (rc == 0) {
-					rc = disrfst(sock, PBS_MAXSVRJOBID+1,
-						pstsvr->brp_objname);
-				}
-				if (rc) {
-					(void)free(pstsvr);
-					return rc;
-				}
-				append_link(&reply->brp_un.brp_status,
-					&pstsvr->brp_stlink, pstsvr);
-				rc = decode_DIS_svrattrl(sock, &pstsvr->brp_attr);
-			}
-			break;
-
-		case BATCH_REPLY_CHOICE_Text:
-
-			/* text reply */
-
-		  	reply->brp_un.brp_txt.brp_str = disrcs(sock, &txtlen, &rc);
-			reply->brp_un.brp_txt.brp_txtlen = txtlen;
-			break;
-
-		case BATCH_REPLY_CHOICE_Locate:
-
-			/* Locate Job Reply */
-
-			rc = disrfst(sock, PBS_MAXDEST+1, reply->brp_un.brp_locate);
-			break;
-
-		default:
-			return -1;
-	}
-
-	return rc;
-}
-
-/**
- * @brief
- * 		decode a Batch Protocol Reply Structure for Server
- *
- *  	This routine reads reply over TCP by calling decode_DIS_replySvr_inner()
- * 		to read the reply to a batch request. This routine reads the protocol type
- * 		and version before calling decode_DIS_replySvr_inner() to read the rest of
- * 		the reply structure.
- *
- * @see
- *		DIS_reply_read
- *
- * @param[in] sock - socket connection from which to read reply
- * @param[out] reply - The reply structure to be returned
- *
- * @return Error code
- * @retval DIS_SUCCESS(0) - Success
- * @retval !DIS_SUCCESS   - Failure (see dis.h)
- */
-int
-decode_DIS_replySvr(int sock, struct batch_reply *reply)
-{
-	int		      rc = 0;
-	int		      i;
-	/* first decode "header" consisting of protocol type and version */
-
-	i = disrui(sock, &rc);
-	if (rc != 0) return rc;
-	if (i != PBS_BATCH_PROT_TYPE) return DIS_PROTO;
-	i = disrui(sock, &rc);
-	if (rc != 0) return rc;
-	if (i != PBS_BATCH_PROT_VER) return DIS_PROTO;
-
-	return (decode_DIS_replySvr_inner(sock, reply));
-}
-
-/**
- * @brief
- * 	decode a Batch Protocol Reply Structure for Server over TPP stream
- *
- * 	This routine reads data over TPP stream by calling decode_DIS_replySvr_inner()
- * 	to read the reply to a batch request. This routine reads the protocol type
- * 	and version before calling decode_DIS_replySvr_inner() to read the rest of
- * 	the reply structure.
- *
- * @see
- * 	DIS_reply_read
- *
- * @param[in] sock - socket connection from which to read reply
- * @param[out] reply - The reply structure to be returned
- *
- * @return Error code
- * @retval DIS_SUCCESS(0) - Success
- * @retval !DIS_SUCCESS   - Failure (see dis.h)
- */
-int
-decode_DIS_replySvrTPP(int sock, struct batch_reply *reply)
-{
-	/* for tpp based connection, header has already been read */
-	return (decode_DIS_replySvr_inner(sock, reply));
-}
-
-/**
- * @brief
- * 	top level function to read and decode DIS based batch reply
- *
- * 	Calls decode_DIS_replySvrTPP in case of PROT_TPP and decode_DIS_replySvr
- * 	in case of PROT_TCP to read the reply
- *
- * @see
- *	read_reg_reply, process_Dreply and process_DreplyTPP.
- *
- * @param[in] sock - socket connection from which to read reply
- * @param[out] reply - The reply structure to be returned
- * @param[in] prot - Whether to read over tcp or tpp based connection
- *
- * @return Error code
- * @retval DIS_SUCCESS(0) - Success
- * @retval !DIS_SUCCESS   - Failure (see dis.h)
- */
-// FIXME: move this to wire_deocde_batch_reply.c
-int
-DIS_reply_read(int sock, struct batch_reply *preply, int prot)
-{
-	if (prot == PROT_TPP)
-		return (decode_DIS_replySvrTPP(sock, preply));
-
-
-	DIS_tcp_funcs();
-	return  (decode_DIS_replySvr(sock, preply));
-}
-
-/**
  * @brief
  * 	Read in an DIS encoded request from the network
  * 	and decodes it:
@@ -2044,71 +335,104 @@ DIS_reply_read(int sock, struct batch_reply *preply, int prot)
 int
 dis_request_read(int sfds, struct batch_request *request)
 {
-#ifndef	PBS_MOM
-	int	 i;
-#endif	/* PBS_MOM */
-	int	 proto_type;
-	int	 proto_ver;
-	int	 rc; 	/* return code */
+	int rc = 0;
+	void *buf = NULL;
+	size_t bufsz = 0;
+	ns(Req_table_t) req;
+	ns(Header_table_t) hdr;
+	uint16_t proto;
+	uint16_t version;
 
-	if (request->prot == PROT_TCP)
-		DIS_tcp_funcs();	/* setup for DIS over tcp */
+	if (request->prot == PROT_TPP)
+		DIS_tpp_funcs();
+	else
+		DIS_tcp_funcs();
 
-	/* Decode the Request Header, that will tell the request type */
-
-	rc = decode_DIS_ReqHdr(sfds, request, &proto_type, &proto_ver);
-
+	//FIXME: get loaded buf for read with size here
+	rc = ns(Req_verify_as_root(buf, bufsz));
 	if (rc != 0) {
-		if (rc == DIS_EOF)
-			return EOF;
-		(void)sprintf(log_buffer,
-			"Req Header bad, errno %d, dis error %d",
-			errno, rc);
-		log_event(PBSEVENT_DEBUG, PBS_EVENTCLASS_REQUEST, LOG_DEBUG,
-			"?", log_buffer);
-
-		return PBSE_DISPROTO;
+		log_eventf(PBSEVENT_DEBUG, PBS_EVENTCLASS_REQUEST, LOG_DEBUG, __func__,
+				"Bad request, errno %d, wire error %d", errno, rc);
+		return PBSE_PROTOCOL;
 	}
 
-	if (proto_ver > PBS_BATCH_PROT_VER)
-		return PBSE_DISPROTO;
+	req = (ns(Req_table_t)) ns(Req_as_root(buf));
+	hdr = (ns(Header_table_t)) ns(Req_hdr(req));
+	proto = (uint16_t) ns(Header_protType(hdr));
+	version = (uint16_t) ns(Header_version(hdr));
+
+	if (proto != ns(ProtType_Batch) || version > PBS_BATCH_PROT_VER)
+		return PBSE_PROTOCOL;
+
+	request->rq_type = (int)ns(Header_reqId(hdr));
+
+	COPYSTR_B(request->rq_user, ns(Header_user(hdr)));
 
 	/* Decode the Request Body based on the type */
-
 	switch (request->rq_type) {
 		case PBS_BATCH_Connect:
 			break;
 
 		case PBS_BATCH_Disconnect:
-			return (-1);		/* set EOF return */
+			return (-1); /* set EOF return */
 
 		case PBS_BATCH_QueueJob:
 		case PBS_BATCH_SubmitResv:
-			CLEAR_HEAD(request->rq_ind.rq_queuejob.rq_attr);
-			rc = decode_DIS_QueueJob(sfds, request);
+			ns(Qjob_table_t) B = (ns(Qjob_table_t)) ns(Req_body(req));
+
+			COPYSTR_B(request->rq_ind.rq_queuejob.rq_jid, ns(Qjob_jobId(B)));
+			COPYSTR_B(request->rq_ind.rq_queuejob.rq_destin, ns(Qjob_destin(B)));
+			rc = wire_decode_svrattrl(ns(Qjob_attrs(B)), &(request->rq_ind.rq_queuejob.rq_attr));
 			break;
 
 		case PBS_BATCH_JobCred:
-			rc = decode_DIS_JobCred(sfds, request);
+			ns(Cred_table_t) B = (ns(Cred_table_t)) ns(Req_body(req));
+
+			request->rq_ind.rq_jobcred.rq_type = (int) ns(Cred_type(B));
+			request->rq_ind.rq_jobcred.rq_size = (int) ns(Cred_size(B));
+			COPYSTR_M(request->rq_ind.rq_jobcred.rq_data, (char *)(ns(Cred_cred(B))), request->rq_ind.rq_jobcred.rq_size);
+
 			break;
 
 		case PBS_BATCH_UserCred:
-			rc = decode_DIS_UserCred(sfds, request);
+			ns(Cred_table_t) B = (ns(Cred_table_t)) ns(Req_body(req));
+
+			request->rq_ind.rq_usercred.rq_type = (int) ns(Cred_type(B));
+			request->rq_ind.rq_usercred.rq_size = (int) ns(Cred_size(B));
+			COPYSTR_B(request->rq_ind.rq_usercred.rq_user, ns(Cred_user(B)));
+			COPYSTR_M(request->rq_ind.rq_usercred.rq_data, (char *)(ns(Cred_data(B))), request->rq_ind.rq_usercred.rq_size);
+
 			break;
 
 		case PBS_BATCH_UserMigrate:
-			rc = decode_DIS_UserMigrate(sfds, request);
+			ns(UserMigrate_table_t) B = (ns(UserMigrate_table_t)) ns(Req_body(req));
+
+			COPYSTR_B(request->rq_ind.rq_user_migrate.rq_tohost, ns(UserMigrate_tohost(B)));
+
 			break;
 
 		case PBS_BATCH_jobscript:
 		case PBS_BATCH_MvJobFile:
-			rc = decode_DIS_JobFile(sfds, request);
+			ns(JobFile_table_t) B = (ns(JobFile_table_t)) ns(Req_body(req));
+
+			request->rq_ind.rq_jobfile.rq_sequence = (int) ns(JobFile_seq(B));
+			request->rq_ind.rq_jobfile.rq_type = (int) ns(JobFile_type(B));
+			request->rq_ind.rq_jobfile.rq_size = (long) ns(JobFile_size(B));
+			COPYSTR_B(request->rq_ind.rq_jobfile.rq_jobid, ns(JobFile_jobId(B)));
+			COPYSTR_M(request->rq_ind.rq_jobfile.rq_data, (char *)(ns(Cred_data(B))), request->rq_ind.rq_jobfile.rq_size);
+
 			break;
 
 		case PBS_BATCH_RdytoCommit:
 		case PBS_BATCH_Commit:
 		case PBS_BATCH_Rerun:
-			rc = decode_DIS_JobId(sfds, request->rq_ind.rq_commit);
+#ifndef MOM
+		case PBS_BATCH_LocateJob:
+#endif
+			ns(JobId_table_t) B = (ns(JobId_table_t)) ns(Req_body(req));
+
+			COPYSTR_B(request->rq_ind.rq_commit, ns(JobFile_jobId(B)));
+
 			break;
 
 		case PBS_BATCH_DeleteJob:
@@ -2116,83 +440,47 @@ dis_request_read(int sfds, struct batch_request *request)
 		case PBS_BATCH_ResvOccurEnd:
 		case PBS_BATCH_HoldJob:
 		case PBS_BATCH_ModifyJob:
-			rc = decode_DIS_Manage(sfds, request);
+#ifndef MOM
+		case PBS_BATCH_Manager:
+		case PBS_BATCH_ReleaseJob:
+		case PBS_BATCH_ModifyResv:
+#endif
+			ns(Manage_table_t) B = (ns(Manage_table_t)) ns(Req_body(req));
+
+			request->rq_ind.rq_manager.rq_cmd = (int) ns(strncpyManage_cmd(B));
+			request->rq_ind.rq_manager.rq_objtype = (int) ns(Manage_objType(B));
+			COPYSTR_B(request->rq_ind.rq_manager.rq_objname, ns(Manager_objName(B)));
+			rc = wire_decode_svrattrl(ns(Manager_attrs(B)), &(request->rq_ind.rq_manager.rq_attr));
+
 			break;
 
 		case PBS_BATCH_MessJob:
-			rc = decode_DIS_MessageJob(sfds, request);
+			ns(Msg_table_t) B = (ns(Msg_table_t)) ns(Req_body(req));
+
+			request->rq_ind.rq_message.rq_file = (int) ns(Msg_FileInd(B));
+			COPYSTR_B(request->rq_ind.rq_message.rq_jid, ns(Msg_jobId(B)));
+			COPYSTR_S(request->rq_ind.rq_message.rq_text, ns(Msg_text(B)));
+
 			break;
 
 		case PBS_BATCH_Shutdown:
 		case PBS_BATCH_FailOver:
-			rc = decode_DIS_ShutDown(sfds, request);
+			ns(DmnCmd_table_t) B = (ns(DmnCmd_table_t)) ns(Req_body(req));
+
+			request->rq_ind.rq_shutdown = (int) ns(DmnCmd_cmd(B));
+
 			break;
 
 		case PBS_BATCH_SignalJob:
-			rc = decode_DIS_SignalJob(sfds, request);
+			ns(Signal_table_t) B = (ns(Signal_table_t)) ns(Req_body(req));
+
+			COPYSTR_B(request->rq_ind.rq_signal.rq_jid, ns(Signal_jobId(B)));
+			COPYSTR_B(request->rq_ind.rq_signal.rq_signame, ns(Signal_sigName(B)));
+
 			break;
 
 		case PBS_BATCH_StatusJob:
-			rc = decode_DIS_Status(sfds, request);
-			break;
-
-		case PBS_BATCH_PySpawn:
-			rc = decode_DIS_PySpawn(sfds, request);
-			break;
-
-		case PBS_BATCH_Authenticate:
-			rc = decode_DIS_Authenticate(sfds, request);
-			break;
-
-#ifndef PBS_MOM
-		case PBS_BATCH_RelnodesJob:
-			rc = decode_DIS_RelnodesJob(sfds, request);
-			break;
-
-		case PBS_BATCH_LocateJob:
-			rc = decode_DIS_JobId(sfds, request->rq_ind.rq_locate);
-			break;
-
-		case PBS_BATCH_Manager:
-		case PBS_BATCH_ReleaseJob:
-			rc = decode_DIS_Manage(sfds, request);
-			break;
-
-		case PBS_BATCH_MoveJob:
-		case PBS_BATCH_OrderJob:
-			rc = decode_DIS_MoveJob(sfds, request);
-			break;
-
-		case PBS_BATCH_RunJob:
-		case PBS_BATCH_AsyrunJob:
-		case PBS_BATCH_StageIn:
-		case PBS_BATCH_ConfirmResv:
-			rc = decode_DIS_Run(sfds, request);
-			break;
-
-		case PBS_BATCH_DefSchReply:
-			request->rq_ind.rq_defrpy.rq_cmd = disrsi(sfds, &rc);
-			if (rc) break;
-			request->rq_ind.rq_defrpy.rq_id = disrst(sfds, &rc);
-			if (rc) break;
-			request->rq_ind.rq_defrpy.rq_err = disrsi(sfds, &rc);
-			if (rc) break;
-			i = disrsi(sfds, &rc);
-			if (rc) break;
-			if (i)
-				request->rq_ind.rq_defrpy.rq_txt = disrst(sfds, &rc);
-			break;
-
-		case PBS_BATCH_SelectJobs:
-		case PBS_BATCH_SelStat:
-			CLEAR_HEAD(request->rq_ind.rq_select.rq_selattr);
-			CLEAR_HEAD(request->rq_ind.rq_select.rq_rtnattr);
-			rc = decode_DIS_svrattrl(sfds,
-				&request->rq_ind.rq_select.rq_selattr);
-			rc = decode_DIS_svrattrl(sfds,
-				&request->rq_ind.rq_select.rq_rtnattr);
-			break;
-
+#ifndef MOM
 		case PBS_BATCH_StatusNode:
 		case PBS_BATCH_StatusResv:
 		case PBS_BATCH_StatusQue:
@@ -2200,81 +488,229 @@ dis_request_read(int sfds, struct batch_request *request)
 		case PBS_BATCH_StatusSched:
 		case PBS_BATCH_StatusRsc:
 		case PBS_BATCH_StatusHook:
-			rc = decode_DIS_Status(sfds, request);
+#endif
+			ns(Stat_table_t) B = (ns(Stat_table_t)) ns(Req_body(req));
+
+			COPYSTR_S(request->rq_ind.rq_status.rq_id, ns(Stat_jobIds(B)));
+			rc = wire_decode_svrattrl(ns(Stat_attrs(B)), &(request->rq_ind.rq_status.rq_attr));
+
+			break;
+
+		case PBS_BATCH_PySpawn:
+			ns(Spawn_table_t) B = (ns(Spawn_table_t)) ns(Req_body(req));
+			int i = 0;
+			size_t len = 0;
+			flatbuffers_string_vec_t strs;
+
+			COPYSTR_B(request->rq_ind.rq_py_spawn.rq_jid, ns(Signal_jobId(B)));
+
+			request->rq_ind.rq_py_spawn.rq_argv = NULL;
+			request->rq_ind.rq_py_spawn.rq_envp = NULL;
+
+			strs = ns(Spawn_argv(B));
+			len = flatbuffers_string_vec_len(strs);
+			request->rq_ind.rq_py_spawn.rq_argv = (char **)calloc(sizeof(char **), len + 1);
+			if (request->rq_ind.rq_py_spawn.rq_argv == NULL)
+				return PBSE_SYSTEM;
+			for (i = 0; i < len; i++) {
+				COPYSTR_S(request->rq_ind.rq_py_spawn.rq_argv[i], flatbuffers_string_vec_at(strs, i))
+			}
+
+			strs = ns(Spawn_envp(B));
+			len = flatbuffers_string_vec_len(strs);
+			request->rq_ind.rq_py_spawn.rq_envp = (char **)calloc(sizeof(char **), len + 1);
+			if (request->rq_ind.rq_py_spawn.rq_envp == NULL)
+				return PBSE_SYSTEM;
+			for (i = 0; i < len; i++) {
+				COPYSTR_S(request->rq_ind.rq_py_spawn.rq_envp[i], flatbuffers_string_vec_at(strs, i))
+			}
+
+			break;
+		// FIXME: Add PBS_BATCH_Authenticate
+
+#ifndef PBS_MOM
+		case PBS_BATCH_RelnodesJob:
+			ns(RelNodes_table_t) B = (ns(RelNodes_table_t)) ns(Req_body(req));
+
+			COPYSTR_B(request->rq_ind.rq_relnodes.rq_jid, ns(RelNodes_jobId(B)));
+			COPYSTR_S(request->rq_ind.rq_relnodes.rq_node_list, ns(RelNodes_nodes(B)));
+
+			break;
+
+		case PBS_BATCH_MoveJob:
+		case PBS_BATCH_OrderJob:
+			ns(Move_table_t) B = (ns(Move_table_t)) ns(Req_body(req));
+
+			COPYSTR_B(request->rq_ind.rq_move.rq_jid, ns(Move_jobId(B)));
+			COPYSTR_B(request->rq_ind.rq_move.rq_destin, ns(Move_dest(B)));
+
+			break;
+
+		case PBS_BATCH_RunJob:
+		case PBS_BATCH_AsyrunJob:
+		case PBS_BATCH_StageIn:
+		case PBS_BATCH_ConfirmResv:
+			ns(Run_table_t) B = (ns(Run_table_t)) ns(Req_body(req));
+
+			request->rq_ind.rq_run.rq_resch = (unsigned long) ns(Run_resch(B));
+			COPYSTR_B(request->rq_ind.rq_run.rq_jid, ns(Run_jobId(B)));
+			COPYSTR_S(request->rq_ind.rq_run.rq_destin, ns(Run_dest(B)));
+
+			break;
+
+		case PBS_BATCH_DefSchReply:
+			ns(SchedDefRep_table_t) B = (ns(SchedDefRep_table_t)) ns(Req_body(req));
+
+			request->rq_ind.rq_defrpy.rq_cmd = (int) ns(SchedDefRep_cmd(B));
+			request->rq_ind.rq_defrpy.rq_err = (int) ns(SchedDefRep_err(B));
+			request->rq_ind.rq_defrpy.rq_txt = NULL;
+			COPYSTR_S(request->rq_ind.rq_defrpy.rq_id, ns(SchedDefRep_id(B)));
+			if (SchedDefRep_txt_is_present(B))
+				COPYSTR_S(request->rq_ind.rq_defrpy.rq_txt, ns(SchedDefResp_txt(B)));
+
+			break;
+
+		case PBS_BATCH_SelectJobs:
+		case PBS_BATCH_SelStat:
+			ns(Select_table_t) B = (ns(Select_table_t)) ns(Req_body(req));
+
+			rc = wire_decode_svrattrl(ns(Select_selAttrs(B)), &(request->rq_ind.rq_select.rq_selattr));
+			if (rc == PBSE_NONE)
+				rc = wire_decode_svrattrl(ns(Select_rtnAttrs(B)), &(request->rq_ind.rq_select.rq_rtnattr));
+
 			break;
 
 		case PBS_BATCH_TrackJob:
-			rc = decode_DIS_TrackJob(sfds, request);
+			ns(Track_table_t) B = (ns(Track_table_t)) ns(Req_body(req));
+
+			request->rq_ind.rq_track.rq_hopcount = (int) ns(Track_hops(B));
+			request->rq_ind.rq_track.rq_state[0] = (char) ns(Track_state(B));
+			COPYSTR_B(request->rq_ind.rq_track.rq_jid, ns(Track_jobId(B)));
+			COPYSTR_B(request->rq_ind.rq_track.rq_location, ns(Track_location(B)));
+
 			break;
 
 		case PBS_BATCH_Rescq:
 		case PBS_BATCH_ReserveResc:
 		case PBS_BATCH_ReleaseResc:
-			rc = decode_DIS_Rescl(sfds, request);
+			ns(RescQuery_table_t) B = (ns(RescQuery_table_t)) ns(Req_body(req));
+			int i = 0;
+			flatbuffers_string_vec_t strs = ns(RescQuery_queries(B));
+			size_t len = flatbuffers_string_vec_len(strs);
+
+			request->rq_ind.rq_rescq.rq_num = (int) len;
+			request->rq_ind.rq_rescq.rq_rhandle = (int) ns(RescQuery_handle(B));
+			request->rq_ind.rq_rescq.rq_list = (char **)calloc(sizeof(char **), len);
+			if (request->rq_ind.rq_rescq.rq_list == NULL)
+				return PBSE_SYSTEM;
+			for (i = 0; i < len; i++) {
+				COPYSTR_S(request->rq_ind.rq_rescq.rq_list[i], flatbuffers_string_vec_at(strs, i));
+			}
+
 			break;
 
 		case PBS_BATCH_RegistDep:
-			rc = decode_DIS_Register(sfds, request);
-			break;
+			ns(Register_table_t) B = (ns(Register_table_t)) ns(Req_body(req));
 
-		case PBS_BATCH_ModifyResv:
-			decode_DIS_ModifyResv(sfds, request);
+			request->rq_ind.rq_register.rq_op = (int) ns(Register_op(B));
+			request->rq_ind.rq_register.rq_dependtype = (int) ns(Register_type(B));
+			request->rq_ind.rq_register.rq_cost = (long) ns(Register_cost(B));
+			COPYSTR_B(request->rq_ind.rq_register.rq_child, ns(Register_child(B)));
+			COPYSTR_B(request->rq_ind.rq_register.rq_parent, ns(Register_parent(B)));
+			COPYSTR_B(request->rq_ind.rq_register.rq_owner, ns(Register_owner(B)));
+			COPYSTR_B(request->rq_ind.rq_register.rq_svr, ns(Register_server(B)));
+
 			break;
 
 		case PBS_BATCH_PreemptJobs:
-			decode_DIS_PreemptJobs(sfds, request);
+			ns(Preempt_table_t) B = (ns(Preempt_table_t)) ns(Req_body(req));
+			ns(PreemptJob_vec_t) preempts = ns(Preempt_infos(B));
+
+			len = ns(PreemptJob_vec_len(preempts));
+			request->rq_ind.rq_preempt.count = (int) len;
+			request->rq_ind.rq_preempt.ppj_list = (preempt_job_info *)calloc(sizeof(struct preempt_job_info), len);
+			if (request->rq_ind.rq_preempt.ppj_list == NULL)
+				return PBSE_SYSTEM;
+
+			for (i = 0; i < len; i++) {
+				// FIXME: below
+				ns(PreemptJob_table_t) p = (ns(PreemptJob_table_t)) flatbuffers_string_vec_at(preempts, i);
+
+				COPYSTR_B(request->rq_ind.rq_preempt.ppj_list[i].job_id, ns(PreemptJob_jid(p)));
+			}
+
 			break;
 
 #else	/* yes PBS_MOM */
 
 		case PBS_BATCH_CopyHookFile:
-			rc = decode_DIS_CopyHookFile(sfds, request);
+			ns(CopyHook_table_t) B = (ns(CopyHook_table_t)) ns(Req_body(req));
+
+			request->rq_ind.rq_hookfile.rq_sequence = (int) ns(CopyHook_seq(B));
+			request->rq_ind.rq_hookfile.rq_size = (int) ns(CopyHook_size(B));
+			COPYSTR_B(request->rq_ind.rq_hookfile.rq_filename, ns(CopyHook_filename(B)));
+			COPYSTR_S(request->rq_ind.rq_hookfile.rq_data, ns(CopyHook_data(B)));
+
 			break;
 
 		case PBS_BATCH_DelHookFile:
-			rc = decode_DIS_DelHookFile(sfds, request);
+			ns(CopyHook_table_t) B = (ns(CopyHook_table_t)) ns(Req_body(req));
+
+			COPYSTR_B(request->rq_ind.rq_hookfile.rq_filename, ns(CopyHook_filename(B)));
+
 			break;
 
 		case PBS_BATCH_CopyFiles:
 		case PBS_BATCH_DelFiles:
-			rc = decode_DIS_CopyFiles(sfds, request);
+			rc = wire_decode_CopyFiles(sfds, request);
 			break;
 
 		case PBS_BATCH_CopyFiles_Cred:
 		case PBS_BATCH_DelFiles_Cred:
-			rc = decode_DIS_CopyFiles_Cred(sfds, request);
+			flatbuffers_string_t cred;
+			ns(CopyFileCred_table_t) B = (ns(CopyFileCred_table_t)) ns(Req_body(req));
+			struct rq_cpyfile *files = &(request->rq_ind.rq_cpyfile_cred.rq_copyfile);
+
+			request->rq_ind.rq_cpyfile_cred.rq_credtype = (int) ns(CopyFileCred_type(B));
+			cred = ns(CopyFileCred_cred(B));
+			request->rq_ind.rq_cpyfile_cred.rq_credlen = flatbuffers_string_len(cred);
+			COPYSTR_M(request->rq_ind.rq_cpyfile_cred.rq_pcred, ns(CopyFileCred_cred(B)), request->rq_ind.rq_cpyfile_cred.rq_credlen);
+			rc = wire_decode_CopyFiles(ns(CopyFileCred_files(B)), files);
+
 			break;
+
 		case PBS_BATCH_Cred:
-			rc = decode_DIS_Cred(sfds, request);
+			ns(Cred_table_t) B = (ns(Cred_table_t)) ns(Req_body(req));
+
+			request->rq_ind.rq_cred.rq_data = NULL;
+			request->rq_ind.rq_cred.rq_type = (int) ns(Cred_type(B));
+			request->rq_ind.rq_cred.rq_size = (size_t) ns(Cred_size(B));
+			request->rq_ind.rq_cred.rq_validity = (long) ns(Cred_validity(B));
+			COPYSTR_B(request->rq_ind.rq_cred.rq_jobid, ns(Cred_jobId(B)));
+			COPYSTR_B(request->rq_ind.rq_cred.rq_credid, ns(Cred_jobId(B)));
+			COPYSTR_M(request->rq_ind.rq_cred.rq_data, ns(Cred_cred(B)), request->rq_ind.rq_cred.rq_size);
+
 			break;
 
 #endif	/* PBS_MOM */
 
 		default:
-			sprintf(log_buffer, "%s: %d from %s", msg_nosupport,
+			log_eventf(PBSEVENT_ERROR, PBS_EVENTCLASS_REQUEST, LOG_ERR,
+				__func__, "%s: %d from %s", msg_nosupport,
 				request->rq_type, request->rq_user);
-			log_event(PBSEVENT_DEBUG, PBS_EVENTCLASS_REQUEST, LOG_DEBUG,
-				"?", log_buffer);
 			rc = PBSE_UNKREQ;
 			break;
 	}
 
-	if (rc == 0) {	/* Decode the Request Extension, if present */
-		rc = decode_DIS_ReqExtend(sfds, request);
-		if (rc != 0) {
-			(void)sprintf(log_buffer,
-				"Request type: %d Req Extension bad, dis error %d", request->rq_type, rc);
-			log_event(PBSEVENT_DEBUG, PBS_EVENTCLASS_REQUEST,
-				LOG_DEBUG, "?", log_buffer);
-			rc = PBSE_DISPROTO;
+	if (rc == 0) {
+		/* Decode the Request Extension, if present */
+		if (ns(Req_extend_is_present(req))) {
+			COPYSTR_S(request->rq_extend, ns(Req_extend(req)));
 		}
 	} else if (rc != PBSE_UNKREQ) {
-		(void)sprintf(log_buffer,
-			"Req Body bad, dis error %d, type %d",
-			rc, request->rq_type);
-		log_event(PBSEVENT_DEBUG, PBS_EVENTCLASS_REQUEST,
-			LOG_DEBUG, "?", log_buffer);
-		rc = PBSE_DISPROTO;
+		log_eventf(PBSEVENT_ERROR, PBS_EVENTCLASS_REQUEST, LOG_ERR, __func__,
+				"Req Body bad, type %d", request->rq_type);
+		rc = PBSE_PROTOCOL;
 	}
 
 	return (rc);

@@ -1369,8 +1369,8 @@ free_br(struct batch_request *preq)
 				free(preq->rq_ind.rq_jobfile.rq_data);
 			break;
 		case PBS_BATCH_Cred:
-			if (preq->rq_ind.rq_cred.rq_cred_data)
-				free(preq->rq_ind.rq_cred.rq_cred_data);
+			if (preq->rq_ind.rq_cred.rq_data)
+				free(preq->rq_ind.rq_cred.rq_data);
 			break;
 
 #ifndef PBS_MOM		/* Server Only */
