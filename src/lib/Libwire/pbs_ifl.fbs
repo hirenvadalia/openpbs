@@ -10,6 +10,228 @@ table Header {
 	user: string;
 }
 
+table Attribute {
+	name: string;
+	resc: string;
+	value: string;
+	op: batch_op;
+}
+
+table Qjob {
+	jobId: string;
+	destin: string;
+	attrs: [Attribute];
+}
+
+table JobFile {
+	seq: long;
+	type: short;
+	size: long;
+	jobId: string;
+	data: string;
+}
+
+// FIXME: rename this to Text
+table JobId {
+	jobId: string;
+}
+
+table Manage {
+	cmd: short;
+	objType: short;
+	objName: string;
+	attrs: [Attribute];
+}
+
+table Msg {
+	fileInd: short;
+	jobId: string;
+	text: string;
+}
+
+table Move {
+	jobId: string;
+	dest: string;
+}
+
+table Run {
+	jobId: string;
+	dest: string;
+	resch: long;
+}
+
+table Select {
+	selAttrs: [Attribute];
+	rtnAttrs: [Attribute];
+}
+
+table DmnCmd {
+	cmd: short;
+}
+
+table Signal {
+	jobId: string;
+	sigName: string;
+}
+
+table Stat {
+	jobIds: string;
+	attrs: [Attribute];
+}
+
+table Track {
+	hops: short;
+	jobId: string;
+	location: string;
+	state: byte;
+}
+
+table RescQuery {
+	handle: short;
+	queries: [string];
+}
+
+table Register {
+	owner: string;
+	parent: string;
+	child: string;
+	type: short;
+	op: short;
+	cost: long;
+}
+
+table FilePair {
+	local: string;
+	remote: string;
+	flag: short;
+}
+
+table CopyFile {
+	jobId: string;
+	owner: string;
+	user: string;
+	group: string;
+	flags: short;
+	pairs: [FilePair];
+}
+
+table Cred {
+	jobId: string;
+	user: string;
+	validity: long;
+	type: short;
+	size: short;
+	data: string;
+}
+
+table CopyFileCred {
+	files: CopyFile;
+	// Can we use Cred here?
+	type: short;
+	cred: string;
+}
+
+table UserMigrate {
+	tohost: string;
+}
+
+table SchedDefRep {
+	cmd: short;
+	id: string;
+	err: short;
+	text: string;
+}
+
+table Spawn {
+	jobId: string;
+	argv: [string];
+	envp: [string];
+}
+
+// FIXME: we can merge this with JobFile
+table CopyHook {
+	seq: short;
+	size: long;
+	filename: string;
+	data: string;
+}
+
+table RelNodes {
+	jobId: string;
+	nodes: string;
+}
+
+table PreemptJob {
+	jid: string;
+	order: string;
+}
+
+table Preempt {
+	infos: [PreemptJob];
+}
+
+table Auth {
+	authMethod: string;
+	encryptMethod: string;
+	encryptMode: ushort;
+	port: ushort;
+}
+
+union ReqBody {
+	Qjob, JobFile, JobId, Manage, Msg,
+	Move, Run, Select, DmnCmd, Signal,
+	Stat, Track, RescQuery, Register,
+	CopyFile, Cred, CopyFileCred,
+	UserMigrate, SchedDefRep, Spawn,
+	CopyHook, RelNodes, Preempt, Auth
+}
+
+table Req {
+	hdr: Header;
+	body: ReqBody;
+	extend: string;
+}
+
+table StatRespStat {
+	type: short;
+	name: string;
+	attrs: [Attribute];
+}
+
+table StatResp {
+	stats: [StatRespStat];
+}
+
+table SelectResp {
+	ids: [string];
+}
+
+table RescQueryResp {
+	avail: [short];
+	alloc: [short];
+	resvd: [short];
+	down: [short];
+}
+
+table TextResp {
+	txt: string;
+}
+
+union RespBody {
+	TextResp, // jobid, text, location etc reponses
+	SelectResp, // select reponses
+	StatResp, // stat, cmdstat reponses
+	RescQueryResp, // resource query reponses
+	Preempt // preempt jobs reply
+}
+
+table Resp {
+	code: short;
+	auxCode: short;
+	choice: short;
+	body: RespBody;
+}
+
 table RmReq {
 	hdr: Header;
 	data: [string];
@@ -67,229 +289,4 @@ table TmReq {
 	event: short;
 	jobTid: short;
 	body: TmBody;
-}
-
-table Attribute {
-	name: string;
-	resc: string;
-	value: string;
-	op: batch_op;
-}
-
-table Extend {
-	extend: string;
-}
-
-table Qjob {
-	jobId: string;
-	destin: string;
-	attrs: [Attribute];
-}
-
-table JobFile {
-	seq: long;
-	type: short;
-	size: long;
-	jobId: string;
-	data: string;
-}
-
-table JobId {
-	jobId: string;
-}
-
-table Manage {
-	cmd: short;
-	objType: short;
-	objName: string; // jobid, quename etc
-	attrs: [Attribute];
-}
-
-table Msg {
-	fileInd: short;
-	jobId: string;
-	text: string;
-}
-
-table DmnCmd {
-	cmd: short;
-}
-
-table Signal {
-	jobId: string;
-	sigName: string;
-}
-
-table Stat {
-	jobIds: string;
-	attrs: [Attribute];
-}
-
-table Spawn {
-	jobId: string;
-	argv: [string];
-	envp: [string];
-}
-
-table Auth {
-	authMethod: string;
-	encryptMethod: string;
-	encryptMode: ushort;
-	port: ushort;
-}
-
-table Move {
-	jobId: string;
-	dest: string;
-}
-
-table Run {
-	jobId: string;
-	dest: string;
-	resch: long;
-}
-
-table SchedDefRep {
-	cmd: short;
-	id: string;
-	err: short;
-	text: string;
-}
-
-table Select {
-	selAttrs: [Attribute];
-	rtnAttrs: [Attribute];
-}
-
-table Track {
-	hops: short;
-	jobId: string;
-	location: string;
-	state: byte;
-}
-
-table Register {
-	owner: string;
-	server: string;
-	parent: string;
-	child: string;
-	type: short;
-	op: short;
-	cost: long;
-}
-
-table CopyHook {
-	seq: short;
-	size: long;
-	filename: string;
-	data: string;
-}
-
-table FilePair {
-	local: string;
-	remote: string;
-	flag: short;
-}
-
-table CopyFile {
-	jobId: string;
-	owner: string;
-	user: string;
-	group: string;
-	flags: short;
-	pairs: [FilePair];
-}
-
-table CopyFileCred {
-	files: CopyFile;
-	type: short;
-	cred: string;
-}
-
-table Cred {
-	jobId: string;
-	user: string;
-	validity: long;
-	type: short;
-	size: short;
-	data: string;
-}
-
-table UserMigrate {
-	tohost: string;
-}
-
-table RelNodes {
-	jobId: string;
-	nodes: string;
-}
-
-table RescQuery {
-	handle: short;
-	queries: [string];
-}
-
-table PreemptJob {
-	jid: string;
-	order: string;
-}
-
-table Preempt {
-	infos: [PreemptJob];
-}
-
-union ReqBody {
-	Qjob, JobFile, JobId, Manage,
-	Msg, DmnCmd, Signal, Stat,
-	Spawn, Auth, Move, Run,
-	SchedDefRep, Select, Track,
-	Register, CopyHook, CopyFile,
-	Cred, UserMigrate, RelNodes,
-	RescQuery, Preempt, CopyFileCred
-}
-
-table Req {
-	hdr: Header;
-	body: ReqBody;
-	extend: Extend;
-}
-
-table StatRespStat {
-	type: short;
-	name: string;
-	attrs: [Attribute];
-}
-
-table StatResp {
-	stats: [StatRespStat];
-}
-
-table SelectResp {
-	ids: [string];
-}
-
-table RescQueryResp {
-	avail: [short];
-	alloc: [short];
-	resvd: [short];
-	down: [short];
-}
-
-table TextResp {
-	txt: string;
-}
-
-union RespBody {
-	TextResp, // jobid, text, location etc reponses
-	SelectResp, // select reponses
-	StatResp, // stat, cmdstat reponses
-	RescQueryResp, // resource query reponses
-	Preempt // preempt jobs reply
-}
-
-table Resp {
-	code: short;
-	auxCode: short;
-	choice: short;
-	body: RespBody;
 }

@@ -1407,3 +1407,189 @@ PBSD_user_migrate(int c, char *tohost)
 
 	return rc;
 }
+
+static struct batch_status *alloc_bs();
+
+/**
+ * @brief
+ *	-wrapper function for PBSD_status_put which sends
+ *	status batch request
+ *
+ * @param[in] c - socket descriptor
+ * @param[in] function - request type
+ * @param[in] id - object id
+ * @param[in] attrib - pointer to attribute list
+ * @param[in] extend - extention string for req encode
+ *
+ * @return	structure handle
+ * @retval 	pointer to batch status on SUCCESS
+ * @retval 	NULL on failure
+ *
+ */
+struct batch_status *
+PBSD_status(int c, int function, char *objid, struct attrl *attrib, char *extend)
+{
+	int rc;
+
+	/* send the status request */
+	if (objid == NULL)
+		objid = "";	/* set to null string for encoding */
+
+	rc = PBSD_status_put(c, function, objid, attrib, extend, PROT_TCP, NULL);
+	if (rc) {
+		return NULL;
+	}
+
+	/* get the status reply */
+
+	return (PBSD_status_get(c));
+}
+
+/**
+ * @brief
+ *	Returns pointer to status record
+ *
+ * @param[in]   c - index into connection table
+ *
+ * @return returns a pointer to a batch_status structure
+ * @retval pointer to batch status on SUCCESS
+ * @retval NULL on failure
+ */
+struct batch_status *PBSD_status_get(int c)
+{
+	struct brp_cmdstat  *stp; /* pointer to a returned status record */
+	struct batch_status *bsp  = NULL;
+	struct batch_status *rbsp = NULL;
+	struct batch_reply  *reply;
+	int i;
+
+	/* read reply from stream into presentation element */
+
+	reply = PBSD_rdrpy(c);
+	if (reply == NULL) {
+		pbs_errno = PBSE_PROTOCOL;
+	} else if (reply->brp_choice != BATCH_REPLY_CHOICE_NULL  &&
+		reply->brp_choice != BATCH_REPLY_CHOICE_Text &&
+		reply->brp_choice != BATCH_REPLY_CHOICE_Status) {
+		pbs_errno = PBSE_PROTOCOL;
+	} else if (get_conn_errno(c) == 0) {
+		/* have zero or more attrl structs to decode here */
+		stp = reply->brp_un.brp_statc;
+		i = 0;
+		pbs_errno = 0;
+		while (stp != NULL) {
+			if (i++ == 0) {
+				rbsp = bsp = alloc_bs();
+				if (bsp == NULL) {
+					pbs_errno = PBSE_SYSTEM;
+					break;
+				}
+			} else {
+				bsp->next = alloc_bs();
+				bsp = bsp->next;
+				if (bsp == NULL) {
+					pbs_errno = PBSE_SYSTEM;
+					break;
+				}
+			}
+			if ((bsp->name = strdup(stp->brp_objname)) == NULL) {
+				pbs_errno = PBSE_SYSTEM;
+				break;
+			}
+			bsp->attribs = stp->brp_attrl;
+			if (stp->brp_attrl)
+				stp->brp_attrl = 0;
+			bsp->next = NULL;
+			stp = stp->brp_stlink;
+		}
+		if (pbs_errno) {
+			pbs_statfree(rbsp);
+			rbsp = NULL;
+		}
+	}
+	PBSD_FreeReply(reply);
+	return rbsp;
+}
+
+/**
+ * @brief
+ *	Allocate a batch status reply structure
+ */
+
+static struct batch_status *alloc_bs()
+{
+	struct batch_status *bsp;
+
+	bsp = MH(struct batch_status);
+	if (bsp) {
+
+		bsp->next = NULL;
+		bsp->name = NULL;
+		bsp->attribs = NULL;
+		bsp->text = NULL;
+	}
+	return bsp;
+}
+
+/**
+ * @brief
+ *	-send manager request and read reply.
+ *
+ * @param[in] c - communication handle
+ * @param[in] function - req type
+ * @param[in] command - command
+ * @param[in] objtype - object type
+ * @param[in] objname - object name
+ * @param[in] aoplp - attribute list
+ * @param[in] extend - extend string for req
+ *
+ * @return	int
+ * @retval	0	success
+ * @retval	!0	error
+ *
+ */
+int
+PBSD_manager(int c, int function, int command, int objtype, char *objname, struct attropl *aoplp, char *extend)
+{
+	int i;
+	struct batch_reply *reply;
+	int rc;
+
+	/* initialize the thread context data, if not initialized */
+	if (pbs_client_thread_init_thread_context() != 0)
+		return pbs_errno;
+
+	/* verify the object name if creating a new one */
+	if (command == MGR_CMD_CREATE)
+		if (pbs_verify_object_name(objtype, objname) != 0)
+			return pbs_errno;
+
+	/* now verify the attributes, if verification is enabled */
+	if ((pbs_verify_attributes(c, function, objtype,
+		command, aoplp)) != 0)
+		return pbs_errno;
+
+	/* lock pthread mutex here for this connection */
+	/* blocking call, waits for mutex release */
+	if (pbs_client_thread_lock_connection(c) != 0)
+		return pbs_errno;
+
+	/* send the manage request */
+	i = PBSD_mgr_put(c, function, command, objtype, objname, aoplp, extend, PROT_TCP, NULL);
+	if (i) {
+		(void)pbs_client_thread_unlock_connection(c);
+		return i;
+	}
+
+	/* read reply from stream into presentation element */
+	reply = PBSD_rdrpy(c);
+	PBSD_FreeReply(reply);
+
+	rc = get_conn_errno(c);
+
+	/* unlock the thread lock and update the thread context data */
+	if (pbs_client_thread_unlock_connection(c) != 0)
+		return pbs_errno;
+
+	return rc;
+}

@@ -309,6 +309,7 @@ struct batch_request {
 		struct rq_cpyfile rq_cpyfile;
 		struct rq_cpyfile_cred rq_cpyfile_cred;
 		int rq_failover;
+		// FIXME: merge all cred in rq_cred
 		struct rq_usercred rq_usercred;
 		struct rq_user_migrate rq_user_migrate;
 		struct rq_defschrpy rq_defrpy;

@@ -43,25 +43,28 @@
 
 extern char *msg_nosupport;
 
-#define COPYSTR(dest, src, len) { \
+#define COPYSTR(dest, src, len) \
+do { \
 	memset(dest, '\0', len); \
 	strncpy(dest, (char *)src, len - 1); \
-}
+} while(0)
 
 #define COPYSTR_B(dest, src) COPYSTR(dest, src, sizeof(dest))
 
-#define COPYSTR_M(dest, src, len) { \
+#define COPYSTR_M(dest, src, len) \
+do { \
 	dest = (char *)malloc(len); \
 	if (dest == NULL) \
 		return PBSE_SYSTEM; \
 	memcpy(dest, src, len); \
-}
+} while(0)
 
-#define COPYSTR_S(dest, src) { \
+#define COPYSTR_S(dest, src) \
+do { \
 	dest = strdup((char *)src); \
 	if (dest == NULL) \
 		return PBSE_SYSTEM; \
-}
+} while(0)
 
 static int wire_decode_attropl(ns(Attribute_vec_t), struct attropl **);
 static int wire_decode_CopyFiles(ns(CopyFile_table_t), struct rq_cpyfile *);
@@ -391,10 +394,13 @@ wire_request_read(int sfds, struct batch_request *request)
 #endif
 			ns(Manage_table_t) B = (ns(Manage_table_t)) ns(Req_body(req));
 
-			request->rq_ind.rq_manager.rq_cmd = (int) ns(strncpyManage_cmd(B));
+			request->rq_ind.rq_manager.rq_cmd = (int) ns(Manage_cmd(B));
 			request->rq_ind.rq_manager.rq_objtype = (int) ns(Manage_objType(B));
-			COPYSTR_B(request->rq_ind.rq_manager.rq_objname, ns(Manager_objName(B)));
-			rc = wire_decode_svrattrl(ns(Manager_attrs(B)), &(request->rq_ind.rq_manager.rq_attr));
+			COPYSTR_B(request->rq_ind.rq_manager.rq_objname, ns(Manage_objName(B)));
+			if (ns(Manage_attrs_is_present(B)))
+				rc = wire_decode_svrattrl(ns(Manage_attrs(B)), &(request->rq_ind.rq_manager.rq_attr));
+			else
+				CLEAR_HEAD(request->rq_ind.rq_manager.rq_attr);
 
 			break;
 
@@ -517,10 +523,11 @@ wire_request_read(int sfds, struct batch_request *request)
 
 			request->rq_ind.rq_defrpy.rq_cmd = (int) ns(SchedDefRep_cmd(B));
 			request->rq_ind.rq_defrpy.rq_err = (int) ns(SchedDefRep_err(B));
-			request->rq_ind.rq_defrpy.rq_txt = NULL;
 			COPYSTR_S(request->rq_ind.rq_defrpy.rq_id, ns(SchedDefRep_id(B)));
-			if (SchedDefRep_txt_is_present(B))
-				COPYSTR_S(request->rq_ind.rq_defrpy.rq_txt, ns(SchedDefResp_txt(B)));
+			if (SchedDefRep_text_is_present(B))
+				COPYSTR_S(request->rq_ind.rq_defrpy.rq_txt, ns(SchedDefResp_text(B)));
+			else
+				request->rq_ind.rq_defrpy.rq_txt = NULL;
 
 			break;
 
@@ -529,7 +536,7 @@ wire_request_read(int sfds, struct batch_request *request)
 			ns(Select_table_t) B = (ns(Select_table_t)) ns(Req_body(req));
 
 			rc = wire_decode_svrattrl(ns(Select_selAttrs(B)), &(request->rq_ind.rq_select.rq_selattr));
-			if (rc == PBSE_NONE)
+			if (rc == PBSE_NONE && ns(Select_rtnAttrs_is_present(B)))
 				rc = wire_decode_svrattrl(ns(Select_rtnAttrs(B)), &(request->rq_ind.rq_select.rq_rtnattr));
 
 			break;
@@ -572,7 +579,6 @@ wire_request_read(int sfds, struct batch_request *request)
 			COPYSTR_B(request->rq_ind.rq_register.rq_child, ns(Register_child(B)));
 			COPYSTR_B(request->rq_ind.rq_register.rq_parent, ns(Register_parent(B)));
 			COPYSTR_B(request->rq_ind.rq_register.rq_owner, ns(Register_owner(B)));
-			COPYSTR_B(request->rq_ind.rq_register.rq_svr, ns(Register_server(B)));
 
 			break;
 
@@ -587,8 +593,7 @@ wire_request_read(int sfds, struct batch_request *request)
 				return PBSE_SYSTEM;
 
 			for (i = 0; i < len; i++) {
-				// FIXME: below
-				ns(PreemptJob_table_t) p = (ns(PreemptJob_table_t)) flatbuffers_string_vec_at(preempts, i);
+				ns(PreemptJob_table_t) p = ns(PreemptJob_vec_at(preempts, i));
 
 				COPYSTR_B(request->rq_ind.rq_preempt.ppj_list[i].job_id, ns(PreemptJob_jid(p)));
 			}
@@ -785,8 +790,7 @@ wire_reply_read(int sock, struct batch_reply *reply, int prot, int forsvr)
 		case BATCH_REPLY_CHOICE_Locate:
 			ns(TextResp_table_t) B = (ns(TextResp_table_t)) ns(Resp_body(resp));
 
-			strncpy(reply->brp_un.brp_locate, (char *) ns(TextResp_txt(B)), PBS_MAXDEST);
-			reply->brp_un.brp_locate[PBS_MAXDEST + 1] = '\0';
+			COPYSTR_B(reply->brp_un.brp_locate, ns(TextResp_txt(B)));
 
 			break;
 

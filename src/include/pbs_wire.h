@@ -50,7 +50,6 @@ extern "C" {
 #include "pbs_ifl_verifier.h"
 
 /* Convenient namespace macro to manage long namespace prefix for flatbuffer */
-#undef ns
 #define ns(x) FLATBUFFERS_WRAP_NAMESPACE(PBS_ifl, x)
 
 typedef struct pbs_tcp_auth_data {
