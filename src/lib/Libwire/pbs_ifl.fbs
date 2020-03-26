@@ -192,6 +192,14 @@ table Req {
 	extend: string;
 }
 
+table TextResp {
+	txt: string;
+}
+
+table SelectResp {
+	ids: [string];
+}
+
 table StatRespStat {
 	type: short;
 	name: string;
@@ -202,19 +210,15 @@ table StatResp {
 	stats: [StatRespStat];
 }
 
-table SelectResp {
-	ids: [string];
+table RescQueryRespInfo {
+	avail: short;
+	alloc: short;
+	resvd: short;
+	down: short;
 }
 
 table RescQueryResp {
-	avail: [short];
-	alloc: [short];
-	resvd: [short];
-	down: [short];
-}
-
-table TextResp {
-	txt: string;
+	infos: [RescQueryRespInfo];
 }
 
 union RespBody {

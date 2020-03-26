@@ -331,39 +331,12 @@ extern struct batch_status *PBSD_status(int, int, char *, struct attrl *, char *
 extern preempt_job_info *PBSD_preempt_jobs(int, char **);
 extern struct batch_status *PBSD_status_get(int);
 extern char * PBSD_queuejob(int, char *, char *, struct attropl *, char *, int, char **);
-/* PBS Batch Request Decode/Encode routines */
-extern int encode_DIS_JobCred(int, int, char *, int);
-extern int encode_DIS_UserCred(int, char *, int, char *, int);
-extern int encode_DIS_UserMigrate(int, char *);
-extern int encode_DIS_JobFile(int, int, char *, int, char *, int);
-extern int encode_DIS_JobId(int, char *);
-extern int encode_DIS_Manage(int, int, int, char *, struct attropl *);
-extern int encode_DIS_MessageJob(int, char *, int, char *);
-extern int encode_DIS_MoveJob(int, char *, char *);
-extern int encode_DIS_ModifyResv(int, char *, struct attropl *);
-extern int encode_DIS_RelnodesJob(int, char *, char *);
-extern int encode_DIS_PySpawn(int, char *, char **, char **);
-extern int encode_DIS_QueueJob(int, char *, char *, struct attropl *);
-extern int encode_DIS_SubmitResv(int, char *, struct attropl *);
-extern int encode_DIS_JobCredential(int, int, char *, int);
-extern int encode_DIS_ReqExtend(int, char *);
-extern int encode_DIS_ReqHdr(int, int, char *);
-extern int encode_DIS_Rescq(int, char **, int);
-extern int encode_DIS_Run(int, char *, char *, unsigned long);
-extern int encode_DIS_ShutDown(int, int);
-extern int encode_DIS_SignalJob(int, char *, char *);
-extern int encode_DIS_Status(int, char *, struct attrl *);
-extern int encode_DIS_attrl(int, struct attrl *);
-extern int encode_DIS_attropl(int, struct attropl *);
-extern int encode_DIS_CopyHookFile(int, int, char *, int, char *);
-extern int encode_DIS_DelHookFile(int, char *);
-extern int encode_DIS_PreemptJobs(int, char **);
-extern char *PBSD_submit_resv(int, char *, struct attropl *, char *);
-extern int DIS_reply_read(int, struct batch_reply *, int);
-extern void pbs_authors(void);
-extern int tcp_pre_process(conn_t *);
 extern char *PBSD_modify_resv(int, char *, struct attropl *, char *);
 extern int PBSD_cred(int, char *, char *, int, char *, long, int, char **);
+extern char *PBSD_submit_resv(int, char *, struct attropl *, char *);
+
+extern void pbs_authors(void);
+extern int tcp_pre_process(conn_t *);
 
 int tcp_send_auth_req(int, unsigned int, char *);
 

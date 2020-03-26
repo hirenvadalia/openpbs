@@ -179,6 +179,16 @@ typedef flatbuffers_ref_t PBS_ifl_Req_ref_t;
 static PBS_ifl_Req_ref_t PBS_ifl_Req_clone(flatbuffers_builder_t *B, PBS_ifl_Req_table_t t);
 __flatbuffers_build_table(flatbuffers_, PBS_ifl_Req, 4)
 
+static const flatbuffers_voffset_t __PBS_ifl_TextResp_required[] = { 0 };
+typedef flatbuffers_ref_t PBS_ifl_TextResp_ref_t;
+static PBS_ifl_TextResp_ref_t PBS_ifl_TextResp_clone(flatbuffers_builder_t *B, PBS_ifl_TextResp_table_t t);
+__flatbuffers_build_table(flatbuffers_, PBS_ifl_TextResp, 1)
+
+static const flatbuffers_voffset_t __PBS_ifl_SelectResp_required[] = { 0 };
+typedef flatbuffers_ref_t PBS_ifl_SelectResp_ref_t;
+static PBS_ifl_SelectResp_ref_t PBS_ifl_SelectResp_clone(flatbuffers_builder_t *B, PBS_ifl_SelectResp_table_t t);
+__flatbuffers_build_table(flatbuffers_, PBS_ifl_SelectResp, 1)
+
 static const flatbuffers_voffset_t __PBS_ifl_StatRespStat_required[] = { 0 };
 typedef flatbuffers_ref_t PBS_ifl_StatRespStat_ref_t;
 static PBS_ifl_StatRespStat_ref_t PBS_ifl_StatRespStat_clone(flatbuffers_builder_t *B, PBS_ifl_StatRespStat_table_t t);
@@ -189,20 +199,15 @@ typedef flatbuffers_ref_t PBS_ifl_StatResp_ref_t;
 static PBS_ifl_StatResp_ref_t PBS_ifl_StatResp_clone(flatbuffers_builder_t *B, PBS_ifl_StatResp_table_t t);
 __flatbuffers_build_table(flatbuffers_, PBS_ifl_StatResp, 1)
 
-static const flatbuffers_voffset_t __PBS_ifl_SelectResp_required[] = { 0 };
-typedef flatbuffers_ref_t PBS_ifl_SelectResp_ref_t;
-static PBS_ifl_SelectResp_ref_t PBS_ifl_SelectResp_clone(flatbuffers_builder_t *B, PBS_ifl_SelectResp_table_t t);
-__flatbuffers_build_table(flatbuffers_, PBS_ifl_SelectResp, 1)
+static const flatbuffers_voffset_t __PBS_ifl_RescQueryRespInfo_required[] = { 0 };
+typedef flatbuffers_ref_t PBS_ifl_RescQueryRespInfo_ref_t;
+static PBS_ifl_RescQueryRespInfo_ref_t PBS_ifl_RescQueryRespInfo_clone(flatbuffers_builder_t *B, PBS_ifl_RescQueryRespInfo_table_t t);
+__flatbuffers_build_table(flatbuffers_, PBS_ifl_RescQueryRespInfo, 4)
 
 static const flatbuffers_voffset_t __PBS_ifl_RescQueryResp_required[] = { 0 };
 typedef flatbuffers_ref_t PBS_ifl_RescQueryResp_ref_t;
 static PBS_ifl_RescQueryResp_ref_t PBS_ifl_RescQueryResp_clone(flatbuffers_builder_t *B, PBS_ifl_RescQueryResp_table_t t);
-__flatbuffers_build_table(flatbuffers_, PBS_ifl_RescQueryResp, 4)
-
-static const flatbuffers_voffset_t __PBS_ifl_TextResp_required[] = { 0 };
-typedef flatbuffers_ref_t PBS_ifl_TextResp_ref_t;
-static PBS_ifl_TextResp_ref_t PBS_ifl_TextResp_clone(flatbuffers_builder_t *B, PBS_ifl_TextResp_table_t t);
-__flatbuffers_build_table(flatbuffers_, PBS_ifl_TextResp, 1)
+__flatbuffers_build_table(flatbuffers_, PBS_ifl_RescQueryResp, 1)
 
 static const flatbuffers_voffset_t __PBS_ifl_Resp_required[] = { 0 };
 typedef flatbuffers_ref_t PBS_ifl_Resp_ref_t;
@@ -412,6 +417,16 @@ __flatbuffers_build_table_prolog(flatbuffers_, PBS_ifl_Auth, PBS_ifl_Auth_file_i
 static inline PBS_ifl_Req_ref_t PBS_ifl_Req_create(flatbuffers_builder_t *B __PBS_ifl_Req_formal_args);
 __flatbuffers_build_table_prolog(flatbuffers_, PBS_ifl_Req, PBS_ifl_Req_file_identifier, PBS_ifl_Req_type_identifier)
 
+#define __PBS_ifl_TextResp_formal_args , flatbuffers_string_ref_t v0
+#define __PBS_ifl_TextResp_call_args , v0
+static inline PBS_ifl_TextResp_ref_t PBS_ifl_TextResp_create(flatbuffers_builder_t *B __PBS_ifl_TextResp_formal_args);
+__flatbuffers_build_table_prolog(flatbuffers_, PBS_ifl_TextResp, PBS_ifl_TextResp_file_identifier, PBS_ifl_TextResp_type_identifier)
+
+#define __PBS_ifl_SelectResp_formal_args , flatbuffers_string_vec_ref_t v0
+#define __PBS_ifl_SelectResp_call_args , v0
+static inline PBS_ifl_SelectResp_ref_t PBS_ifl_SelectResp_create(flatbuffers_builder_t *B __PBS_ifl_SelectResp_formal_args);
+__flatbuffers_build_table_prolog(flatbuffers_, PBS_ifl_SelectResp, PBS_ifl_SelectResp_file_identifier, PBS_ifl_SelectResp_type_identifier)
+
 #define __PBS_ifl_StatRespStat_formal_args , int16_t v0, flatbuffers_string_ref_t v1, PBS_ifl_Attribute_vec_ref_t v2
 #define __PBS_ifl_StatRespStat_call_args , v0, v1, v2
 static inline PBS_ifl_StatRespStat_ref_t PBS_ifl_StatRespStat_create(flatbuffers_builder_t *B __PBS_ifl_StatRespStat_formal_args);
@@ -422,20 +437,15 @@ __flatbuffers_build_table_prolog(flatbuffers_, PBS_ifl_StatRespStat, PBS_ifl_Sta
 static inline PBS_ifl_StatResp_ref_t PBS_ifl_StatResp_create(flatbuffers_builder_t *B __PBS_ifl_StatResp_formal_args);
 __flatbuffers_build_table_prolog(flatbuffers_, PBS_ifl_StatResp, PBS_ifl_StatResp_file_identifier, PBS_ifl_StatResp_type_identifier)
 
-#define __PBS_ifl_SelectResp_formal_args , flatbuffers_string_vec_ref_t v0
-#define __PBS_ifl_SelectResp_call_args , v0
-static inline PBS_ifl_SelectResp_ref_t PBS_ifl_SelectResp_create(flatbuffers_builder_t *B __PBS_ifl_SelectResp_formal_args);
-__flatbuffers_build_table_prolog(flatbuffers_, PBS_ifl_SelectResp, PBS_ifl_SelectResp_file_identifier, PBS_ifl_SelectResp_type_identifier)
+#define __PBS_ifl_RescQueryRespInfo_formal_args , int16_t v0, int16_t v1, int16_t v2, int16_t v3
+#define __PBS_ifl_RescQueryRespInfo_call_args , v0, v1, v2, v3
+static inline PBS_ifl_RescQueryRespInfo_ref_t PBS_ifl_RescQueryRespInfo_create(flatbuffers_builder_t *B __PBS_ifl_RescQueryRespInfo_formal_args);
+__flatbuffers_build_table_prolog(flatbuffers_, PBS_ifl_RescQueryRespInfo, PBS_ifl_RescQueryRespInfo_file_identifier, PBS_ifl_RescQueryRespInfo_type_identifier)
 
-#define __PBS_ifl_RescQueryResp_formal_args , flatbuffers_int16_vec_ref_t v0, flatbuffers_int16_vec_ref_t v1, flatbuffers_int16_vec_ref_t v2, flatbuffers_int16_vec_ref_t v3
-#define __PBS_ifl_RescQueryResp_call_args , v0, v1, v2, v3
+#define __PBS_ifl_RescQueryResp_formal_args , PBS_ifl_RescQueryRespInfo_vec_ref_t v0
+#define __PBS_ifl_RescQueryResp_call_args , v0
 static inline PBS_ifl_RescQueryResp_ref_t PBS_ifl_RescQueryResp_create(flatbuffers_builder_t *B __PBS_ifl_RescQueryResp_formal_args);
 __flatbuffers_build_table_prolog(flatbuffers_, PBS_ifl_RescQueryResp, PBS_ifl_RescQueryResp_file_identifier, PBS_ifl_RescQueryResp_type_identifier)
-
-#define __PBS_ifl_TextResp_formal_args , flatbuffers_string_ref_t v0
-#define __PBS_ifl_TextResp_call_args , v0
-static inline PBS_ifl_TextResp_ref_t PBS_ifl_TextResp_create(flatbuffers_builder_t *B __PBS_ifl_TextResp_formal_args);
-__flatbuffers_build_table_prolog(flatbuffers_, PBS_ifl_TextResp, PBS_ifl_TextResp_file_identifier, PBS_ifl_TextResp_type_identifier)
 
 #define __PBS_ifl_Resp_formal_args , int16_t v0, int16_t v1, int16_t v2, PBS_ifl_RespBody_union_ref_t v4
 #define __PBS_ifl_Resp_call_args , v0, v1, v2, v4
@@ -1452,6 +1462,48 @@ static PBS_ifl_Req_ref_t PBS_ifl_Req_clone(flatbuffers_builder_t *B, PBS_ifl_Req
     __flatbuffers_memoize_end(B, t, PBS_ifl_Req_end(B));
 }
 
+__flatbuffers_build_string_field(0, flatbuffers_, PBS_ifl_TextResp_txt, PBS_ifl_TextResp)
+
+static inline PBS_ifl_TextResp_ref_t PBS_ifl_TextResp_create(flatbuffers_builder_t *B __PBS_ifl_TextResp_formal_args)
+{
+    if (PBS_ifl_TextResp_start(B)
+        || PBS_ifl_TextResp_txt_add(B, v0)) {
+        return 0;
+    }
+    return PBS_ifl_TextResp_end(B);
+}
+
+static PBS_ifl_TextResp_ref_t PBS_ifl_TextResp_clone(flatbuffers_builder_t *B, PBS_ifl_TextResp_table_t t)
+{
+    __flatbuffers_memoize_begin(B, t);
+    if (PBS_ifl_TextResp_start(B)
+        || PBS_ifl_TextResp_txt_pick(B, t)) {
+        return 0;
+    }
+    __flatbuffers_memoize_end(B, t, PBS_ifl_TextResp_end(B));
+}
+
+__flatbuffers_build_string_vector_field(0, flatbuffers_, PBS_ifl_SelectResp_ids, PBS_ifl_SelectResp)
+
+static inline PBS_ifl_SelectResp_ref_t PBS_ifl_SelectResp_create(flatbuffers_builder_t *B __PBS_ifl_SelectResp_formal_args)
+{
+    if (PBS_ifl_SelectResp_start(B)
+        || PBS_ifl_SelectResp_ids_add(B, v0)) {
+        return 0;
+    }
+    return PBS_ifl_SelectResp_end(B);
+}
+
+static PBS_ifl_SelectResp_ref_t PBS_ifl_SelectResp_clone(flatbuffers_builder_t *B, PBS_ifl_SelectResp_table_t t)
+{
+    __flatbuffers_memoize_begin(B, t);
+    if (PBS_ifl_SelectResp_start(B)
+        || PBS_ifl_SelectResp_ids_pick(B, t)) {
+        return 0;
+    }
+    __flatbuffers_memoize_end(B, t, PBS_ifl_SelectResp_end(B));
+}
+
 __flatbuffers_build_scalar_field(0, flatbuffers_, PBS_ifl_StatRespStat_type, flatbuffers_int16, int16_t, 2, 2, INT16_C(0), PBS_ifl_StatRespStat)
 __flatbuffers_build_string_field(1, flatbuffers_, PBS_ifl_StatRespStat_name, PBS_ifl_StatRespStat)
 __flatbuffers_build_table_vector_field(2, flatbuffers_, PBS_ifl_StatRespStat_attrs, PBS_ifl_Attribute, PBS_ifl_StatRespStat)
@@ -1500,39 +1552,42 @@ static PBS_ifl_StatResp_ref_t PBS_ifl_StatResp_clone(flatbuffers_builder_t *B, P
     __flatbuffers_memoize_end(B, t, PBS_ifl_StatResp_end(B));
 }
 
-__flatbuffers_build_string_vector_field(0, flatbuffers_, PBS_ifl_SelectResp_ids, PBS_ifl_SelectResp)
+__flatbuffers_build_scalar_field(0, flatbuffers_, PBS_ifl_RescQueryRespInfo_avail, flatbuffers_int16, int16_t, 2, 2, INT16_C(0), PBS_ifl_RescQueryRespInfo)
+__flatbuffers_build_scalar_field(1, flatbuffers_, PBS_ifl_RescQueryRespInfo_alloc, flatbuffers_int16, int16_t, 2, 2, INT16_C(0), PBS_ifl_RescQueryRespInfo)
+__flatbuffers_build_scalar_field(2, flatbuffers_, PBS_ifl_RescQueryRespInfo_resvd, flatbuffers_int16, int16_t, 2, 2, INT16_C(0), PBS_ifl_RescQueryRespInfo)
+__flatbuffers_build_scalar_field(3, flatbuffers_, PBS_ifl_RescQueryRespInfo_down, flatbuffers_int16, int16_t, 2, 2, INT16_C(0), PBS_ifl_RescQueryRespInfo)
 
-static inline PBS_ifl_SelectResp_ref_t PBS_ifl_SelectResp_create(flatbuffers_builder_t *B __PBS_ifl_SelectResp_formal_args)
+static inline PBS_ifl_RescQueryRespInfo_ref_t PBS_ifl_RescQueryRespInfo_create(flatbuffers_builder_t *B __PBS_ifl_RescQueryRespInfo_formal_args)
 {
-    if (PBS_ifl_SelectResp_start(B)
-        || PBS_ifl_SelectResp_ids_add(B, v0)) {
+    if (PBS_ifl_RescQueryRespInfo_start(B)
+        || PBS_ifl_RescQueryRespInfo_avail_add(B, v0)
+        || PBS_ifl_RescQueryRespInfo_alloc_add(B, v1)
+        || PBS_ifl_RescQueryRespInfo_resvd_add(B, v2)
+        || PBS_ifl_RescQueryRespInfo_down_add(B, v3)) {
         return 0;
     }
-    return PBS_ifl_SelectResp_end(B);
+    return PBS_ifl_RescQueryRespInfo_end(B);
 }
 
-static PBS_ifl_SelectResp_ref_t PBS_ifl_SelectResp_clone(flatbuffers_builder_t *B, PBS_ifl_SelectResp_table_t t)
+static PBS_ifl_RescQueryRespInfo_ref_t PBS_ifl_RescQueryRespInfo_clone(flatbuffers_builder_t *B, PBS_ifl_RescQueryRespInfo_table_t t)
 {
     __flatbuffers_memoize_begin(B, t);
-    if (PBS_ifl_SelectResp_start(B)
-        || PBS_ifl_SelectResp_ids_pick(B, t)) {
+    if (PBS_ifl_RescQueryRespInfo_start(B)
+        || PBS_ifl_RescQueryRespInfo_avail_pick(B, t)
+        || PBS_ifl_RescQueryRespInfo_alloc_pick(B, t)
+        || PBS_ifl_RescQueryRespInfo_resvd_pick(B, t)
+        || PBS_ifl_RescQueryRespInfo_down_pick(B, t)) {
         return 0;
     }
-    __flatbuffers_memoize_end(B, t, PBS_ifl_SelectResp_end(B));
+    __flatbuffers_memoize_end(B, t, PBS_ifl_RescQueryRespInfo_end(B));
 }
 
-__flatbuffers_build_vector_field(0, flatbuffers_, PBS_ifl_RescQueryResp_avail, flatbuffers_int16, int16_t, PBS_ifl_RescQueryResp)
-__flatbuffers_build_vector_field(1, flatbuffers_, PBS_ifl_RescQueryResp_alloc, flatbuffers_int16, int16_t, PBS_ifl_RescQueryResp)
-__flatbuffers_build_vector_field(2, flatbuffers_, PBS_ifl_RescQueryResp_resvd, flatbuffers_int16, int16_t, PBS_ifl_RescQueryResp)
-__flatbuffers_build_vector_field(3, flatbuffers_, PBS_ifl_RescQueryResp_down, flatbuffers_int16, int16_t, PBS_ifl_RescQueryResp)
+__flatbuffers_build_table_vector_field(0, flatbuffers_, PBS_ifl_RescQueryResp_infos, PBS_ifl_RescQueryRespInfo, PBS_ifl_RescQueryResp)
 
 static inline PBS_ifl_RescQueryResp_ref_t PBS_ifl_RescQueryResp_create(flatbuffers_builder_t *B __PBS_ifl_RescQueryResp_formal_args)
 {
     if (PBS_ifl_RescQueryResp_start(B)
-        || PBS_ifl_RescQueryResp_avail_add(B, v0)
-        || PBS_ifl_RescQueryResp_alloc_add(B, v1)
-        || PBS_ifl_RescQueryResp_resvd_add(B, v2)
-        || PBS_ifl_RescQueryResp_down_add(B, v3)) {
+        || PBS_ifl_RescQueryResp_infos_add(B, v0)) {
         return 0;
     }
     return PBS_ifl_RescQueryResp_end(B);
@@ -1542,34 +1597,10 @@ static PBS_ifl_RescQueryResp_ref_t PBS_ifl_RescQueryResp_clone(flatbuffers_build
 {
     __flatbuffers_memoize_begin(B, t);
     if (PBS_ifl_RescQueryResp_start(B)
-        || PBS_ifl_RescQueryResp_avail_pick(B, t)
-        || PBS_ifl_RescQueryResp_alloc_pick(B, t)
-        || PBS_ifl_RescQueryResp_resvd_pick(B, t)
-        || PBS_ifl_RescQueryResp_down_pick(B, t)) {
+        || PBS_ifl_RescQueryResp_infos_pick(B, t)) {
         return 0;
     }
     __flatbuffers_memoize_end(B, t, PBS_ifl_RescQueryResp_end(B));
-}
-
-__flatbuffers_build_string_field(0, flatbuffers_, PBS_ifl_TextResp_txt, PBS_ifl_TextResp)
-
-static inline PBS_ifl_TextResp_ref_t PBS_ifl_TextResp_create(flatbuffers_builder_t *B __PBS_ifl_TextResp_formal_args)
-{
-    if (PBS_ifl_TextResp_start(B)
-        || PBS_ifl_TextResp_txt_add(B, v0)) {
-        return 0;
-    }
-    return PBS_ifl_TextResp_end(B);
-}
-
-static PBS_ifl_TextResp_ref_t PBS_ifl_TextResp_clone(flatbuffers_builder_t *B, PBS_ifl_TextResp_table_t t)
-{
-    __flatbuffers_memoize_begin(B, t);
-    if (PBS_ifl_TextResp_start(B)
-        || PBS_ifl_TextResp_txt_pick(B, t)) {
-        return 0;
-    }
-    __flatbuffers_memoize_end(B, t, PBS_ifl_TextResp_end(B));
 }
 
 __flatbuffers_build_scalar_field(0, flatbuffers_, PBS_ifl_Resp_code, flatbuffers_int16, int16_t, 2, 2, INT16_C(0), PBS_ifl_Resp)

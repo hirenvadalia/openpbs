@@ -135,6 +135,14 @@ typedef const struct PBS_ifl_Req_table *PBS_ifl_Req_table_t;
 typedef struct PBS_ifl_Req_table *PBS_ifl_Req_mutable_table_t;
 typedef const flatbuffers_uoffset_t *PBS_ifl_Req_vec_t;
 typedef flatbuffers_uoffset_t *PBS_ifl_Req_mutable_vec_t;
+typedef const struct PBS_ifl_TextResp_table *PBS_ifl_TextResp_table_t;
+typedef struct PBS_ifl_TextResp_table *PBS_ifl_TextResp_mutable_table_t;
+typedef const flatbuffers_uoffset_t *PBS_ifl_TextResp_vec_t;
+typedef flatbuffers_uoffset_t *PBS_ifl_TextResp_mutable_vec_t;
+typedef const struct PBS_ifl_SelectResp_table *PBS_ifl_SelectResp_table_t;
+typedef struct PBS_ifl_SelectResp_table *PBS_ifl_SelectResp_mutable_table_t;
+typedef const flatbuffers_uoffset_t *PBS_ifl_SelectResp_vec_t;
+typedef flatbuffers_uoffset_t *PBS_ifl_SelectResp_mutable_vec_t;
 typedef const struct PBS_ifl_StatRespStat_table *PBS_ifl_StatRespStat_table_t;
 typedef struct PBS_ifl_StatRespStat_table *PBS_ifl_StatRespStat_mutable_table_t;
 typedef const flatbuffers_uoffset_t *PBS_ifl_StatRespStat_vec_t;
@@ -143,18 +151,14 @@ typedef const struct PBS_ifl_StatResp_table *PBS_ifl_StatResp_table_t;
 typedef struct PBS_ifl_StatResp_table *PBS_ifl_StatResp_mutable_table_t;
 typedef const flatbuffers_uoffset_t *PBS_ifl_StatResp_vec_t;
 typedef flatbuffers_uoffset_t *PBS_ifl_StatResp_mutable_vec_t;
-typedef const struct PBS_ifl_SelectResp_table *PBS_ifl_SelectResp_table_t;
-typedef struct PBS_ifl_SelectResp_table *PBS_ifl_SelectResp_mutable_table_t;
-typedef const flatbuffers_uoffset_t *PBS_ifl_SelectResp_vec_t;
-typedef flatbuffers_uoffset_t *PBS_ifl_SelectResp_mutable_vec_t;
+typedef const struct PBS_ifl_RescQueryRespInfo_table *PBS_ifl_RescQueryRespInfo_table_t;
+typedef struct PBS_ifl_RescQueryRespInfo_table *PBS_ifl_RescQueryRespInfo_mutable_table_t;
+typedef const flatbuffers_uoffset_t *PBS_ifl_RescQueryRespInfo_vec_t;
+typedef flatbuffers_uoffset_t *PBS_ifl_RescQueryRespInfo_mutable_vec_t;
 typedef const struct PBS_ifl_RescQueryResp_table *PBS_ifl_RescQueryResp_table_t;
 typedef struct PBS_ifl_RescQueryResp_table *PBS_ifl_RescQueryResp_mutable_table_t;
 typedef const flatbuffers_uoffset_t *PBS_ifl_RescQueryResp_vec_t;
 typedef flatbuffers_uoffset_t *PBS_ifl_RescQueryResp_mutable_vec_t;
-typedef const struct PBS_ifl_TextResp_table *PBS_ifl_TextResp_table_t;
-typedef struct PBS_ifl_TextResp_table *PBS_ifl_TextResp_mutable_table_t;
-typedef const flatbuffers_uoffset_t *PBS_ifl_TextResp_vec_t;
-typedef flatbuffers_uoffset_t *PBS_ifl_TextResp_mutable_vec_t;
 typedef const struct PBS_ifl_Resp_table *PBS_ifl_Resp_table_t;
 typedef struct PBS_ifl_Resp_table *PBS_ifl_Resp_mutable_table_t;
 typedef const flatbuffers_uoffset_t *PBS_ifl_Resp_vec_t;
@@ -460,6 +464,24 @@ typedef flatbuffers_uoffset_t *PBS_ifl_TmReq_mutable_vec_t;
 #endif
 #define PBS_ifl_Req_type_hash ((flatbuffers_thash_t)0xf7279861)
 #define PBS_ifl_Req_type_identifier "\x61\x98\x27\xf7"
+#ifndef PBS_ifl_TextResp_file_identifier
+#define PBS_ifl_TextResp_file_identifier flatbuffers_identifier
+#endif
+/* deprecated, use PBS_ifl_TextResp_file_identifier */
+#ifndef PBS_ifl_TextResp_identifier
+#define PBS_ifl_TextResp_identifier flatbuffers_identifier
+#endif
+#define PBS_ifl_TextResp_type_hash ((flatbuffers_thash_t)0xc73b395e)
+#define PBS_ifl_TextResp_type_identifier "\x5e\x39\x3b\xc7"
+#ifndef PBS_ifl_SelectResp_file_identifier
+#define PBS_ifl_SelectResp_file_identifier flatbuffers_identifier
+#endif
+/* deprecated, use PBS_ifl_SelectResp_file_identifier */
+#ifndef PBS_ifl_SelectResp_identifier
+#define PBS_ifl_SelectResp_identifier flatbuffers_identifier
+#endif
+#define PBS_ifl_SelectResp_type_hash ((flatbuffers_thash_t)0xbe916bf1)
+#define PBS_ifl_SelectResp_type_identifier "\xf1\x6b\x91\xbe"
 #ifndef PBS_ifl_StatRespStat_file_identifier
 #define PBS_ifl_StatRespStat_file_identifier flatbuffers_identifier
 #endif
@@ -478,15 +500,15 @@ typedef flatbuffers_uoffset_t *PBS_ifl_TmReq_mutable_vec_t;
 #endif
 #define PBS_ifl_StatResp_type_hash ((flatbuffers_thash_t)0x6217a80f)
 #define PBS_ifl_StatResp_type_identifier "\x0f\xa8\x17\x62"
-#ifndef PBS_ifl_SelectResp_file_identifier
-#define PBS_ifl_SelectResp_file_identifier flatbuffers_identifier
+#ifndef PBS_ifl_RescQueryRespInfo_file_identifier
+#define PBS_ifl_RescQueryRespInfo_file_identifier flatbuffers_identifier
 #endif
-/* deprecated, use PBS_ifl_SelectResp_file_identifier */
-#ifndef PBS_ifl_SelectResp_identifier
-#define PBS_ifl_SelectResp_identifier flatbuffers_identifier
+/* deprecated, use PBS_ifl_RescQueryRespInfo_file_identifier */
+#ifndef PBS_ifl_RescQueryRespInfo_identifier
+#define PBS_ifl_RescQueryRespInfo_identifier flatbuffers_identifier
 #endif
-#define PBS_ifl_SelectResp_type_hash ((flatbuffers_thash_t)0xbe916bf1)
-#define PBS_ifl_SelectResp_type_identifier "\xf1\x6b\x91\xbe"
+#define PBS_ifl_RescQueryRespInfo_type_hash ((flatbuffers_thash_t)0x7a3dd6fe)
+#define PBS_ifl_RescQueryRespInfo_type_identifier "\xfe\xd6\x3d\x7a"
 #ifndef PBS_ifl_RescQueryResp_file_identifier
 #define PBS_ifl_RescQueryResp_file_identifier flatbuffers_identifier
 #endif
@@ -496,15 +518,6 @@ typedef flatbuffers_uoffset_t *PBS_ifl_TmReq_mutable_vec_t;
 #endif
 #define PBS_ifl_RescQueryResp_type_hash ((flatbuffers_thash_t)0x7d54689e)
 #define PBS_ifl_RescQueryResp_type_identifier "\x9e\x68\x54\x7d"
-#ifndef PBS_ifl_TextResp_file_identifier
-#define PBS_ifl_TextResp_file_identifier flatbuffers_identifier
-#endif
-/* deprecated, use PBS_ifl_TextResp_file_identifier */
-#ifndef PBS_ifl_TextResp_identifier
-#define PBS_ifl_TextResp_identifier flatbuffers_identifier
-#endif
-#define PBS_ifl_TextResp_type_hash ((flatbuffers_thash_t)0xc73b395e)
-#define PBS_ifl_TextResp_type_identifier "\x5e\x39\x3b\xc7"
 #ifndef PBS_ifl_Resp_file_identifier
 #define PBS_ifl_Resp_file_identifier flatbuffers_identifier
 #endif
@@ -1133,6 +1146,26 @@ __flatbuffers_define_table_field(0, PBS_ifl_Req, hdr, PBS_ifl_Header_table_t, 0)
 __flatbuffers_define_union_field(flatbuffers_, 2, PBS_ifl_Req, body, PBS_ifl_ReqBody, 0)
 __flatbuffers_define_string_field(3, PBS_ifl_Req, extend, 0)
 
+struct PBS_ifl_TextResp_table { uint8_t unused__; };
+
+static inline size_t PBS_ifl_TextResp_vec_len(PBS_ifl_TextResp_vec_t vec)
+__flatbuffers_vec_len(vec)
+static inline PBS_ifl_TextResp_table_t PBS_ifl_TextResp_vec_at(PBS_ifl_TextResp_vec_t vec, size_t i)
+__flatbuffers_offset_vec_at(PBS_ifl_TextResp_table_t, vec, i, 0)
+__flatbuffers_table_as_root(PBS_ifl_TextResp)
+
+__flatbuffers_define_string_field(0, PBS_ifl_TextResp, txt, 0)
+
+struct PBS_ifl_SelectResp_table { uint8_t unused__; };
+
+static inline size_t PBS_ifl_SelectResp_vec_len(PBS_ifl_SelectResp_vec_t vec)
+__flatbuffers_vec_len(vec)
+static inline PBS_ifl_SelectResp_table_t PBS_ifl_SelectResp_vec_at(PBS_ifl_SelectResp_vec_t vec, size_t i)
+__flatbuffers_offset_vec_at(PBS_ifl_SelectResp_table_t, vec, i, 0)
+__flatbuffers_table_as_root(PBS_ifl_SelectResp)
+
+__flatbuffers_define_vector_field(0, PBS_ifl_SelectResp, ids, flatbuffers_string_vec_t, 0)
+
 struct PBS_ifl_StatRespStat_table { uint8_t unused__; };
 
 static inline size_t PBS_ifl_StatRespStat_vec_len(PBS_ifl_StatRespStat_vec_t vec)
@@ -1155,15 +1188,18 @@ __flatbuffers_table_as_root(PBS_ifl_StatResp)
 
 __flatbuffers_define_vector_field(0, PBS_ifl_StatResp, stats, PBS_ifl_StatRespStat_vec_t, 0)
 
-struct PBS_ifl_SelectResp_table { uint8_t unused__; };
+struct PBS_ifl_RescQueryRespInfo_table { uint8_t unused__; };
 
-static inline size_t PBS_ifl_SelectResp_vec_len(PBS_ifl_SelectResp_vec_t vec)
+static inline size_t PBS_ifl_RescQueryRespInfo_vec_len(PBS_ifl_RescQueryRespInfo_vec_t vec)
 __flatbuffers_vec_len(vec)
-static inline PBS_ifl_SelectResp_table_t PBS_ifl_SelectResp_vec_at(PBS_ifl_SelectResp_vec_t vec, size_t i)
-__flatbuffers_offset_vec_at(PBS_ifl_SelectResp_table_t, vec, i, 0)
-__flatbuffers_table_as_root(PBS_ifl_SelectResp)
+static inline PBS_ifl_RescQueryRespInfo_table_t PBS_ifl_RescQueryRespInfo_vec_at(PBS_ifl_RescQueryRespInfo_vec_t vec, size_t i)
+__flatbuffers_offset_vec_at(PBS_ifl_RescQueryRespInfo_table_t, vec, i, 0)
+__flatbuffers_table_as_root(PBS_ifl_RescQueryRespInfo)
 
-__flatbuffers_define_vector_field(0, PBS_ifl_SelectResp, ids, flatbuffers_string_vec_t, 0)
+__flatbuffers_define_scalar_field(0, PBS_ifl_RescQueryRespInfo, avail, flatbuffers_int16, int16_t, INT16_C(0))
+__flatbuffers_define_scalar_field(1, PBS_ifl_RescQueryRespInfo, alloc, flatbuffers_int16, int16_t, INT16_C(0))
+__flatbuffers_define_scalar_field(2, PBS_ifl_RescQueryRespInfo, resvd, flatbuffers_int16, int16_t, INT16_C(0))
+__flatbuffers_define_scalar_field(3, PBS_ifl_RescQueryRespInfo, down, flatbuffers_int16, int16_t, INT16_C(0))
 
 struct PBS_ifl_RescQueryResp_table { uint8_t unused__; };
 
@@ -1173,20 +1209,7 @@ static inline PBS_ifl_RescQueryResp_table_t PBS_ifl_RescQueryResp_vec_at(PBS_ifl
 __flatbuffers_offset_vec_at(PBS_ifl_RescQueryResp_table_t, vec, i, 0)
 __flatbuffers_table_as_root(PBS_ifl_RescQueryResp)
 
-__flatbuffers_define_vector_field(0, PBS_ifl_RescQueryResp, avail, flatbuffers_int16_vec_t, 0)
-__flatbuffers_define_vector_field(1, PBS_ifl_RescQueryResp, alloc, flatbuffers_int16_vec_t, 0)
-__flatbuffers_define_vector_field(2, PBS_ifl_RescQueryResp, resvd, flatbuffers_int16_vec_t, 0)
-__flatbuffers_define_vector_field(3, PBS_ifl_RescQueryResp, down, flatbuffers_int16_vec_t, 0)
-
-struct PBS_ifl_TextResp_table { uint8_t unused__; };
-
-static inline size_t PBS_ifl_TextResp_vec_len(PBS_ifl_TextResp_vec_t vec)
-__flatbuffers_vec_len(vec)
-static inline PBS_ifl_TextResp_table_t PBS_ifl_TextResp_vec_at(PBS_ifl_TextResp_vec_t vec, size_t i)
-__flatbuffers_offset_vec_at(PBS_ifl_TextResp_table_t, vec, i, 0)
-__flatbuffers_table_as_root(PBS_ifl_TextResp)
-
-__flatbuffers_define_string_field(0, PBS_ifl_TextResp, txt, 0)
+__flatbuffers_define_vector_field(0, PBS_ifl_RescQueryResp, infos, PBS_ifl_RescQueryRespInfo_vec_t, 0)
 typedef uint8_t PBS_ifl_RespBody_union_type_t;
 __flatbuffers_define_integer_type(PBS_ifl_RespBody, PBS_ifl_RespBody_union_type_t, 8)
 __flatbuffers_define_union(flatbuffers_, PBS_ifl_RespBody)

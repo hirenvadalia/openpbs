@@ -463,7 +463,7 @@ wire_request_read(int sfds, struct batch_request *request)
 			if (request->rq_ind.rq_py_spawn.rq_argv == NULL)
 				return PBSE_SYSTEM;
 			for (i = 0; i < len; i++) {
-				COPYSTR_S(request->rq_ind.rq_py_spawn.rq_argv[i], flatbuffers_string_vec_at(strs, i))
+				COPYSTR_S(request->rq_ind.rq_py_spawn.rq_argv[i], flatbuffers_string_vec_at(strs, i));
 			}
 
 			strs = ns(Spawn_envp(B));
@@ -472,7 +472,7 @@ wire_request_read(int sfds, struct batch_request *request)
 			if (request->rq_ind.rq_py_spawn.rq_envp == NULL)
 				return PBSE_SYSTEM;
 			for (i = 0; i < len; i++) {
-				COPYSTR_S(request->rq_ind.rq_py_spawn.rq_envp[i], flatbuffers_string_vec_at(strs, i))
+				COPYSTR_S(request->rq_ind.rq_py_spawn.rq_envp[i], flatbuffers_string_vec_at(strs, i));
 			}
 
 			break;
@@ -796,17 +796,14 @@ wire_reply_read(int sock, struct batch_reply *reply, int prot, int forsvr)
 
 		case BATCH_REPLY_CHOICE_RescQuery:
 			ns(RescQueryResp_table_t) B = (ns (RescQueryResp_table_t)) ns(Resp_body(resp));
-			flatbuffers_int16_vec_t avails = ns(RescQueryResp_avail(B));
-			flatbuffers_int16_vec_t allocs = ns(RescQueryResp_alloc(B));
-			flatbuffers_int16_vec_t resvds = ns(RescQueryResp_resvd(B));
-			flatbuffers_int16_vec_t downs = ns(RescQueryResp_down(B));
+			ns(RescQueryRespInfo_vec_t) infos = ns(RescQueryResp_infos(B));
 
 			reply->brp_un.brp_rescq.brq_avail = NULL;
 			reply->brp_un.brp_rescq.brq_alloc = NULL;
 			reply->brp_un.brp_rescq.brq_resvd = NULL;
 			reply->brp_un.brp_rescq.brq_down  = NULL;
 
-			len = flatbuffers_int16_vec_len(avails);
+			len = ns(RescQueryRespInfo_vec_len(infos));
 			reply->brp_un.brp_rescq.brq_number = len;
 
 			reply->brp_un.brp_rescq.brq_avail = (int *)malloc(sizeof(int) * len);
@@ -832,19 +829,21 @@ wire_reply_read(int sock, struct batch_reply *reply, int prot, int forsvr)
 			}
 
 			for (i = 0; i < len; i++) {
-				*(reply->brp_un.brp_rescq.brq_avail + i) = (int) flatbuffers_int16_vec_at(avails, i);
-				*(reply->brp_un.brp_rescq.brq_alloc + i) = (int) flatbuffers_int16_vec_at(allocs, i);
-				*(reply->brp_un.brp_rescq.brq_resvd + i) = (int) flatbuffers_int16_vec_at(resvds, i);
-				*(reply->brp_un.brp_rescq.brq_down + i) = (int) flatbuffers_int16_vec_at(downs, i);
+				ns(RescQueryRespInfo_table_t) info = ns(RescQueryRespInfo_vec_at(infos, i));
+
+				*(reply->brp_un.brp_rescq.brq_avail + i) = (int) ns(RescQueryRespInfo_avail(info));
+				*(reply->brp_un.brp_rescq.brq_alloc + i) = (int) ns(RescQueryRespInfo_alloc(info));
+				*(reply->brp_un.brp_rescq.brq_resvd + i) = (int) ns(RescQueryRespInfo_resvd(info));
+				*(reply->brp_un.brp_rescq.brq_down + i) = (int) ns(RescQueryRespInfo_down(info));
 			}
 
 			break;
 
 		case BATCH_REPLY_CHOICE_PreemptJobs:
 			ns(Preempt_table_t) B = (ns(Preempt_table_t)) ns(Resp_body(resp));
-			ns(PreemptJob_vec_t) preempts = ns(Preempt_infos(B));
+			ns(PreemptJob_vec_t) infos = ns(Preempt_infos(B));
 
-			len = ns(PreemptJob_vec_len(preempts));
+			len = ns(PreemptJob_vec_len(infos));
 			reply->brp_un.brp_preempt_jobs.count = (int) len;
 
 			reply->brp_un.brp_preempt_jobs.ppj_list = NULL;
@@ -853,10 +852,10 @@ wire_reply_read(int sock, struct batch_reply *reply, int prot, int forsvr)
 				return PBSE_SYSTEM;
 
 			for (i = 0; i < len; i++) {
-				ns(PreemptJob_table_t) p = (ns(PreemptJob_table_t)) flatbuffers_string_vec_at(preempts, i);
+				ns(PreemptJob_table_t) info = ns(PreemptJob_vec_at(infos, i));
 
-				COPYSTR_B(reply->brp_un.brp_preempt_jobs.ppj_list[i].job_id, ns(PreemptJob_jid(p)));
-				COPYSTR_B(reply->brp_un.brp_preempt_jobs.ppj_list[i].order, ns(PreemptJob_order(p)));
+				COPYSTR_B(reply->brp_un.brp_preempt_jobs.ppj_list[i].job_id, ns(PreemptJob_jid(info)));
+				COPYSTR_B(reply->brp_un.brp_preempt_jobs.ppj_list[i].order, ns(PreemptJob_order(info)));
 			}
 
 			break;

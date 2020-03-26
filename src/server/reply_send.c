@@ -290,12 +290,9 @@ reply_send(struct batch_request *request)
 			request->rq_parentbr->rq_reply.brp_code = request->rq_reply.brp_code;
 			request->rq_parentbr->rq_reply.brp_auxcode = request->rq_reply.brp_auxcode;
 			if (request->rq_reply.brp_choice == BATCH_REPLY_CHOICE_Text) {
-				request->rq_parentbr->rq_reply.brp_choice =
-					request->rq_reply.brp_choice;
-				request->rq_parentbr->rq_reply.brp_un.brp_txt.brp_txtlen
-				= request->rq_reply.brp_un.brp_txt.brp_txtlen;
-				request->rq_parentbr->rq_reply.brp_un.brp_txt.brp_str =
-					strdup(request->rq_reply.brp_un.brp_txt.brp_str);
+				request->rq_parentbr->rq_reply.brp_choice = request->rq_reply.brp_choice;
+				request->rq_parentbr->rq_reply.brp_un.brp_txt.brp_txtlen = request->rq_reply.brp_un.brp_txt.brp_txtlen;
+				request->rq_parentbr->rq_reply.brp_un.brp_txt.brp_str = strdup(request->rq_reply.brp_un.brp_txt.brp_str);
 				if (request->rq_parentbr->rq_reply.brp_un.brp_txt.brp_str == NULL) {
 					log_err(-1, "reply_send", "Unable to allocate Memory!\n");
 					return (PBSE_SYSTEM);
@@ -320,11 +317,9 @@ reply_send(struct batch_request *request)
 
 		ptask = (struct work_task *)GET_NEXT(task_list_event);
 		while (ptask) {
-			if ((ptask->wt_type == WORK_Deferred_Local) &&
-				(ptask->wt_parm1 == (void *)request)) {
+			if ((ptask->wt_type == WORK_Deferred_Local) && (ptask->wt_parm1 == (void *)request)) {
 				delete_link(&ptask->wt_linkall);
-				append_link(&task_list_immed,
-					&ptask->wt_linkall, ptask);
+				append_link(&task_list_immed, &ptask->wt_linkall, ptask);
 				return (0);
 			}
 			ptask = (struct work_task *)GET_NEXT(ptask->wt_linkall);
@@ -341,9 +336,7 @@ reply_send(struct batch_request *request)
 		/*
 		 * Otherwise, the reply is to be sent to a remote client
 		 */
-		if (rc == PBSE_NONE) {
-			rc = dis_reply_write(sfds, request);
-		}
+		rc = dis_reply_write(sfds, request);
 	}
 
 	free_br(request);
