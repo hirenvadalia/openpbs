@@ -53,7 +53,7 @@ do { \
 #define FB_STRN(var, B, str, len) \
 do { \
 	var = PBSE_FLATCC_ERROR; \
-	if ((var = flatbuffers_string_create_strn(B, str, len)) == PBSE_FLATCC_ERROR) \
+	if ((var = flatbuffers_string_create(B, str, len)) == PBSE_FLATCC_ERROR) \
 		return PBSE_FLATCC_ERROR; \
 } while(0)
 

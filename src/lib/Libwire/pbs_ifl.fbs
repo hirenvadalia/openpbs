@@ -1,6 +1,6 @@
 namespace PBS.ifl;
 
-enum ProtType:byte { Batch, TaskManager, RescManager, InterMoM, InterSvr }
+enum ProtType:byte { Batch, TaskMgr, RescMgr, InterMoM, InterSvr }
 enum batch_op:byte { SET, UNSET, INCR, DECR, EQ, NE, GE, GT, LE, LT, DFLT }
 
 table Header {
@@ -234,6 +234,131 @@ table Resp {
 	auxCode: short;
 	choice: short;
 	body: RespBody;
+}
+
+table IMJoin {
+	nodeNum: short;
+	stdOut: short;
+	stdErr: short;
+	credType: short;
+	credLen: ushort;
+	cred: string;
+	attrs: [Attribute];
+}
+
+table IMSpawn {
+	pvnodeId: short;
+	tvnodeId: short;
+	taskId: ushort;
+	argv: [string];
+	envp: [string];
+}
+
+table IMTasks {
+	pvnodeId: short;
+	tvnodeId: short;
+}
+
+table IMSignal {
+	pvnodeId: short;
+	taskId: ushort;
+	sigNum: short;
+}
+
+table IMObit {
+	pvnodeId: short;
+	tvnodeId: short;
+	taskId: ushort;
+}
+
+table IMInfo {
+	pvnodeId: short;
+	taskId: ushort;
+	name: string;
+}
+
+table IMGResc {
+	pvnodeId: short;
+}
+
+table IMSResc {
+	node: string;
+	cpu: long;
+	mem: long;
+	cpupercent: long;
+}
+
+table IMUpdate {
+	attrs: [Attribute];
+}
+
+table IMCred {
+	type: short;
+	cred: string;
+	validity: long;
+}
+
+union IMReq {
+	IMJoin, IMSpawn, IMTasks, IMSignal,
+	IMObit, IMInfo, IMGResc, IMSResc,
+	IMUpdate, IMCred
+}
+
+table IMRKill {
+	cpu: long;
+	mem: long;
+	cpupercent: long;
+	attrs: [Attribute];
+}
+
+table IMRSpawn {
+	taskId: ushort;
+}
+
+table IMRTasks {
+	taskIds: [ushort];
+}
+
+table IMRObit {
+	exitval: short;
+}
+
+table IMRInfo {
+	infos: [string]; // FIXME: not sure about this
+}
+
+table IMRResc {
+	info: string;
+}
+
+table IMRPoll {
+	exitval: short;
+	cpu: long;
+	mem: long;
+	cpupercent: long;
+	attrs: [Attribute];
+}
+
+table IMRErr {
+	errcode: short;
+	errmsg: string;
+}
+
+union IMReply {
+	IMRErr,
+	IMRKill, IMRSpawn, IMRTasks,
+	IMRObit, IMRInfo, IMRResc,
+	IMRPoll
+}
+
+table InterMoM {
+	jobId: string;
+	cookie: string;
+	cmd: short;
+	event: short;
+	fromTask: ushort;
+	req: IMReq;
+	reply: IMReply;
 }
 
 table RmReq {

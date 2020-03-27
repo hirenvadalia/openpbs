@@ -87,12 +87,6 @@ typedef struct im_get_resc {
 	tm_node_id im_pvnodeid;
 } im_get_resc_t;
 
-typedef struct im_cred {
-	int im_type;
-	char *im_cred;
-	long validity;
-} im_cred_t;
-
 typedef struct im_send_resc {
 	char *im_node;
 	long im_cput;
@@ -103,6 +97,12 @@ typedef struct im_send_resc {
 typedef struct im_update_job {
 	pbs_list_head im_jattrs;
 } im_update_job_t;
+
+typedef struct im_cred {
+	int im_type;
+	char *im_cred;
+	long validity;
+} im_cred_t;
 
 typedef union im_req {
 	im_join_job_t im_join; /* IM_JOIN_JOB */
@@ -180,6 +180,7 @@ typedef union imr_ok {
 	imr_kill_job_t imr_kill; /* IM_KILL_JOB */
 	/* no info for IM_DELETE_JOB_REPLY */
 	imr_spawn_task_t imr_spawn; /* IM_SPAWN_TASK */
+	imr_get_tasks_t imr_tasks; /* IM_GET_TASKS */
 	/* no info for IM_SIGNAL_TASK */
 	imr_obit_task_t imr_obit; /* IM_OBIT_TASK */
 	imr_get_info_t imr_info; /* IM_GET_INFO */

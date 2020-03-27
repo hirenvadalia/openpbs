@@ -30,6 +30,12 @@ static PBS_ifl_ReqBody_union_ref_t PBS_ifl_ReqBody_clone(flatbuffers_builder_t *
 typedef flatbuffers_union_ref_t PBS_ifl_RespBody_union_ref_t;
 typedef flatbuffers_union_vec_ref_t PBS_ifl_RespBody_union_vec_ref_t;
 static PBS_ifl_RespBody_union_ref_t PBS_ifl_RespBody_clone(flatbuffers_builder_t *B, PBS_ifl_RespBody_union_t t);
+typedef flatbuffers_union_ref_t PBS_ifl_IMReq_union_ref_t;
+typedef flatbuffers_union_vec_ref_t PBS_ifl_IMReq_union_vec_ref_t;
+static PBS_ifl_IMReq_union_ref_t PBS_ifl_IMReq_clone(flatbuffers_builder_t *B, PBS_ifl_IMReq_union_t t);
+typedef flatbuffers_union_ref_t PBS_ifl_IMReply_union_ref_t;
+typedef flatbuffers_union_vec_ref_t PBS_ifl_IMReply_union_vec_ref_t;
+static PBS_ifl_IMReply_union_ref_t PBS_ifl_IMReply_clone(flatbuffers_builder_t *B, PBS_ifl_IMReply_union_t t);
 typedef flatbuffers_union_ref_t PBS_ifl_TmBody_union_ref_t;
 typedef flatbuffers_union_vec_ref_t PBS_ifl_TmBody_union_vec_ref_t;
 static PBS_ifl_TmBody_union_ref_t PBS_ifl_TmBody_clone(flatbuffers_builder_t *B, PBS_ifl_TmBody_union_t t);
@@ -213,6 +219,101 @@ static const flatbuffers_voffset_t __PBS_ifl_Resp_required[] = { 0 };
 typedef flatbuffers_ref_t PBS_ifl_Resp_ref_t;
 static PBS_ifl_Resp_ref_t PBS_ifl_Resp_clone(flatbuffers_builder_t *B, PBS_ifl_Resp_table_t t);
 __flatbuffers_build_table(flatbuffers_, PBS_ifl_Resp, 5)
+
+static const flatbuffers_voffset_t __PBS_ifl_IMJoin_required[] = { 0 };
+typedef flatbuffers_ref_t PBS_ifl_IMJoin_ref_t;
+static PBS_ifl_IMJoin_ref_t PBS_ifl_IMJoin_clone(flatbuffers_builder_t *B, PBS_ifl_IMJoin_table_t t);
+__flatbuffers_build_table(flatbuffers_, PBS_ifl_IMJoin, 7)
+
+static const flatbuffers_voffset_t __PBS_ifl_IMSpawn_required[] = { 0 };
+typedef flatbuffers_ref_t PBS_ifl_IMSpawn_ref_t;
+static PBS_ifl_IMSpawn_ref_t PBS_ifl_IMSpawn_clone(flatbuffers_builder_t *B, PBS_ifl_IMSpawn_table_t t);
+__flatbuffers_build_table(flatbuffers_, PBS_ifl_IMSpawn, 5)
+
+static const flatbuffers_voffset_t __PBS_ifl_IMTasks_required[] = { 0 };
+typedef flatbuffers_ref_t PBS_ifl_IMTasks_ref_t;
+static PBS_ifl_IMTasks_ref_t PBS_ifl_IMTasks_clone(flatbuffers_builder_t *B, PBS_ifl_IMTasks_table_t t);
+__flatbuffers_build_table(flatbuffers_, PBS_ifl_IMTasks, 2)
+
+static const flatbuffers_voffset_t __PBS_ifl_IMSignal_required[] = { 0 };
+typedef flatbuffers_ref_t PBS_ifl_IMSignal_ref_t;
+static PBS_ifl_IMSignal_ref_t PBS_ifl_IMSignal_clone(flatbuffers_builder_t *B, PBS_ifl_IMSignal_table_t t);
+__flatbuffers_build_table(flatbuffers_, PBS_ifl_IMSignal, 3)
+
+static const flatbuffers_voffset_t __PBS_ifl_IMObit_required[] = { 0 };
+typedef flatbuffers_ref_t PBS_ifl_IMObit_ref_t;
+static PBS_ifl_IMObit_ref_t PBS_ifl_IMObit_clone(flatbuffers_builder_t *B, PBS_ifl_IMObit_table_t t);
+__flatbuffers_build_table(flatbuffers_, PBS_ifl_IMObit, 3)
+
+static const flatbuffers_voffset_t __PBS_ifl_IMInfo_required[] = { 0 };
+typedef flatbuffers_ref_t PBS_ifl_IMInfo_ref_t;
+static PBS_ifl_IMInfo_ref_t PBS_ifl_IMInfo_clone(flatbuffers_builder_t *B, PBS_ifl_IMInfo_table_t t);
+__flatbuffers_build_table(flatbuffers_, PBS_ifl_IMInfo, 3)
+
+static const flatbuffers_voffset_t __PBS_ifl_IMGResc_required[] = { 0 };
+typedef flatbuffers_ref_t PBS_ifl_IMGResc_ref_t;
+static PBS_ifl_IMGResc_ref_t PBS_ifl_IMGResc_clone(flatbuffers_builder_t *B, PBS_ifl_IMGResc_table_t t);
+__flatbuffers_build_table(flatbuffers_, PBS_ifl_IMGResc, 1)
+
+static const flatbuffers_voffset_t __PBS_ifl_IMSResc_required[] = { 0 };
+typedef flatbuffers_ref_t PBS_ifl_IMSResc_ref_t;
+static PBS_ifl_IMSResc_ref_t PBS_ifl_IMSResc_clone(flatbuffers_builder_t *B, PBS_ifl_IMSResc_table_t t);
+__flatbuffers_build_table(flatbuffers_, PBS_ifl_IMSResc, 4)
+
+static const flatbuffers_voffset_t __PBS_ifl_IMUpdate_required[] = { 0 };
+typedef flatbuffers_ref_t PBS_ifl_IMUpdate_ref_t;
+static PBS_ifl_IMUpdate_ref_t PBS_ifl_IMUpdate_clone(flatbuffers_builder_t *B, PBS_ifl_IMUpdate_table_t t);
+__flatbuffers_build_table(flatbuffers_, PBS_ifl_IMUpdate, 1)
+
+static const flatbuffers_voffset_t __PBS_ifl_IMCred_required[] = { 0 };
+typedef flatbuffers_ref_t PBS_ifl_IMCred_ref_t;
+static PBS_ifl_IMCred_ref_t PBS_ifl_IMCred_clone(flatbuffers_builder_t *B, PBS_ifl_IMCred_table_t t);
+__flatbuffers_build_table(flatbuffers_, PBS_ifl_IMCred, 3)
+
+static const flatbuffers_voffset_t __PBS_ifl_IMRKill_required[] = { 0 };
+typedef flatbuffers_ref_t PBS_ifl_IMRKill_ref_t;
+static PBS_ifl_IMRKill_ref_t PBS_ifl_IMRKill_clone(flatbuffers_builder_t *B, PBS_ifl_IMRKill_table_t t);
+__flatbuffers_build_table(flatbuffers_, PBS_ifl_IMRKill, 4)
+
+static const flatbuffers_voffset_t __PBS_ifl_IMRSpawn_required[] = { 0 };
+typedef flatbuffers_ref_t PBS_ifl_IMRSpawn_ref_t;
+static PBS_ifl_IMRSpawn_ref_t PBS_ifl_IMRSpawn_clone(flatbuffers_builder_t *B, PBS_ifl_IMRSpawn_table_t t);
+__flatbuffers_build_table(flatbuffers_, PBS_ifl_IMRSpawn, 1)
+
+static const flatbuffers_voffset_t __PBS_ifl_IMRTasks_required[] = { 0 };
+typedef flatbuffers_ref_t PBS_ifl_IMRTasks_ref_t;
+static PBS_ifl_IMRTasks_ref_t PBS_ifl_IMRTasks_clone(flatbuffers_builder_t *B, PBS_ifl_IMRTasks_table_t t);
+__flatbuffers_build_table(flatbuffers_, PBS_ifl_IMRTasks, 1)
+
+static const flatbuffers_voffset_t __PBS_ifl_IMRObit_required[] = { 0 };
+typedef flatbuffers_ref_t PBS_ifl_IMRObit_ref_t;
+static PBS_ifl_IMRObit_ref_t PBS_ifl_IMRObit_clone(flatbuffers_builder_t *B, PBS_ifl_IMRObit_table_t t);
+__flatbuffers_build_table(flatbuffers_, PBS_ifl_IMRObit, 1)
+
+static const flatbuffers_voffset_t __PBS_ifl_IMRInfo_required[] = { 0 };
+typedef flatbuffers_ref_t PBS_ifl_IMRInfo_ref_t;
+static PBS_ifl_IMRInfo_ref_t PBS_ifl_IMRInfo_clone(flatbuffers_builder_t *B, PBS_ifl_IMRInfo_table_t t);
+__flatbuffers_build_table(flatbuffers_, PBS_ifl_IMRInfo, 1)
+
+static const flatbuffers_voffset_t __PBS_ifl_IMRResc_required[] = { 0 };
+typedef flatbuffers_ref_t PBS_ifl_IMRResc_ref_t;
+static PBS_ifl_IMRResc_ref_t PBS_ifl_IMRResc_clone(flatbuffers_builder_t *B, PBS_ifl_IMRResc_table_t t);
+__flatbuffers_build_table(flatbuffers_, PBS_ifl_IMRResc, 1)
+
+static const flatbuffers_voffset_t __PBS_ifl_IMRPoll_required[] = { 0 };
+typedef flatbuffers_ref_t PBS_ifl_IMRPoll_ref_t;
+static PBS_ifl_IMRPoll_ref_t PBS_ifl_IMRPoll_clone(flatbuffers_builder_t *B, PBS_ifl_IMRPoll_table_t t);
+__flatbuffers_build_table(flatbuffers_, PBS_ifl_IMRPoll, 5)
+
+static const flatbuffers_voffset_t __PBS_ifl_IMRErr_required[] = { 0 };
+typedef flatbuffers_ref_t PBS_ifl_IMRErr_ref_t;
+static PBS_ifl_IMRErr_ref_t PBS_ifl_IMRErr_clone(flatbuffers_builder_t *B, PBS_ifl_IMRErr_table_t t);
+__flatbuffers_build_table(flatbuffers_, PBS_ifl_IMRErr, 2)
+
+static const flatbuffers_voffset_t __PBS_ifl_InterMoM_required[] = { 0 };
+typedef flatbuffers_ref_t PBS_ifl_InterMoM_ref_t;
+static PBS_ifl_InterMoM_ref_t PBS_ifl_InterMoM_clone(flatbuffers_builder_t *B, PBS_ifl_InterMoM_table_t t);
+__flatbuffers_build_table(flatbuffers_, PBS_ifl_InterMoM, 9)
 
 static const flatbuffers_voffset_t __PBS_ifl_RmReq_required[] = { 0 };
 typedef flatbuffers_ref_t PBS_ifl_RmReq_ref_t;
@@ -452,6 +553,113 @@ __flatbuffers_build_table_prolog(flatbuffers_, PBS_ifl_RescQueryResp, PBS_ifl_Re
 static inline PBS_ifl_Resp_ref_t PBS_ifl_Resp_create(flatbuffers_builder_t *B __PBS_ifl_Resp_formal_args);
 __flatbuffers_build_table_prolog(flatbuffers_, PBS_ifl_Resp, PBS_ifl_Resp_file_identifier, PBS_ifl_Resp_type_identifier)
 
+#define __PBS_ifl_IMJoin_formal_args ,\
+  int16_t v0, int16_t v1, int16_t v2, int16_t v3,\
+  uint16_t v4, flatbuffers_string_ref_t v5, PBS_ifl_Attribute_vec_ref_t v6
+#define __PBS_ifl_IMJoin_call_args ,\
+  v0, v1, v2, v3,\
+  v4, v5, v6
+static inline PBS_ifl_IMJoin_ref_t PBS_ifl_IMJoin_create(flatbuffers_builder_t *B __PBS_ifl_IMJoin_formal_args);
+__flatbuffers_build_table_prolog(flatbuffers_, PBS_ifl_IMJoin, PBS_ifl_IMJoin_file_identifier, PBS_ifl_IMJoin_type_identifier)
+
+#define __PBS_ifl_IMSpawn_formal_args ,\
+  int16_t v0, int16_t v1, uint16_t v2, flatbuffers_string_vec_ref_t v3, flatbuffers_string_vec_ref_t v4
+#define __PBS_ifl_IMSpawn_call_args ,\
+  v0, v1, v2, v3, v4
+static inline PBS_ifl_IMSpawn_ref_t PBS_ifl_IMSpawn_create(flatbuffers_builder_t *B __PBS_ifl_IMSpawn_formal_args);
+__flatbuffers_build_table_prolog(flatbuffers_, PBS_ifl_IMSpawn, PBS_ifl_IMSpawn_file_identifier, PBS_ifl_IMSpawn_type_identifier)
+
+#define __PBS_ifl_IMTasks_formal_args , int16_t v0, int16_t v1
+#define __PBS_ifl_IMTasks_call_args , v0, v1
+static inline PBS_ifl_IMTasks_ref_t PBS_ifl_IMTasks_create(flatbuffers_builder_t *B __PBS_ifl_IMTasks_formal_args);
+__flatbuffers_build_table_prolog(flatbuffers_, PBS_ifl_IMTasks, PBS_ifl_IMTasks_file_identifier, PBS_ifl_IMTasks_type_identifier)
+
+#define __PBS_ifl_IMSignal_formal_args , int16_t v0, uint16_t v1, int16_t v2
+#define __PBS_ifl_IMSignal_call_args , v0, v1, v2
+static inline PBS_ifl_IMSignal_ref_t PBS_ifl_IMSignal_create(flatbuffers_builder_t *B __PBS_ifl_IMSignal_formal_args);
+__flatbuffers_build_table_prolog(flatbuffers_, PBS_ifl_IMSignal, PBS_ifl_IMSignal_file_identifier, PBS_ifl_IMSignal_type_identifier)
+
+#define __PBS_ifl_IMObit_formal_args , int16_t v0, int16_t v1, uint16_t v2
+#define __PBS_ifl_IMObit_call_args , v0, v1, v2
+static inline PBS_ifl_IMObit_ref_t PBS_ifl_IMObit_create(flatbuffers_builder_t *B __PBS_ifl_IMObit_formal_args);
+__flatbuffers_build_table_prolog(flatbuffers_, PBS_ifl_IMObit, PBS_ifl_IMObit_file_identifier, PBS_ifl_IMObit_type_identifier)
+
+#define __PBS_ifl_IMInfo_formal_args , int16_t v0, uint16_t v1, flatbuffers_string_ref_t v2
+#define __PBS_ifl_IMInfo_call_args , v0, v1, v2
+static inline PBS_ifl_IMInfo_ref_t PBS_ifl_IMInfo_create(flatbuffers_builder_t *B __PBS_ifl_IMInfo_formal_args);
+__flatbuffers_build_table_prolog(flatbuffers_, PBS_ifl_IMInfo, PBS_ifl_IMInfo_file_identifier, PBS_ifl_IMInfo_type_identifier)
+
+#define __PBS_ifl_IMGResc_formal_args , int16_t v0
+#define __PBS_ifl_IMGResc_call_args , v0
+static inline PBS_ifl_IMGResc_ref_t PBS_ifl_IMGResc_create(flatbuffers_builder_t *B __PBS_ifl_IMGResc_formal_args);
+__flatbuffers_build_table_prolog(flatbuffers_, PBS_ifl_IMGResc, PBS_ifl_IMGResc_file_identifier, PBS_ifl_IMGResc_type_identifier)
+
+#define __PBS_ifl_IMSResc_formal_args , flatbuffers_string_ref_t v0, int64_t v1, int64_t v2, int64_t v3
+#define __PBS_ifl_IMSResc_call_args , v0, v1, v2, v3
+static inline PBS_ifl_IMSResc_ref_t PBS_ifl_IMSResc_create(flatbuffers_builder_t *B __PBS_ifl_IMSResc_formal_args);
+__flatbuffers_build_table_prolog(flatbuffers_, PBS_ifl_IMSResc, PBS_ifl_IMSResc_file_identifier, PBS_ifl_IMSResc_type_identifier)
+
+#define __PBS_ifl_IMUpdate_formal_args , PBS_ifl_Attribute_vec_ref_t v0
+#define __PBS_ifl_IMUpdate_call_args , v0
+static inline PBS_ifl_IMUpdate_ref_t PBS_ifl_IMUpdate_create(flatbuffers_builder_t *B __PBS_ifl_IMUpdate_formal_args);
+__flatbuffers_build_table_prolog(flatbuffers_, PBS_ifl_IMUpdate, PBS_ifl_IMUpdate_file_identifier, PBS_ifl_IMUpdate_type_identifier)
+
+#define __PBS_ifl_IMCred_formal_args , int16_t v0, flatbuffers_string_ref_t v1, int64_t v2
+#define __PBS_ifl_IMCred_call_args , v0, v1, v2
+static inline PBS_ifl_IMCred_ref_t PBS_ifl_IMCred_create(flatbuffers_builder_t *B __PBS_ifl_IMCred_formal_args);
+__flatbuffers_build_table_prolog(flatbuffers_, PBS_ifl_IMCred, PBS_ifl_IMCred_file_identifier, PBS_ifl_IMCred_type_identifier)
+
+#define __PBS_ifl_IMRKill_formal_args , int64_t v0, int64_t v1, int64_t v2, PBS_ifl_Attribute_vec_ref_t v3
+#define __PBS_ifl_IMRKill_call_args , v0, v1, v2, v3
+static inline PBS_ifl_IMRKill_ref_t PBS_ifl_IMRKill_create(flatbuffers_builder_t *B __PBS_ifl_IMRKill_formal_args);
+__flatbuffers_build_table_prolog(flatbuffers_, PBS_ifl_IMRKill, PBS_ifl_IMRKill_file_identifier, PBS_ifl_IMRKill_type_identifier)
+
+#define __PBS_ifl_IMRSpawn_formal_args , uint16_t v0
+#define __PBS_ifl_IMRSpawn_call_args , v0
+static inline PBS_ifl_IMRSpawn_ref_t PBS_ifl_IMRSpawn_create(flatbuffers_builder_t *B __PBS_ifl_IMRSpawn_formal_args);
+__flatbuffers_build_table_prolog(flatbuffers_, PBS_ifl_IMRSpawn, PBS_ifl_IMRSpawn_file_identifier, PBS_ifl_IMRSpawn_type_identifier)
+
+#define __PBS_ifl_IMRTasks_formal_args , flatbuffers_uint16_vec_ref_t v0
+#define __PBS_ifl_IMRTasks_call_args , v0
+static inline PBS_ifl_IMRTasks_ref_t PBS_ifl_IMRTasks_create(flatbuffers_builder_t *B __PBS_ifl_IMRTasks_formal_args);
+__flatbuffers_build_table_prolog(flatbuffers_, PBS_ifl_IMRTasks, PBS_ifl_IMRTasks_file_identifier, PBS_ifl_IMRTasks_type_identifier)
+
+#define __PBS_ifl_IMRObit_formal_args , int16_t v0
+#define __PBS_ifl_IMRObit_call_args , v0
+static inline PBS_ifl_IMRObit_ref_t PBS_ifl_IMRObit_create(flatbuffers_builder_t *B __PBS_ifl_IMRObit_formal_args);
+__flatbuffers_build_table_prolog(flatbuffers_, PBS_ifl_IMRObit, PBS_ifl_IMRObit_file_identifier, PBS_ifl_IMRObit_type_identifier)
+
+#define __PBS_ifl_IMRInfo_formal_args , flatbuffers_string_vec_ref_t v0
+#define __PBS_ifl_IMRInfo_call_args , v0
+static inline PBS_ifl_IMRInfo_ref_t PBS_ifl_IMRInfo_create(flatbuffers_builder_t *B __PBS_ifl_IMRInfo_formal_args);
+__flatbuffers_build_table_prolog(flatbuffers_, PBS_ifl_IMRInfo, PBS_ifl_IMRInfo_file_identifier, PBS_ifl_IMRInfo_type_identifier)
+
+#define __PBS_ifl_IMRResc_formal_args , flatbuffers_string_ref_t v0
+#define __PBS_ifl_IMRResc_call_args , v0
+static inline PBS_ifl_IMRResc_ref_t PBS_ifl_IMRResc_create(flatbuffers_builder_t *B __PBS_ifl_IMRResc_formal_args);
+__flatbuffers_build_table_prolog(flatbuffers_, PBS_ifl_IMRResc, PBS_ifl_IMRResc_file_identifier, PBS_ifl_IMRResc_type_identifier)
+
+#define __PBS_ifl_IMRPoll_formal_args ,\
+  int16_t v0, int64_t v1, int64_t v2, int64_t v3, PBS_ifl_Attribute_vec_ref_t v4
+#define __PBS_ifl_IMRPoll_call_args ,\
+  v0, v1, v2, v3, v4
+static inline PBS_ifl_IMRPoll_ref_t PBS_ifl_IMRPoll_create(flatbuffers_builder_t *B __PBS_ifl_IMRPoll_formal_args);
+__flatbuffers_build_table_prolog(flatbuffers_, PBS_ifl_IMRPoll, PBS_ifl_IMRPoll_file_identifier, PBS_ifl_IMRPoll_type_identifier)
+
+#define __PBS_ifl_IMRErr_formal_args , int16_t v0, flatbuffers_string_ref_t v1
+#define __PBS_ifl_IMRErr_call_args , v0, v1
+static inline PBS_ifl_IMRErr_ref_t PBS_ifl_IMRErr_create(flatbuffers_builder_t *B __PBS_ifl_IMRErr_formal_args);
+__flatbuffers_build_table_prolog(flatbuffers_, PBS_ifl_IMRErr, PBS_ifl_IMRErr_file_identifier, PBS_ifl_IMRErr_type_identifier)
+
+#define __PBS_ifl_InterMoM_formal_args ,\
+  flatbuffers_string_ref_t v0, flatbuffers_string_ref_t v1, int16_t v2, int16_t v3,\
+  uint16_t v4, PBS_ifl_IMReq_union_ref_t v6, PBS_ifl_IMReply_union_ref_t v8
+#define __PBS_ifl_InterMoM_call_args ,\
+  v0, v1, v2, v3,\
+  v4, v6, v8
+static inline PBS_ifl_InterMoM_ref_t PBS_ifl_InterMoM_create(flatbuffers_builder_t *B __PBS_ifl_InterMoM_formal_args);
+__flatbuffers_build_table_prolog(flatbuffers_, PBS_ifl_InterMoM, PBS_ifl_InterMoM_file_identifier, PBS_ifl_InterMoM_type_identifier)
+
 #define __PBS_ifl_RmReq_formal_args , PBS_ifl_Header_ref_t v0, flatbuffers_string_vec_ref_t v1
 #define __PBS_ifl_RmReq_call_args , v0, v1
 static inline PBS_ifl_RmReq_ref_t PBS_ifl_RmReq_create(flatbuffers_builder_t *B __PBS_ifl_RmReq_formal_args);
@@ -610,6 +818,82 @@ static PBS_ifl_RespBody_union_ref_t PBS_ifl_RespBody_clone(flatbuffers_builder_t
     case 4: return PBS_ifl_RespBody_as_RescQueryResp(PBS_ifl_RescQueryResp_clone(B, (PBS_ifl_RescQueryResp_table_t)u.value));
     case 5: return PBS_ifl_RespBody_as_Preempt(PBS_ifl_Preempt_clone(B, (PBS_ifl_Preempt_table_t)u.value));
     default: return PBS_ifl_RespBody_as_NONE();
+    }
+}
+
+static inline PBS_ifl_IMReq_union_ref_t PBS_ifl_IMReq_as_NONE()
+{ PBS_ifl_IMReq_union_ref_t uref; uref.type = PBS_ifl_IMReq_NONE; uref.value = 0; return uref; }
+static inline PBS_ifl_IMReq_union_ref_t PBS_ifl_IMReq_as_IMJoin(PBS_ifl_IMJoin_ref_t ref)
+{ PBS_ifl_IMReq_union_ref_t uref; uref.type = PBS_ifl_IMReq_IMJoin; uref.value = ref; return uref; }
+static inline PBS_ifl_IMReq_union_ref_t PBS_ifl_IMReq_as_IMSpawn(PBS_ifl_IMSpawn_ref_t ref)
+{ PBS_ifl_IMReq_union_ref_t uref; uref.type = PBS_ifl_IMReq_IMSpawn; uref.value = ref; return uref; }
+static inline PBS_ifl_IMReq_union_ref_t PBS_ifl_IMReq_as_IMTasks(PBS_ifl_IMTasks_ref_t ref)
+{ PBS_ifl_IMReq_union_ref_t uref; uref.type = PBS_ifl_IMReq_IMTasks; uref.value = ref; return uref; }
+static inline PBS_ifl_IMReq_union_ref_t PBS_ifl_IMReq_as_IMSignal(PBS_ifl_IMSignal_ref_t ref)
+{ PBS_ifl_IMReq_union_ref_t uref; uref.type = PBS_ifl_IMReq_IMSignal; uref.value = ref; return uref; }
+static inline PBS_ifl_IMReq_union_ref_t PBS_ifl_IMReq_as_IMObit(PBS_ifl_IMObit_ref_t ref)
+{ PBS_ifl_IMReq_union_ref_t uref; uref.type = PBS_ifl_IMReq_IMObit; uref.value = ref; return uref; }
+static inline PBS_ifl_IMReq_union_ref_t PBS_ifl_IMReq_as_IMInfo(PBS_ifl_IMInfo_ref_t ref)
+{ PBS_ifl_IMReq_union_ref_t uref; uref.type = PBS_ifl_IMReq_IMInfo; uref.value = ref; return uref; }
+static inline PBS_ifl_IMReq_union_ref_t PBS_ifl_IMReq_as_IMGResc(PBS_ifl_IMGResc_ref_t ref)
+{ PBS_ifl_IMReq_union_ref_t uref; uref.type = PBS_ifl_IMReq_IMGResc; uref.value = ref; return uref; }
+static inline PBS_ifl_IMReq_union_ref_t PBS_ifl_IMReq_as_IMSResc(PBS_ifl_IMSResc_ref_t ref)
+{ PBS_ifl_IMReq_union_ref_t uref; uref.type = PBS_ifl_IMReq_IMSResc; uref.value = ref; return uref; }
+static inline PBS_ifl_IMReq_union_ref_t PBS_ifl_IMReq_as_IMUpdate(PBS_ifl_IMUpdate_ref_t ref)
+{ PBS_ifl_IMReq_union_ref_t uref; uref.type = PBS_ifl_IMReq_IMUpdate; uref.value = ref; return uref; }
+static inline PBS_ifl_IMReq_union_ref_t PBS_ifl_IMReq_as_IMCred(PBS_ifl_IMCred_ref_t ref)
+{ PBS_ifl_IMReq_union_ref_t uref; uref.type = PBS_ifl_IMReq_IMCred; uref.value = ref; return uref; }
+__flatbuffers_build_union_vector(flatbuffers_, PBS_ifl_IMReq)
+
+static PBS_ifl_IMReq_union_ref_t PBS_ifl_IMReq_clone(flatbuffers_builder_t *B, PBS_ifl_IMReq_union_t u)
+{
+    switch (u.type) {
+    case 1: return PBS_ifl_IMReq_as_IMJoin(PBS_ifl_IMJoin_clone(B, (PBS_ifl_IMJoin_table_t)u.value));
+    case 2: return PBS_ifl_IMReq_as_IMSpawn(PBS_ifl_IMSpawn_clone(B, (PBS_ifl_IMSpawn_table_t)u.value));
+    case 3: return PBS_ifl_IMReq_as_IMTasks(PBS_ifl_IMTasks_clone(B, (PBS_ifl_IMTasks_table_t)u.value));
+    case 4: return PBS_ifl_IMReq_as_IMSignal(PBS_ifl_IMSignal_clone(B, (PBS_ifl_IMSignal_table_t)u.value));
+    case 5: return PBS_ifl_IMReq_as_IMObit(PBS_ifl_IMObit_clone(B, (PBS_ifl_IMObit_table_t)u.value));
+    case 6: return PBS_ifl_IMReq_as_IMInfo(PBS_ifl_IMInfo_clone(B, (PBS_ifl_IMInfo_table_t)u.value));
+    case 7: return PBS_ifl_IMReq_as_IMGResc(PBS_ifl_IMGResc_clone(B, (PBS_ifl_IMGResc_table_t)u.value));
+    case 8: return PBS_ifl_IMReq_as_IMSResc(PBS_ifl_IMSResc_clone(B, (PBS_ifl_IMSResc_table_t)u.value));
+    case 9: return PBS_ifl_IMReq_as_IMUpdate(PBS_ifl_IMUpdate_clone(B, (PBS_ifl_IMUpdate_table_t)u.value));
+    case 10: return PBS_ifl_IMReq_as_IMCred(PBS_ifl_IMCred_clone(B, (PBS_ifl_IMCred_table_t)u.value));
+    default: return PBS_ifl_IMReq_as_NONE();
+    }
+}
+
+static inline PBS_ifl_IMReply_union_ref_t PBS_ifl_IMReply_as_NONE()
+{ PBS_ifl_IMReply_union_ref_t uref; uref.type = PBS_ifl_IMReply_NONE; uref.value = 0; return uref; }
+static inline PBS_ifl_IMReply_union_ref_t PBS_ifl_IMReply_as_IMRErr(PBS_ifl_IMRErr_ref_t ref)
+{ PBS_ifl_IMReply_union_ref_t uref; uref.type = PBS_ifl_IMReply_IMRErr; uref.value = ref; return uref; }
+static inline PBS_ifl_IMReply_union_ref_t PBS_ifl_IMReply_as_IMRKill(PBS_ifl_IMRKill_ref_t ref)
+{ PBS_ifl_IMReply_union_ref_t uref; uref.type = PBS_ifl_IMReply_IMRKill; uref.value = ref; return uref; }
+static inline PBS_ifl_IMReply_union_ref_t PBS_ifl_IMReply_as_IMRSpawn(PBS_ifl_IMRSpawn_ref_t ref)
+{ PBS_ifl_IMReply_union_ref_t uref; uref.type = PBS_ifl_IMReply_IMRSpawn; uref.value = ref; return uref; }
+static inline PBS_ifl_IMReply_union_ref_t PBS_ifl_IMReply_as_IMRTasks(PBS_ifl_IMRTasks_ref_t ref)
+{ PBS_ifl_IMReply_union_ref_t uref; uref.type = PBS_ifl_IMReply_IMRTasks; uref.value = ref; return uref; }
+static inline PBS_ifl_IMReply_union_ref_t PBS_ifl_IMReply_as_IMRObit(PBS_ifl_IMRObit_ref_t ref)
+{ PBS_ifl_IMReply_union_ref_t uref; uref.type = PBS_ifl_IMReply_IMRObit; uref.value = ref; return uref; }
+static inline PBS_ifl_IMReply_union_ref_t PBS_ifl_IMReply_as_IMRInfo(PBS_ifl_IMRInfo_ref_t ref)
+{ PBS_ifl_IMReply_union_ref_t uref; uref.type = PBS_ifl_IMReply_IMRInfo; uref.value = ref; return uref; }
+static inline PBS_ifl_IMReply_union_ref_t PBS_ifl_IMReply_as_IMRResc(PBS_ifl_IMRResc_ref_t ref)
+{ PBS_ifl_IMReply_union_ref_t uref; uref.type = PBS_ifl_IMReply_IMRResc; uref.value = ref; return uref; }
+static inline PBS_ifl_IMReply_union_ref_t PBS_ifl_IMReply_as_IMRPoll(PBS_ifl_IMRPoll_ref_t ref)
+{ PBS_ifl_IMReply_union_ref_t uref; uref.type = PBS_ifl_IMReply_IMRPoll; uref.value = ref; return uref; }
+__flatbuffers_build_union_vector(flatbuffers_, PBS_ifl_IMReply)
+
+static PBS_ifl_IMReply_union_ref_t PBS_ifl_IMReply_clone(flatbuffers_builder_t *B, PBS_ifl_IMReply_union_t u)
+{
+    switch (u.type) {
+    case 1: return PBS_ifl_IMReply_as_IMRErr(PBS_ifl_IMRErr_clone(B, (PBS_ifl_IMRErr_table_t)u.value));
+    case 2: return PBS_ifl_IMReply_as_IMRKill(PBS_ifl_IMRKill_clone(B, (PBS_ifl_IMRKill_table_t)u.value));
+    case 3: return PBS_ifl_IMReply_as_IMRSpawn(PBS_ifl_IMRSpawn_clone(B, (PBS_ifl_IMRSpawn_table_t)u.value));
+    case 4: return PBS_ifl_IMReply_as_IMRTasks(PBS_ifl_IMRTasks_clone(B, (PBS_ifl_IMRTasks_table_t)u.value));
+    case 5: return PBS_ifl_IMReply_as_IMRObit(PBS_ifl_IMRObit_clone(B, (PBS_ifl_IMRObit_table_t)u.value));
+    case 6: return PBS_ifl_IMReply_as_IMRInfo(PBS_ifl_IMRInfo_clone(B, (PBS_ifl_IMRInfo_table_t)u.value));
+    case 7: return PBS_ifl_IMReply_as_IMRResc(PBS_ifl_IMRResc_clone(B, (PBS_ifl_IMRResc_table_t)u.value));
+    case 8: return PBS_ifl_IMReply_as_IMRPoll(PBS_ifl_IMRPoll_clone(B, (PBS_ifl_IMRPoll_table_t)u.value));
+    default: return PBS_ifl_IMReply_as_NONE();
     }
 }
 
@@ -1637,6 +1921,533 @@ static PBS_ifl_Resp_ref_t PBS_ifl_Resp_clone(flatbuffers_builder_t *B, PBS_ifl_R
         return 0;
     }
     __flatbuffers_memoize_end(B, t, PBS_ifl_Resp_end(B));
+}
+
+__flatbuffers_build_scalar_field(0, flatbuffers_, PBS_ifl_IMJoin_nodeNum, flatbuffers_int16, int16_t, 2, 2, INT16_C(0), PBS_ifl_IMJoin)
+__flatbuffers_build_scalar_field(1, flatbuffers_, PBS_ifl_IMJoin_stdOut, flatbuffers_int16, int16_t, 2, 2, INT16_C(0), PBS_ifl_IMJoin)
+__flatbuffers_build_scalar_field(2, flatbuffers_, PBS_ifl_IMJoin_stdErr, flatbuffers_int16, int16_t, 2, 2, INT16_C(0), PBS_ifl_IMJoin)
+__flatbuffers_build_scalar_field(3, flatbuffers_, PBS_ifl_IMJoin_credType, flatbuffers_int16, int16_t, 2, 2, INT16_C(0), PBS_ifl_IMJoin)
+__flatbuffers_build_scalar_field(4, flatbuffers_, PBS_ifl_IMJoin_credLen, flatbuffers_uint16, uint16_t, 2, 2, UINT16_C(0), PBS_ifl_IMJoin)
+__flatbuffers_build_string_field(5, flatbuffers_, PBS_ifl_IMJoin_cred, PBS_ifl_IMJoin)
+__flatbuffers_build_table_vector_field(6, flatbuffers_, PBS_ifl_IMJoin_attrs, PBS_ifl_Attribute, PBS_ifl_IMJoin)
+
+static inline PBS_ifl_IMJoin_ref_t PBS_ifl_IMJoin_create(flatbuffers_builder_t *B __PBS_ifl_IMJoin_formal_args)
+{
+    if (PBS_ifl_IMJoin_start(B)
+        || PBS_ifl_IMJoin_cred_add(B, v5)
+        || PBS_ifl_IMJoin_attrs_add(B, v6)
+        || PBS_ifl_IMJoin_nodeNum_add(B, v0)
+        || PBS_ifl_IMJoin_stdOut_add(B, v1)
+        || PBS_ifl_IMJoin_stdErr_add(B, v2)
+        || PBS_ifl_IMJoin_credType_add(B, v3)
+        || PBS_ifl_IMJoin_credLen_add(B, v4)) {
+        return 0;
+    }
+    return PBS_ifl_IMJoin_end(B);
+}
+
+static PBS_ifl_IMJoin_ref_t PBS_ifl_IMJoin_clone(flatbuffers_builder_t *B, PBS_ifl_IMJoin_table_t t)
+{
+    __flatbuffers_memoize_begin(B, t);
+    if (PBS_ifl_IMJoin_start(B)
+        || PBS_ifl_IMJoin_cred_pick(B, t)
+        || PBS_ifl_IMJoin_attrs_pick(B, t)
+        || PBS_ifl_IMJoin_nodeNum_pick(B, t)
+        || PBS_ifl_IMJoin_stdOut_pick(B, t)
+        || PBS_ifl_IMJoin_stdErr_pick(B, t)
+        || PBS_ifl_IMJoin_credType_pick(B, t)
+        || PBS_ifl_IMJoin_credLen_pick(B, t)) {
+        return 0;
+    }
+    __flatbuffers_memoize_end(B, t, PBS_ifl_IMJoin_end(B));
+}
+
+__flatbuffers_build_scalar_field(0, flatbuffers_, PBS_ifl_IMSpawn_pvnodeId, flatbuffers_int16, int16_t, 2, 2, INT16_C(0), PBS_ifl_IMSpawn)
+__flatbuffers_build_scalar_field(1, flatbuffers_, PBS_ifl_IMSpawn_tvnodeId, flatbuffers_int16, int16_t, 2, 2, INT16_C(0), PBS_ifl_IMSpawn)
+__flatbuffers_build_scalar_field(2, flatbuffers_, PBS_ifl_IMSpawn_taskId, flatbuffers_uint16, uint16_t, 2, 2, UINT16_C(0), PBS_ifl_IMSpawn)
+__flatbuffers_build_string_vector_field(3, flatbuffers_, PBS_ifl_IMSpawn_argv, PBS_ifl_IMSpawn)
+__flatbuffers_build_string_vector_field(4, flatbuffers_, PBS_ifl_IMSpawn_envp, PBS_ifl_IMSpawn)
+
+static inline PBS_ifl_IMSpawn_ref_t PBS_ifl_IMSpawn_create(flatbuffers_builder_t *B __PBS_ifl_IMSpawn_formal_args)
+{
+    if (PBS_ifl_IMSpawn_start(B)
+        || PBS_ifl_IMSpawn_argv_add(B, v3)
+        || PBS_ifl_IMSpawn_envp_add(B, v4)
+        || PBS_ifl_IMSpawn_pvnodeId_add(B, v0)
+        || PBS_ifl_IMSpawn_tvnodeId_add(B, v1)
+        || PBS_ifl_IMSpawn_taskId_add(B, v2)) {
+        return 0;
+    }
+    return PBS_ifl_IMSpawn_end(B);
+}
+
+static PBS_ifl_IMSpawn_ref_t PBS_ifl_IMSpawn_clone(flatbuffers_builder_t *B, PBS_ifl_IMSpawn_table_t t)
+{
+    __flatbuffers_memoize_begin(B, t);
+    if (PBS_ifl_IMSpawn_start(B)
+        || PBS_ifl_IMSpawn_argv_pick(B, t)
+        || PBS_ifl_IMSpawn_envp_pick(B, t)
+        || PBS_ifl_IMSpawn_pvnodeId_pick(B, t)
+        || PBS_ifl_IMSpawn_tvnodeId_pick(B, t)
+        || PBS_ifl_IMSpawn_taskId_pick(B, t)) {
+        return 0;
+    }
+    __flatbuffers_memoize_end(B, t, PBS_ifl_IMSpawn_end(B));
+}
+
+__flatbuffers_build_scalar_field(0, flatbuffers_, PBS_ifl_IMTasks_pvnodeId, flatbuffers_int16, int16_t, 2, 2, INT16_C(0), PBS_ifl_IMTasks)
+__flatbuffers_build_scalar_field(1, flatbuffers_, PBS_ifl_IMTasks_tvnodeId, flatbuffers_int16, int16_t, 2, 2, INT16_C(0), PBS_ifl_IMTasks)
+
+static inline PBS_ifl_IMTasks_ref_t PBS_ifl_IMTasks_create(flatbuffers_builder_t *B __PBS_ifl_IMTasks_formal_args)
+{
+    if (PBS_ifl_IMTasks_start(B)
+        || PBS_ifl_IMTasks_pvnodeId_add(B, v0)
+        || PBS_ifl_IMTasks_tvnodeId_add(B, v1)) {
+        return 0;
+    }
+    return PBS_ifl_IMTasks_end(B);
+}
+
+static PBS_ifl_IMTasks_ref_t PBS_ifl_IMTasks_clone(flatbuffers_builder_t *B, PBS_ifl_IMTasks_table_t t)
+{
+    __flatbuffers_memoize_begin(B, t);
+    if (PBS_ifl_IMTasks_start(B)
+        || PBS_ifl_IMTasks_pvnodeId_pick(B, t)
+        || PBS_ifl_IMTasks_tvnodeId_pick(B, t)) {
+        return 0;
+    }
+    __flatbuffers_memoize_end(B, t, PBS_ifl_IMTasks_end(B));
+}
+
+__flatbuffers_build_scalar_field(0, flatbuffers_, PBS_ifl_IMSignal_pvnodeId, flatbuffers_int16, int16_t, 2, 2, INT16_C(0), PBS_ifl_IMSignal)
+__flatbuffers_build_scalar_field(1, flatbuffers_, PBS_ifl_IMSignal_taskId, flatbuffers_uint16, uint16_t, 2, 2, UINT16_C(0), PBS_ifl_IMSignal)
+__flatbuffers_build_scalar_field(2, flatbuffers_, PBS_ifl_IMSignal_sigNum, flatbuffers_int16, int16_t, 2, 2, INT16_C(0), PBS_ifl_IMSignal)
+
+static inline PBS_ifl_IMSignal_ref_t PBS_ifl_IMSignal_create(flatbuffers_builder_t *B __PBS_ifl_IMSignal_formal_args)
+{
+    if (PBS_ifl_IMSignal_start(B)
+        || PBS_ifl_IMSignal_pvnodeId_add(B, v0)
+        || PBS_ifl_IMSignal_taskId_add(B, v1)
+        || PBS_ifl_IMSignal_sigNum_add(B, v2)) {
+        return 0;
+    }
+    return PBS_ifl_IMSignal_end(B);
+}
+
+static PBS_ifl_IMSignal_ref_t PBS_ifl_IMSignal_clone(flatbuffers_builder_t *B, PBS_ifl_IMSignal_table_t t)
+{
+    __flatbuffers_memoize_begin(B, t);
+    if (PBS_ifl_IMSignal_start(B)
+        || PBS_ifl_IMSignal_pvnodeId_pick(B, t)
+        || PBS_ifl_IMSignal_taskId_pick(B, t)
+        || PBS_ifl_IMSignal_sigNum_pick(B, t)) {
+        return 0;
+    }
+    __flatbuffers_memoize_end(B, t, PBS_ifl_IMSignal_end(B));
+}
+
+__flatbuffers_build_scalar_field(0, flatbuffers_, PBS_ifl_IMObit_pvnodeId, flatbuffers_int16, int16_t, 2, 2, INT16_C(0), PBS_ifl_IMObit)
+__flatbuffers_build_scalar_field(1, flatbuffers_, PBS_ifl_IMObit_tvnodeId, flatbuffers_int16, int16_t, 2, 2, INT16_C(0), PBS_ifl_IMObit)
+__flatbuffers_build_scalar_field(2, flatbuffers_, PBS_ifl_IMObit_taskId, flatbuffers_uint16, uint16_t, 2, 2, UINT16_C(0), PBS_ifl_IMObit)
+
+static inline PBS_ifl_IMObit_ref_t PBS_ifl_IMObit_create(flatbuffers_builder_t *B __PBS_ifl_IMObit_formal_args)
+{
+    if (PBS_ifl_IMObit_start(B)
+        || PBS_ifl_IMObit_pvnodeId_add(B, v0)
+        || PBS_ifl_IMObit_tvnodeId_add(B, v1)
+        || PBS_ifl_IMObit_taskId_add(B, v2)) {
+        return 0;
+    }
+    return PBS_ifl_IMObit_end(B);
+}
+
+static PBS_ifl_IMObit_ref_t PBS_ifl_IMObit_clone(flatbuffers_builder_t *B, PBS_ifl_IMObit_table_t t)
+{
+    __flatbuffers_memoize_begin(B, t);
+    if (PBS_ifl_IMObit_start(B)
+        || PBS_ifl_IMObit_pvnodeId_pick(B, t)
+        || PBS_ifl_IMObit_tvnodeId_pick(B, t)
+        || PBS_ifl_IMObit_taskId_pick(B, t)) {
+        return 0;
+    }
+    __flatbuffers_memoize_end(B, t, PBS_ifl_IMObit_end(B));
+}
+
+__flatbuffers_build_scalar_field(0, flatbuffers_, PBS_ifl_IMInfo_pvnodeId, flatbuffers_int16, int16_t, 2, 2, INT16_C(0), PBS_ifl_IMInfo)
+__flatbuffers_build_scalar_field(1, flatbuffers_, PBS_ifl_IMInfo_taskId, flatbuffers_uint16, uint16_t, 2, 2, UINT16_C(0), PBS_ifl_IMInfo)
+__flatbuffers_build_string_field(2, flatbuffers_, PBS_ifl_IMInfo_name, PBS_ifl_IMInfo)
+
+static inline PBS_ifl_IMInfo_ref_t PBS_ifl_IMInfo_create(flatbuffers_builder_t *B __PBS_ifl_IMInfo_formal_args)
+{
+    if (PBS_ifl_IMInfo_start(B)
+        || PBS_ifl_IMInfo_name_add(B, v2)
+        || PBS_ifl_IMInfo_pvnodeId_add(B, v0)
+        || PBS_ifl_IMInfo_taskId_add(B, v1)) {
+        return 0;
+    }
+    return PBS_ifl_IMInfo_end(B);
+}
+
+static PBS_ifl_IMInfo_ref_t PBS_ifl_IMInfo_clone(flatbuffers_builder_t *B, PBS_ifl_IMInfo_table_t t)
+{
+    __flatbuffers_memoize_begin(B, t);
+    if (PBS_ifl_IMInfo_start(B)
+        || PBS_ifl_IMInfo_name_pick(B, t)
+        || PBS_ifl_IMInfo_pvnodeId_pick(B, t)
+        || PBS_ifl_IMInfo_taskId_pick(B, t)) {
+        return 0;
+    }
+    __flatbuffers_memoize_end(B, t, PBS_ifl_IMInfo_end(B));
+}
+
+__flatbuffers_build_scalar_field(0, flatbuffers_, PBS_ifl_IMGResc_pvnodeId, flatbuffers_int16, int16_t, 2, 2, INT16_C(0), PBS_ifl_IMGResc)
+
+static inline PBS_ifl_IMGResc_ref_t PBS_ifl_IMGResc_create(flatbuffers_builder_t *B __PBS_ifl_IMGResc_formal_args)
+{
+    if (PBS_ifl_IMGResc_start(B)
+        || PBS_ifl_IMGResc_pvnodeId_add(B, v0)) {
+        return 0;
+    }
+    return PBS_ifl_IMGResc_end(B);
+}
+
+static PBS_ifl_IMGResc_ref_t PBS_ifl_IMGResc_clone(flatbuffers_builder_t *B, PBS_ifl_IMGResc_table_t t)
+{
+    __flatbuffers_memoize_begin(B, t);
+    if (PBS_ifl_IMGResc_start(B)
+        || PBS_ifl_IMGResc_pvnodeId_pick(B, t)) {
+        return 0;
+    }
+    __flatbuffers_memoize_end(B, t, PBS_ifl_IMGResc_end(B));
+}
+
+__flatbuffers_build_string_field(0, flatbuffers_, PBS_ifl_IMSResc_node, PBS_ifl_IMSResc)
+__flatbuffers_build_scalar_field(1, flatbuffers_, PBS_ifl_IMSResc_cpu, flatbuffers_int64, int64_t, 8, 8, INT64_C(0), PBS_ifl_IMSResc)
+__flatbuffers_build_scalar_field(2, flatbuffers_, PBS_ifl_IMSResc_mem, flatbuffers_int64, int64_t, 8, 8, INT64_C(0), PBS_ifl_IMSResc)
+__flatbuffers_build_scalar_field(3, flatbuffers_, PBS_ifl_IMSResc_cpupercent, flatbuffers_int64, int64_t, 8, 8, INT64_C(0), PBS_ifl_IMSResc)
+
+static inline PBS_ifl_IMSResc_ref_t PBS_ifl_IMSResc_create(flatbuffers_builder_t *B __PBS_ifl_IMSResc_formal_args)
+{
+    if (PBS_ifl_IMSResc_start(B)
+        || PBS_ifl_IMSResc_cpu_add(B, v1)
+        || PBS_ifl_IMSResc_mem_add(B, v2)
+        || PBS_ifl_IMSResc_cpupercent_add(B, v3)
+        || PBS_ifl_IMSResc_node_add(B, v0)) {
+        return 0;
+    }
+    return PBS_ifl_IMSResc_end(B);
+}
+
+static PBS_ifl_IMSResc_ref_t PBS_ifl_IMSResc_clone(flatbuffers_builder_t *B, PBS_ifl_IMSResc_table_t t)
+{
+    __flatbuffers_memoize_begin(B, t);
+    if (PBS_ifl_IMSResc_start(B)
+        || PBS_ifl_IMSResc_cpu_pick(B, t)
+        || PBS_ifl_IMSResc_mem_pick(B, t)
+        || PBS_ifl_IMSResc_cpupercent_pick(B, t)
+        || PBS_ifl_IMSResc_node_pick(B, t)) {
+        return 0;
+    }
+    __flatbuffers_memoize_end(B, t, PBS_ifl_IMSResc_end(B));
+}
+
+__flatbuffers_build_table_vector_field(0, flatbuffers_, PBS_ifl_IMUpdate_attrs, PBS_ifl_Attribute, PBS_ifl_IMUpdate)
+
+static inline PBS_ifl_IMUpdate_ref_t PBS_ifl_IMUpdate_create(flatbuffers_builder_t *B __PBS_ifl_IMUpdate_formal_args)
+{
+    if (PBS_ifl_IMUpdate_start(B)
+        || PBS_ifl_IMUpdate_attrs_add(B, v0)) {
+        return 0;
+    }
+    return PBS_ifl_IMUpdate_end(B);
+}
+
+static PBS_ifl_IMUpdate_ref_t PBS_ifl_IMUpdate_clone(flatbuffers_builder_t *B, PBS_ifl_IMUpdate_table_t t)
+{
+    __flatbuffers_memoize_begin(B, t);
+    if (PBS_ifl_IMUpdate_start(B)
+        || PBS_ifl_IMUpdate_attrs_pick(B, t)) {
+        return 0;
+    }
+    __flatbuffers_memoize_end(B, t, PBS_ifl_IMUpdate_end(B));
+}
+
+__flatbuffers_build_scalar_field(0, flatbuffers_, PBS_ifl_IMCred_type, flatbuffers_int16, int16_t, 2, 2, INT16_C(0), PBS_ifl_IMCred)
+__flatbuffers_build_string_field(1, flatbuffers_, PBS_ifl_IMCred_cred, PBS_ifl_IMCred)
+__flatbuffers_build_scalar_field(2, flatbuffers_, PBS_ifl_IMCred_validity, flatbuffers_int64, int64_t, 8, 8, INT64_C(0), PBS_ifl_IMCred)
+
+static inline PBS_ifl_IMCred_ref_t PBS_ifl_IMCred_create(flatbuffers_builder_t *B __PBS_ifl_IMCred_formal_args)
+{
+    if (PBS_ifl_IMCred_start(B)
+        || PBS_ifl_IMCred_validity_add(B, v2)
+        || PBS_ifl_IMCred_cred_add(B, v1)
+        || PBS_ifl_IMCred_type_add(B, v0)) {
+        return 0;
+    }
+    return PBS_ifl_IMCred_end(B);
+}
+
+static PBS_ifl_IMCred_ref_t PBS_ifl_IMCred_clone(flatbuffers_builder_t *B, PBS_ifl_IMCred_table_t t)
+{
+    __flatbuffers_memoize_begin(B, t);
+    if (PBS_ifl_IMCred_start(B)
+        || PBS_ifl_IMCred_validity_pick(B, t)
+        || PBS_ifl_IMCred_cred_pick(B, t)
+        || PBS_ifl_IMCred_type_pick(B, t)) {
+        return 0;
+    }
+    __flatbuffers_memoize_end(B, t, PBS_ifl_IMCred_end(B));
+}
+
+__flatbuffers_build_scalar_field(0, flatbuffers_, PBS_ifl_IMRKill_cpu, flatbuffers_int64, int64_t, 8, 8, INT64_C(0), PBS_ifl_IMRKill)
+__flatbuffers_build_scalar_field(1, flatbuffers_, PBS_ifl_IMRKill_mem, flatbuffers_int64, int64_t, 8, 8, INT64_C(0), PBS_ifl_IMRKill)
+__flatbuffers_build_scalar_field(2, flatbuffers_, PBS_ifl_IMRKill_cpupercent, flatbuffers_int64, int64_t, 8, 8, INT64_C(0), PBS_ifl_IMRKill)
+__flatbuffers_build_table_vector_field(3, flatbuffers_, PBS_ifl_IMRKill_attrs, PBS_ifl_Attribute, PBS_ifl_IMRKill)
+
+static inline PBS_ifl_IMRKill_ref_t PBS_ifl_IMRKill_create(flatbuffers_builder_t *B __PBS_ifl_IMRKill_formal_args)
+{
+    if (PBS_ifl_IMRKill_start(B)
+        || PBS_ifl_IMRKill_cpu_add(B, v0)
+        || PBS_ifl_IMRKill_mem_add(B, v1)
+        || PBS_ifl_IMRKill_cpupercent_add(B, v2)
+        || PBS_ifl_IMRKill_attrs_add(B, v3)) {
+        return 0;
+    }
+    return PBS_ifl_IMRKill_end(B);
+}
+
+static PBS_ifl_IMRKill_ref_t PBS_ifl_IMRKill_clone(flatbuffers_builder_t *B, PBS_ifl_IMRKill_table_t t)
+{
+    __flatbuffers_memoize_begin(B, t);
+    if (PBS_ifl_IMRKill_start(B)
+        || PBS_ifl_IMRKill_cpu_pick(B, t)
+        || PBS_ifl_IMRKill_mem_pick(B, t)
+        || PBS_ifl_IMRKill_cpupercent_pick(B, t)
+        || PBS_ifl_IMRKill_attrs_pick(B, t)) {
+        return 0;
+    }
+    __flatbuffers_memoize_end(B, t, PBS_ifl_IMRKill_end(B));
+}
+
+__flatbuffers_build_scalar_field(0, flatbuffers_, PBS_ifl_IMRSpawn_taskId, flatbuffers_uint16, uint16_t, 2, 2, UINT16_C(0), PBS_ifl_IMRSpawn)
+
+static inline PBS_ifl_IMRSpawn_ref_t PBS_ifl_IMRSpawn_create(flatbuffers_builder_t *B __PBS_ifl_IMRSpawn_formal_args)
+{
+    if (PBS_ifl_IMRSpawn_start(B)
+        || PBS_ifl_IMRSpawn_taskId_add(B, v0)) {
+        return 0;
+    }
+    return PBS_ifl_IMRSpawn_end(B);
+}
+
+static PBS_ifl_IMRSpawn_ref_t PBS_ifl_IMRSpawn_clone(flatbuffers_builder_t *B, PBS_ifl_IMRSpawn_table_t t)
+{
+    __flatbuffers_memoize_begin(B, t);
+    if (PBS_ifl_IMRSpawn_start(B)
+        || PBS_ifl_IMRSpawn_taskId_pick(B, t)) {
+        return 0;
+    }
+    __flatbuffers_memoize_end(B, t, PBS_ifl_IMRSpawn_end(B));
+}
+
+__flatbuffers_build_vector_field(0, flatbuffers_, PBS_ifl_IMRTasks_taskIds, flatbuffers_uint16, uint16_t, PBS_ifl_IMRTasks)
+
+static inline PBS_ifl_IMRTasks_ref_t PBS_ifl_IMRTasks_create(flatbuffers_builder_t *B __PBS_ifl_IMRTasks_formal_args)
+{
+    if (PBS_ifl_IMRTasks_start(B)
+        || PBS_ifl_IMRTasks_taskIds_add(B, v0)) {
+        return 0;
+    }
+    return PBS_ifl_IMRTasks_end(B);
+}
+
+static PBS_ifl_IMRTasks_ref_t PBS_ifl_IMRTasks_clone(flatbuffers_builder_t *B, PBS_ifl_IMRTasks_table_t t)
+{
+    __flatbuffers_memoize_begin(B, t);
+    if (PBS_ifl_IMRTasks_start(B)
+        || PBS_ifl_IMRTasks_taskIds_pick(B, t)) {
+        return 0;
+    }
+    __flatbuffers_memoize_end(B, t, PBS_ifl_IMRTasks_end(B));
+}
+
+__flatbuffers_build_scalar_field(0, flatbuffers_, PBS_ifl_IMRObit_exitval, flatbuffers_int16, int16_t, 2, 2, INT16_C(0), PBS_ifl_IMRObit)
+
+static inline PBS_ifl_IMRObit_ref_t PBS_ifl_IMRObit_create(flatbuffers_builder_t *B __PBS_ifl_IMRObit_formal_args)
+{
+    if (PBS_ifl_IMRObit_start(B)
+        || PBS_ifl_IMRObit_exitval_add(B, v0)) {
+        return 0;
+    }
+    return PBS_ifl_IMRObit_end(B);
+}
+
+static PBS_ifl_IMRObit_ref_t PBS_ifl_IMRObit_clone(flatbuffers_builder_t *B, PBS_ifl_IMRObit_table_t t)
+{
+    __flatbuffers_memoize_begin(B, t);
+    if (PBS_ifl_IMRObit_start(B)
+        || PBS_ifl_IMRObit_exitval_pick(B, t)) {
+        return 0;
+    }
+    __flatbuffers_memoize_end(B, t, PBS_ifl_IMRObit_end(B));
+}
+
+__flatbuffers_build_string_vector_field(0, flatbuffers_, PBS_ifl_IMRInfo_infos, PBS_ifl_IMRInfo)
+
+static inline PBS_ifl_IMRInfo_ref_t PBS_ifl_IMRInfo_create(flatbuffers_builder_t *B __PBS_ifl_IMRInfo_formal_args)
+{
+    if (PBS_ifl_IMRInfo_start(B)
+        || PBS_ifl_IMRInfo_infos_add(B, v0)) {
+        return 0;
+    }
+    return PBS_ifl_IMRInfo_end(B);
+}
+
+static PBS_ifl_IMRInfo_ref_t PBS_ifl_IMRInfo_clone(flatbuffers_builder_t *B, PBS_ifl_IMRInfo_table_t t)
+{
+    __flatbuffers_memoize_begin(B, t);
+    if (PBS_ifl_IMRInfo_start(B)
+        || PBS_ifl_IMRInfo_infos_pick(B, t)) {
+        return 0;
+    }
+    __flatbuffers_memoize_end(B, t, PBS_ifl_IMRInfo_end(B));
+}
+
+__flatbuffers_build_string_field(0, flatbuffers_, PBS_ifl_IMRResc_info, PBS_ifl_IMRResc)
+
+static inline PBS_ifl_IMRResc_ref_t PBS_ifl_IMRResc_create(flatbuffers_builder_t *B __PBS_ifl_IMRResc_formal_args)
+{
+    if (PBS_ifl_IMRResc_start(B)
+        || PBS_ifl_IMRResc_info_add(B, v0)) {
+        return 0;
+    }
+    return PBS_ifl_IMRResc_end(B);
+}
+
+static PBS_ifl_IMRResc_ref_t PBS_ifl_IMRResc_clone(flatbuffers_builder_t *B, PBS_ifl_IMRResc_table_t t)
+{
+    __flatbuffers_memoize_begin(B, t);
+    if (PBS_ifl_IMRResc_start(B)
+        || PBS_ifl_IMRResc_info_pick(B, t)) {
+        return 0;
+    }
+    __flatbuffers_memoize_end(B, t, PBS_ifl_IMRResc_end(B));
+}
+
+__flatbuffers_build_scalar_field(0, flatbuffers_, PBS_ifl_IMRPoll_exitval, flatbuffers_int16, int16_t, 2, 2, INT16_C(0), PBS_ifl_IMRPoll)
+__flatbuffers_build_scalar_field(1, flatbuffers_, PBS_ifl_IMRPoll_cpu, flatbuffers_int64, int64_t, 8, 8, INT64_C(0), PBS_ifl_IMRPoll)
+__flatbuffers_build_scalar_field(2, flatbuffers_, PBS_ifl_IMRPoll_mem, flatbuffers_int64, int64_t, 8, 8, INT64_C(0), PBS_ifl_IMRPoll)
+__flatbuffers_build_scalar_field(3, flatbuffers_, PBS_ifl_IMRPoll_cpupercent, flatbuffers_int64, int64_t, 8, 8, INT64_C(0), PBS_ifl_IMRPoll)
+__flatbuffers_build_table_vector_field(4, flatbuffers_, PBS_ifl_IMRPoll_attrs, PBS_ifl_Attribute, PBS_ifl_IMRPoll)
+
+static inline PBS_ifl_IMRPoll_ref_t PBS_ifl_IMRPoll_create(flatbuffers_builder_t *B __PBS_ifl_IMRPoll_formal_args)
+{
+    if (PBS_ifl_IMRPoll_start(B)
+        || PBS_ifl_IMRPoll_cpu_add(B, v1)
+        || PBS_ifl_IMRPoll_mem_add(B, v2)
+        || PBS_ifl_IMRPoll_cpupercent_add(B, v3)
+        || PBS_ifl_IMRPoll_attrs_add(B, v4)
+        || PBS_ifl_IMRPoll_exitval_add(B, v0)) {
+        return 0;
+    }
+    return PBS_ifl_IMRPoll_end(B);
+}
+
+static PBS_ifl_IMRPoll_ref_t PBS_ifl_IMRPoll_clone(flatbuffers_builder_t *B, PBS_ifl_IMRPoll_table_t t)
+{
+    __flatbuffers_memoize_begin(B, t);
+    if (PBS_ifl_IMRPoll_start(B)
+        || PBS_ifl_IMRPoll_cpu_pick(B, t)
+        || PBS_ifl_IMRPoll_mem_pick(B, t)
+        || PBS_ifl_IMRPoll_cpupercent_pick(B, t)
+        || PBS_ifl_IMRPoll_attrs_pick(B, t)
+        || PBS_ifl_IMRPoll_exitval_pick(B, t)) {
+        return 0;
+    }
+    __flatbuffers_memoize_end(B, t, PBS_ifl_IMRPoll_end(B));
+}
+
+__flatbuffers_build_scalar_field(0, flatbuffers_, PBS_ifl_IMRErr_errcode, flatbuffers_int16, int16_t, 2, 2, INT16_C(0), PBS_ifl_IMRErr)
+__flatbuffers_build_string_field(1, flatbuffers_, PBS_ifl_IMRErr_errmsg, PBS_ifl_IMRErr)
+
+static inline PBS_ifl_IMRErr_ref_t PBS_ifl_IMRErr_create(flatbuffers_builder_t *B __PBS_ifl_IMRErr_formal_args)
+{
+    if (PBS_ifl_IMRErr_start(B)
+        || PBS_ifl_IMRErr_errmsg_add(B, v1)
+        || PBS_ifl_IMRErr_errcode_add(B, v0)) {
+        return 0;
+    }
+    return PBS_ifl_IMRErr_end(B);
+}
+
+static PBS_ifl_IMRErr_ref_t PBS_ifl_IMRErr_clone(flatbuffers_builder_t *B, PBS_ifl_IMRErr_table_t t)
+{
+    __flatbuffers_memoize_begin(B, t);
+    if (PBS_ifl_IMRErr_start(B)
+        || PBS_ifl_IMRErr_errmsg_pick(B, t)
+        || PBS_ifl_IMRErr_errcode_pick(B, t)) {
+        return 0;
+    }
+    __flatbuffers_memoize_end(B, t, PBS_ifl_IMRErr_end(B));
+}
+
+__flatbuffers_build_string_field(0, flatbuffers_, PBS_ifl_InterMoM_jobId, PBS_ifl_InterMoM)
+__flatbuffers_build_string_field(1, flatbuffers_, PBS_ifl_InterMoM_cookie, PBS_ifl_InterMoM)
+__flatbuffers_build_scalar_field(2, flatbuffers_, PBS_ifl_InterMoM_cmd, flatbuffers_int16, int16_t, 2, 2, INT16_C(0), PBS_ifl_InterMoM)
+__flatbuffers_build_scalar_field(3, flatbuffers_, PBS_ifl_InterMoM_event, flatbuffers_int16, int16_t, 2, 2, INT16_C(0), PBS_ifl_InterMoM)
+__flatbuffers_build_scalar_field(4, flatbuffers_, PBS_ifl_InterMoM_fromTask, flatbuffers_uint16, uint16_t, 2, 2, UINT16_C(0), PBS_ifl_InterMoM)
+__flatbuffers_build_union_field(6, flatbuffers_, PBS_ifl_InterMoM_req, PBS_ifl_IMReq, PBS_ifl_InterMoM)
+__flatbuffers_build_union_table_value_field(flatbuffers_, PBS_ifl_InterMoM_req, PBS_ifl_IMReq, IMJoin, PBS_ifl_IMJoin)
+__flatbuffers_build_union_table_value_field(flatbuffers_, PBS_ifl_InterMoM_req, PBS_ifl_IMReq, IMSpawn, PBS_ifl_IMSpawn)
+__flatbuffers_build_union_table_value_field(flatbuffers_, PBS_ifl_InterMoM_req, PBS_ifl_IMReq, IMTasks, PBS_ifl_IMTasks)
+__flatbuffers_build_union_table_value_field(flatbuffers_, PBS_ifl_InterMoM_req, PBS_ifl_IMReq, IMSignal, PBS_ifl_IMSignal)
+__flatbuffers_build_union_table_value_field(flatbuffers_, PBS_ifl_InterMoM_req, PBS_ifl_IMReq, IMObit, PBS_ifl_IMObit)
+__flatbuffers_build_union_table_value_field(flatbuffers_, PBS_ifl_InterMoM_req, PBS_ifl_IMReq, IMInfo, PBS_ifl_IMInfo)
+__flatbuffers_build_union_table_value_field(flatbuffers_, PBS_ifl_InterMoM_req, PBS_ifl_IMReq, IMGResc, PBS_ifl_IMGResc)
+__flatbuffers_build_union_table_value_field(flatbuffers_, PBS_ifl_InterMoM_req, PBS_ifl_IMReq, IMSResc, PBS_ifl_IMSResc)
+__flatbuffers_build_union_table_value_field(flatbuffers_, PBS_ifl_InterMoM_req, PBS_ifl_IMReq, IMUpdate, PBS_ifl_IMUpdate)
+__flatbuffers_build_union_table_value_field(flatbuffers_, PBS_ifl_InterMoM_req, PBS_ifl_IMReq, IMCred, PBS_ifl_IMCred)
+__flatbuffers_build_union_field(8, flatbuffers_, PBS_ifl_InterMoM_reply, PBS_ifl_IMReply, PBS_ifl_InterMoM)
+__flatbuffers_build_union_table_value_field(flatbuffers_, PBS_ifl_InterMoM_reply, PBS_ifl_IMReply, IMRErr, PBS_ifl_IMRErr)
+__flatbuffers_build_union_table_value_field(flatbuffers_, PBS_ifl_InterMoM_reply, PBS_ifl_IMReply, IMRKill, PBS_ifl_IMRKill)
+__flatbuffers_build_union_table_value_field(flatbuffers_, PBS_ifl_InterMoM_reply, PBS_ifl_IMReply, IMRSpawn, PBS_ifl_IMRSpawn)
+__flatbuffers_build_union_table_value_field(flatbuffers_, PBS_ifl_InterMoM_reply, PBS_ifl_IMReply, IMRTasks, PBS_ifl_IMRTasks)
+__flatbuffers_build_union_table_value_field(flatbuffers_, PBS_ifl_InterMoM_reply, PBS_ifl_IMReply, IMRObit, PBS_ifl_IMRObit)
+__flatbuffers_build_union_table_value_field(flatbuffers_, PBS_ifl_InterMoM_reply, PBS_ifl_IMReply, IMRInfo, PBS_ifl_IMRInfo)
+__flatbuffers_build_union_table_value_field(flatbuffers_, PBS_ifl_InterMoM_reply, PBS_ifl_IMReply, IMRResc, PBS_ifl_IMRResc)
+__flatbuffers_build_union_table_value_field(flatbuffers_, PBS_ifl_InterMoM_reply, PBS_ifl_IMReply, IMRPoll, PBS_ifl_IMRPoll)
+
+static inline PBS_ifl_InterMoM_ref_t PBS_ifl_InterMoM_create(flatbuffers_builder_t *B __PBS_ifl_InterMoM_formal_args)
+{
+    if (PBS_ifl_InterMoM_start(B)
+        || PBS_ifl_InterMoM_jobId_add(B, v0)
+        || PBS_ifl_InterMoM_cookie_add(B, v1)
+        || PBS_ifl_InterMoM_req_add_value(B, v6)
+        || PBS_ifl_InterMoM_reply_add_value(B, v8)
+        || PBS_ifl_InterMoM_cmd_add(B, v2)
+        || PBS_ifl_InterMoM_event_add(B, v3)
+        || PBS_ifl_InterMoM_fromTask_add(B, v4)
+        || PBS_ifl_InterMoM_req_add_type(B, v6.type)
+        || PBS_ifl_InterMoM_reply_add_type(B, v8.type)) {
+        return 0;
+    }
+    return PBS_ifl_InterMoM_end(B);
+}
+
+static PBS_ifl_InterMoM_ref_t PBS_ifl_InterMoM_clone(flatbuffers_builder_t *B, PBS_ifl_InterMoM_table_t t)
+{
+    __flatbuffers_memoize_begin(B, t);
+    if (PBS_ifl_InterMoM_start(B)
+        || PBS_ifl_InterMoM_jobId_pick(B, t)
+        || PBS_ifl_InterMoM_cookie_pick(B, t)
+        || PBS_ifl_InterMoM_req_pick(B, t)
+        || PBS_ifl_InterMoM_reply_pick(B, t)
+        || PBS_ifl_InterMoM_cmd_pick(B, t)
+        || PBS_ifl_InterMoM_event_pick(B, t)
+        || PBS_ifl_InterMoM_fromTask_pick(B, t)) {
+        return 0;
+    }
+    __flatbuffers_memoize_end(B, t, PBS_ifl_InterMoM_end(B));
 }
 
 __flatbuffers_build_table_field(0, flatbuffers_, PBS_ifl_RmReq_hdr, PBS_ifl_Header, PBS_ifl_RmReq)
