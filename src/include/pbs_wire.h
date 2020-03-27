@@ -52,6 +52,29 @@ extern "C" {
 /* Convenient namespace macro to manage long namespace prefix for flatbuffer */
 #define ns(x) FLATBUFFERS_WRAP_NAMESPACE(PBS_ifl, x)
 
+#define COPYSTR(dest, src, len) \
+do { \
+	memset(dest, '\0', len); \
+	strncpy(dest, (char *)src, len - 1); \
+} while(0)
+
+#define COPYSTR_B(dest, src) COPYSTR(dest, src, sizeof(dest))
+
+#define COPYSTR_M(dest, src, len) \
+do { \
+	dest = (char *)malloc(len); \
+	if (dest == NULL) \
+		return PBSE_SYSTEM; \
+	memcpy(dest, src, len); \
+} while(0)
+
+#define COPYSTR_S(dest, src) \
+do { \
+	dest = strdup((char *)src); \
+	if (dest == NULL) \
+		return PBSE_SYSTEM; \
+} while(0)
+
 typedef struct pbs_tcp_auth_data {
 	int ctx_status;
 	void *ctx;

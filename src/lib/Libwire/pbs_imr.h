@@ -42,6 +42,7 @@
 #include "libpbs.h"
 #include "log.h"
 #include "tm_.h"
+#include "job.h"
 
 typedef struct im_join_job {
 	int im_nodenum;
@@ -145,7 +146,7 @@ typedef struct imr_spawn_task {
 
 typedef struct imr_get_tasks {
 	int imr_count;
-	tm_task_id *imr_taskid; /* list */
+	tm_task_id *imr_taskids; /* list */
 } imr_get_tasks_t;
 
 typedef struct imr_obit_task {

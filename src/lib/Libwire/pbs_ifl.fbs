@@ -267,7 +267,6 @@ table IMSignal {
 
 table IMObit {
 	pvnodeId: short;
-	tvnodeId: short;
 	taskId: ushort;
 }
 
@@ -283,7 +282,7 @@ table IMGResc {
 
 table IMSResc {
 	node: string;
-	cpu: long;
+	cput: long;
 	mem: long;
 	cpupercent: long;
 }
@@ -304,8 +303,13 @@ union IMReq {
 	IMUpdate, IMCred
 }
 
+table IMRErr {
+	errcode: short;
+	errmsg: string;
+}
+
 table IMRKill {
-	cpu: long;
+	cput: long;
 	mem: long;
 	cpupercent: long;
 	attrs: [Attribute];
@@ -333,15 +337,10 @@ table IMRResc {
 
 table IMRPoll {
 	exitval: short;
-	cpu: long;
+	cput: long;
 	mem: long;
 	cpupercent: long;
 	attrs: [Attribute];
-}
-
-table IMRErr {
-	errcode: short;
-	errmsg: string;
 }
 
 union IMReply {

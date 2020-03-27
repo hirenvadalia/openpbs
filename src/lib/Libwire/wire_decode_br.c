@@ -43,29 +43,6 @@
 
 extern char *msg_nosupport;
 
-#define COPYSTR(dest, src, len) \
-do { \
-	memset(dest, '\0', len); \
-	strncpy(dest, (char *)src, len - 1); \
-} while(0)
-
-#define COPYSTR_B(dest, src) COPYSTR(dest, src, sizeof(dest))
-
-#define COPYSTR_M(dest, src, len) \
-do { \
-	dest = (char *)malloc(len); \
-	if (dest == NULL) \
-		return PBSE_SYSTEM; \
-	memcpy(dest, src, len); \
-} while(0)
-
-#define COPYSTR_S(dest, src) \
-do { \
-	dest = strdup((char *)src); \
-	if (dest == NULL) \
-		return PBSE_SYSTEM; \
-} while(0)
-
 static int wire_decode_attropl(ns(Attribute_vec_t), struct attropl **);
 static int wire_decode_CopyFiles(ns(CopyFile_table_t), struct rq_cpyfile *);
 
@@ -303,10 +280,10 @@ wire_request_read(int sfds, struct batch_request *request)
 		return PBSE_PROTOCOL;
 	}
 
-	req = (ns(Req_table_t)) ns(Req_as_root(buf));
-	hdr = (ns(Header_table_t)) ns(Req_hdr(req));
-	proto = (uint16_t) ns(Header_protType(hdr));
-	version = (uint16_t) ns(Header_version(hdr));
+	req = ns(Req_as_root(buf));
+	hdr = ns(Req_hdr(req));
+	proto = ns(Header_protType(hdr));
+	version = ns(Header_version(hdr));
 
 	if (proto != ns(ProtType_Batch) || version > PBS_BATCH_PROT_VER)
 		return PBSE_PROTOCOL;
