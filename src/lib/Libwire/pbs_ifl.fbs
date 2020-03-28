@@ -360,6 +360,142 @@ table InterMoM {
 	reply: IMReply;
 }
 
+table ISNull {
+	retry: short;
+	highwater: short;
+}
+
+table VnodeAttr {
+	name: string;
+	value: string;
+	type: short;
+	flag: short;
+}
+
+table Vnode {
+	vnodeId: string;
+	attrs: [VnodeAttr];
+}
+
+table Vnodes {
+	modtime: long;
+	vnodes: [Vnode];
+}
+
+table ISUpdate {
+	state: short;
+	phyCpu: short;
+	availCpu: short;
+	phyMem: ulong;
+	arch: string;
+	version: string;
+	vnodes: Vnodes;
+}
+
+table RUsed {
+	jobId: string;
+	comment: string;
+	status: short;
+	hop: short;
+	attrs: [Attribute];
+}
+
+table ISRescUsed {
+	elems: [RUsed];
+}
+
+table ISObit {
+	jobId: string;
+}
+
+table ISRestart {
+	port: short;
+}
+
+table ISIdle {
+	which: short;
+	jobId: string;
+}
+
+table JInfo {
+	jobId: string;
+	subState: short;
+	runVer: long;
+	execVnode: string;
+}
+
+table ISHello {
+	opts: short;
+	infos: [JInfo];
+}
+
+table ISDiscard {
+	jobId: string;
+	runVer: long;
+}
+
+table Addr {
+	addr: ulong;
+	depth: ulong;
+}
+
+table ISAddrs {
+	addrs: [Addr];
+}
+
+table ISUpdateHook {
+	seq: ulong;
+	user: string;
+	vnodes: Vnodes;
+}
+
+table Action {
+	jobId: string;
+	seq: ulong;
+	runVer: short;
+	action: short;
+}
+
+table ISActions {
+	actions: [Action];
+}
+
+table ISAcks {
+	type: short;
+	seq: ulong;
+}
+
+table ISSchedRC {
+	user: string;
+}
+
+table HookChkSum {
+	hkChkSum: ulong;
+	pyChkSum: ulong;
+	cfChkSum: ulong;
+}
+
+table ISChkSums {
+	rdChkSum: ulong;
+	hChkSums: [HookChkSum];
+}
+
+union ISReq {
+	ISNull, ISUpdate, ISRescUsed,
+	ISObit, ISRestart, ISIdle,
+	ISHello, ISDiscard, ISAddrs,
+	ISUpdateHook, ISActions,
+	ISAcks, ISSchedRC, ISChkSums
+}
+
+table InterSvr {
+	cmd: short;
+	nsgId: short;
+	req: ISReq;
+	breq: Req;
+	breply: Resp;
+}
+
 table RmReq {
 	hdr: Header;
 	data: [string];

@@ -4647,6 +4647,7 @@ found:
 				hello_opts = 0;	/* no optional data */
 
 			if (hello_opts & HELLO4_vmap_version) {
+				// FIXME: should we remove below and mominfo_time_t?
 				/* Mom sending vnodemap file info which is */
 				/* no longer used,  just read and ignore   */
 				(void)disrul(stream, &ret);

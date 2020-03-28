@@ -93,9 +93,10 @@ typedef unsigned long pbs_net_t;        /* for holding host addresses */
 /*
  **	Types of Inter Server messages (between Server and Mom).
  */
+// FIXME: remove deprecated
 #define	IS_NULL			0
 #define	IS_HELLO		1
-#define	IS_CLUSTER_ADDRS	2
+#define	IS_CLUSTER_ADDRS	2	/* Deprecated */
 #define IS_UPDATE		3
 #define IS_RESCUSED		4
 #define IS_JOBOBIT		5
@@ -106,13 +107,13 @@ typedef unsigned long pbs_net_t;        /* for holding host addresses */
 #define IS_ACKOBIT		10
 #define IS_GSS_HANDSHAKE	11	/* Deprecated */
 #define IS_CLUSTER_KEY		12	/* Deprecated */
-#define IS_REGISTERMOM		13
+#define IS_REGISTERMOM		13	/* Deprecated */
 #define IS_UPDATE2		14
-#define IS_HELLO2		15
-#define IS_HOST_TO_VNODE	16
-#define IS_RECVD_VMAP		17
+#define IS_HELLO2		15	/* Deprecated */
+#define IS_HOST_TO_VNODE	16	/* Deprecated, FIXME: confirm */
+#define IS_RECVD_VMAP		17	/* Deprecated, see below */
 #define IS_MOM_READY		17	/* alias for IS_RECD_VMAP */
-#define IS_HELLO3		18
+#define IS_HELLO3		18	/* Deprecated */
 #define IS_DISCARD_JOB		19
 #define IS_HELLO4		20
 #define IS_DISCARD_DONE		21
