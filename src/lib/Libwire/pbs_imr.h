@@ -208,6 +208,6 @@ typedef struct pbs_im {
 	int im_command;
 	tm_event_t im_event;
 	tm_task_id im_fromtask;
-	im_req_t im_req;
-	im_reply_t im_reply;
+	im_req_t *im_req;
+	im_reply_t *im_reply;
 } pbs_im_t;

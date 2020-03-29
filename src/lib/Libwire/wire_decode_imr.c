@@ -284,12 +284,14 @@ wire_im_read(int sock, pbs_im_t *pims)
 		case IM_ERROR:
 		case IM_ERROR2:
 			/* this is reply */
-			return __wire_im_read_reply(req, &(pims->im_reply));
+			// FIXME: alloc im_reply here
+			return __wire_im_read_reply(req, pims->im_reply);
 			break;
 
 		default:
 			/* this is request */
-			return __wire_im_read_req(req, &(pims->im_req));
+			// FIXME: alloc im_req here
+			return __wire_im_read_req(req, pims->im_req);
 			break;
 	}
 

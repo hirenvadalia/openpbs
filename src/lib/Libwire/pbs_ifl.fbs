@@ -401,7 +401,7 @@ table RUsed {
 }
 
 table ISRescUsed {
-	elems: [RUsed];
+	rescs: [RUsed];
 }
 
 table ISObit {
@@ -426,7 +426,7 @@ table JInfo {
 
 table ISHello {
 	opts: short;
-	infos: [JInfo];
+	jobs: [JInfo];
 }
 
 table ISDiscard {
@@ -460,7 +460,7 @@ table ISActions {
 	actions: [Action];
 }
 
-table ISAcks {
+table ISHAck {
 	type: short;
 	seq: ulong;
 }
@@ -485,12 +485,12 @@ union ISReq {
 	ISObit, ISRestart, ISIdle,
 	ISHello, ISDiscard, ISAddrs,
 	ISUpdateHook, ISActions,
-	ISAcks, ISSchedRC, ISChkSums
+	ISHAck, ISSchedRC, ISChkSums
 }
 
 table InterSvr {
 	cmd: short;
-	nsgId: short;
+	msgId: short;
 	req: ISReq;
 	breq: Req;
 	breply: Resp;

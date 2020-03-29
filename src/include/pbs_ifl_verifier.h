@@ -82,7 +82,7 @@ static int PBS_ifl_ISAddrs_verify_table(flatcc_table_verifier_descriptor_t *td);
 static int PBS_ifl_ISUpdateHook_verify_table(flatcc_table_verifier_descriptor_t *td);
 static int PBS_ifl_Action_verify_table(flatcc_table_verifier_descriptor_t *td);
 static int PBS_ifl_ISActions_verify_table(flatcc_table_verifier_descriptor_t *td);
-static int PBS_ifl_ISAcks_verify_table(flatcc_table_verifier_descriptor_t *td);
+static int PBS_ifl_ISHAck_verify_table(flatcc_table_verifier_descriptor_t *td);
 static int PBS_ifl_ISSchedRC_verify_table(flatcc_table_verifier_descriptor_t *td);
 static int PBS_ifl_HookChkSum_verify_table(flatcc_table_verifier_descriptor_t *td);
 static int PBS_ifl_ISChkSums_verify_table(flatcc_table_verifier_descriptor_t *td);
@@ -187,7 +187,7 @@ static int PBS_ifl_ISReq_union_verifier(flatcc_union_verifier_descriptor_t *ud)
     case 9: return flatcc_verify_union_table(ud, PBS_ifl_ISAddrs_verify_table); /* ISAddrs */
     case 10: return flatcc_verify_union_table(ud, PBS_ifl_ISUpdateHook_verify_table); /* ISUpdateHook */
     case 11: return flatcc_verify_union_table(ud, PBS_ifl_ISActions_verify_table); /* ISActions */
-    case 12: return flatcc_verify_union_table(ud, PBS_ifl_ISAcks_verify_table); /* ISAcks */
+    case 12: return flatcc_verify_union_table(ud, PBS_ifl_ISHAck_verify_table); /* ISHAck */
     case 13: return flatcc_verify_union_table(ud, PBS_ifl_ISSchedRC_verify_table); /* ISSchedRC */
     case 14: return flatcc_verify_union_table(ud, PBS_ifl_ISChkSums_verify_table); /* ISChkSums */
     default: return flatcc_verify_ok;
@@ -1978,7 +1978,7 @@ static inline int PBS_ifl_RUsed_verify_as_root_with_type_hash(const void *buf, s
 static int PBS_ifl_ISRescUsed_verify_table(flatcc_table_verifier_descriptor_t *td)
 {
     int ret;
-    if ((ret = flatcc_verify_table_vector_field(td, 0, 0, &PBS_ifl_RUsed_verify_table) /* elems */)) return ret;
+    if ((ret = flatcc_verify_table_vector_field(td, 0, 0, &PBS_ifl_RUsed_verify_table) /* rescs */)) return ret;
     return flatcc_verify_ok;
 }
 
@@ -2118,7 +2118,7 @@ static int PBS_ifl_ISHello_verify_table(flatcc_table_verifier_descriptor_t *td)
 {
     int ret;
     if ((ret = flatcc_verify_field(td, 0, 2, 2) /* opts */)) return ret;
-    if ((ret = flatcc_verify_table_vector_field(td, 1, 0, &PBS_ifl_JInfo_verify_table) /* infos */)) return ret;
+    if ((ret = flatcc_verify_table_vector_field(td, 1, 0, &PBS_ifl_JInfo_verify_table) /* jobs */)) return ret;
     return flatcc_verify_ok;
 }
 
@@ -2311,7 +2311,7 @@ static inline int PBS_ifl_ISActions_verify_as_root_with_type_hash(const void *bu
     return flatcc_verify_table_as_typed_root(buf, bufsiz, thash, &PBS_ifl_ISActions_verify_table);
 }
 
-static int PBS_ifl_ISAcks_verify_table(flatcc_table_verifier_descriptor_t *td)
+static int PBS_ifl_ISHAck_verify_table(flatcc_table_verifier_descriptor_t *td)
 {
     int ret;
     if ((ret = flatcc_verify_field(td, 0, 2, 2) /* type */)) return ret;
@@ -2319,24 +2319,24 @@ static int PBS_ifl_ISAcks_verify_table(flatcc_table_verifier_descriptor_t *td)
     return flatcc_verify_ok;
 }
 
-static inline int PBS_ifl_ISAcks_verify_as_root(const void *buf, size_t bufsiz)
+static inline int PBS_ifl_ISHAck_verify_as_root(const void *buf, size_t bufsiz)
 {
-    return flatcc_verify_table_as_root(buf, bufsiz, PBS_ifl_ISAcks_identifier, &PBS_ifl_ISAcks_verify_table);
+    return flatcc_verify_table_as_root(buf, bufsiz, PBS_ifl_ISHAck_identifier, &PBS_ifl_ISHAck_verify_table);
 }
 
-static inline int PBS_ifl_ISAcks_verify_as_typed_root(const void *buf, size_t bufsiz)
+static inline int PBS_ifl_ISHAck_verify_as_typed_root(const void *buf, size_t bufsiz)
 {
-    return flatcc_verify_table_as_root(buf, bufsiz, PBS_ifl_ISAcks_type_identifier, &PBS_ifl_ISAcks_verify_table);
+    return flatcc_verify_table_as_root(buf, bufsiz, PBS_ifl_ISHAck_type_identifier, &PBS_ifl_ISHAck_verify_table);
 }
 
-static inline int PBS_ifl_ISAcks_verify_as_root_with_identifier(const void *buf, size_t bufsiz, const char *fid)
+static inline int PBS_ifl_ISHAck_verify_as_root_with_identifier(const void *buf, size_t bufsiz, const char *fid)
 {
-    return flatcc_verify_table_as_root(buf, bufsiz, fid, &PBS_ifl_ISAcks_verify_table);
+    return flatcc_verify_table_as_root(buf, bufsiz, fid, &PBS_ifl_ISHAck_verify_table);
 }
 
-static inline int PBS_ifl_ISAcks_verify_as_root_with_type_hash(const void *buf, size_t bufsiz, flatbuffers_thash_t thash)
+static inline int PBS_ifl_ISHAck_verify_as_root_with_type_hash(const void *buf, size_t bufsiz, flatbuffers_thash_t thash)
 {
-    return flatcc_verify_table_as_typed_root(buf, bufsiz, thash, &PBS_ifl_ISAcks_verify_table);
+    return flatcc_verify_table_as_typed_root(buf, bufsiz, thash, &PBS_ifl_ISHAck_verify_table);
 }
 
 static int PBS_ifl_ISSchedRC_verify_table(flatcc_table_verifier_descriptor_t *td)
@@ -2427,7 +2427,7 @@ static int PBS_ifl_InterSvr_verify_table(flatcc_table_verifier_descriptor_t *td)
 {
     int ret;
     if ((ret = flatcc_verify_field(td, 0, 2, 2) /* cmd */)) return ret;
-    if ((ret = flatcc_verify_field(td, 1, 2, 2) /* nsgId */)) return ret;
+    if ((ret = flatcc_verify_field(td, 1, 2, 2) /* msgId */)) return ret;
     if ((ret = flatcc_verify_union_field(td, 3, 0, &PBS_ifl_ISReq_union_verifier) /* req */)) return ret;
     if ((ret = flatcc_verify_table_field(td, 4, 0, &PBS_ifl_Req_verify_table) /* breq */)) return ret;
     if ((ret = flatcc_verify_table_field(td, 5, 0, &PBS_ifl_Resp_verify_table) /* breply */)) return ret;

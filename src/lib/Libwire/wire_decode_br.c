@@ -238,6 +238,31 @@ wire_decode_CopyFiles(ns(CopyFile_table_t) B, struct rq_cpyfile *pcf)
 	return 0;
 }
 
+int
+wire_request_read(int sfds, struct batch_request *request)
+{
+	int rc = 0;
+	void *buf = NULL;
+	size_t bufsz = 0;
+	ns(Req_table_t) req;
+
+	if (request->prot == PROT_TPP)
+		DIS_tpp_funcs();
+	else
+		DIS_tcp_funcs();
+
+	//FIXME: get loaded buf for read with size here
+	rc = ns(Req_verify_as_root(buf, bufsz));
+	if (rc != 0) {
+		log_eventf(PBSEVENT_DEBUG, PBS_EVENTCLASS_REQUEST, LOG_DEBUG, __func__,
+				"Bad request, errno %d, wire error %d", errno, rc);
+		return PBSE_PROTOCOL;
+	}
+
+	req = ns(Req_as_root(buf));
+	return __wire_request_read(req, request);
+}
+
 /**
  * @brief
  * 	Read in an DIS encoded request from the network
@@ -257,30 +282,13 @@ wire_decode_CopyFiles(ns(CopyFile_table_t) B, struct rq_cpyfile *pcf)
  */
 // FIXME: Move this to wire_decode_batch_request.c
 int
-wire_request_read(int sfds, struct batch_request *request)
+__wire_request_read(ns(Req_table_t) req, struct batch_request *request)
 {
 	int rc = 0;
-	void *buf = NULL;
-	size_t bufsz = 0;
-	ns(Req_table_t) req;
 	ns(Header_table_t) hdr;
 	uint16_t proto;
 	uint16_t version;
 
-	if (request->prot == PROT_TPP)
-		DIS_tpp_funcs();
-	else
-		DIS_tcp_funcs();
-
-	//FIXME: get loaded buf for read with size here
-	rc = ns(Req_verify_as_root(buf, bufsz));
-	if (rc != 0) {
-		log_eventf(PBSEVENT_DEBUG, PBS_EVENTCLASS_REQUEST, LOG_DEBUG, __func__,
-				"Bad request, errno %d, wire error %d", errno, rc);
-		return PBSE_PROTOCOL;
-	}
-
-	req = ns(Req_as_root(buf));
 	hdr = ns(Req_hdr(req));
 	proto = ns(Header_protType(hdr));
 	version = ns(Header_version(hdr));
@@ -668,8 +676,6 @@ wire_request_read(int sfds, struct batch_request *request)
 int
 wire_reply_read(int sock, struct batch_reply *reply, int prot, int forsvr)
 {
-	int i = 0;
-	size_t len = 0;
 	int rc = 0;
 	void *buf = NULL;
 	size_t bufsz = 0;
@@ -689,6 +695,16 @@ wire_reply_read(int sock, struct batch_reply *reply, int prot, int forsvr)
 	}
 
 	resp = ns(Resp_as_root(buf));
+	return __wire_reply_read(resp, reply, forsvr);
+}
+
+int
+wire_reply_read(ns(Resp_table_t) resp, struct batch_reply *reply, int forsvr)
+{
+	int i = 0;
+	size_t len = 0;
+	int rc = 0;
+
 	reply->brp_code = ns(Resp_code(resp));
 	reply->brp_auxcode = ns(Resp_auxCode(resp));
 	reply->brp_choice = ns(Resp_choice(resp));

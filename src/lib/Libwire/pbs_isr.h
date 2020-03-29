@@ -41,6 +41,7 @@
 #include "pbs_ifl.h"
 #include "libpbs.h"
 #include "log.h"
+#include "mom_server.h"
 #include "placementsets.h"
 
 // FIXME: move below to appropriate place
@@ -136,9 +137,9 @@ typedef union is_req {
 	/* no info for IS_MOM_READY */
 	is_hello_t is_hello; /* IS_HELLO4 */
 	is_discard_job_t is_discard; /* IS_DISCARD_JOB and IS_DISCARD_DONE */
-	is_addr_info_t is_addrs; /* IS_CLUSTER_ADDRS2 */
+	is_addr_info_t *is_addrs; /* IS_CLUSTER_ADDRS2 */
 	is_update_from_hook_t is_update_hook; /* IS_UPDATE_FROM_HOOK and IS_UPDATE_FROM_HOOK2 */
-	is_hj_action_t is_actions; /* IS_HOOK_JOB_ACTION */
+	is_hj_action_t *is_actions; /* IS_HOOK_JOB_ACTION */
 	is_hact_ack_t is_hact_ack; /* IS_HOOK_ACTION_ACK */
 	char *is_user; /* IS_HOOK_SCHEDULER_RESTART_CYCLE */
 	is_hook_chksums_t is_hchksums; /* IS_HOOK_CHECKSUMS */
@@ -148,7 +149,7 @@ typedef union is_req {
 typedef struct pbs_is {
 	int is_cmd;
 	char *is_msgid;
-	is_req_t is_req;
+	is_req_t *is_req;
 	breq_t *is_breq; /* IS_CMD */
 	breply_t *is_breply; /* IS_CMD_REPLY */
 } pbs_is_t;
