@@ -364,7 +364,6 @@ int wire_is_read(int sock, pbs_is_t *piss)
 
 	req = ns(InterSvr_as_root(buf));
 	piss->is_cmd = ns(InterSvr_cmd(req));
-	COPYSTR_S(piss->is_msgid, ns(InterSvr_msgId(req)));
 
 	switch (piss->is_cmd) {
 		case IS_CMD:
@@ -372,16 +371,20 @@ int wire_is_read(int sock, pbs_is_t *piss)
 			if (piss->is_breq == NULL)
 				return PBSE_SYSTEM;
 			piss->is_breq->prot = PROT_TPP;
-			// FIXME: is_msgid should be in is_breq ?
+			COPYSTR_S(piss->is_breq->tppcmd_msgid, ns(InterSvr_msgId(req)));
 			rc = __wire_request_read(ns(InterSvr_req(req)), piss->is_breq);
 			break;
 
 		case IS_CMD_REPLY:
-			// FIXME: alloc is_breply here
+			piss->is_breply = (breply_t *) calloc(1, sizeof(breply_t));
+			if (piss->is_breply == NULL)
+				return PBSE_SYSTEM;
 			rc = __wire_reply_read(ns(InterSvr_reply(req)), piss->is_breply, 1);
 
 		default:
-			// FIXME: alloc is_req here
+			piss->is_req = (is_req_t *) calloc(1, sizeof(is_req_t));
+			if (piss->is_req == NULL)
+				return PBSE_SYSTEM;
 			rc = __wire_is_read(ns(InterSvr_req(req)), piss->is_req);
 			break;
 	}

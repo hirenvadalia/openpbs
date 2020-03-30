@@ -55,7 +55,6 @@
 #ifdef WIN32
 #include	<sddl.h>
 #endif
-#include	"dis.h"
 #include	"tm.h"
 #include	"pbs_ifl.h"
 #include 	"pbs_client_thread.h"
@@ -117,6 +116,15 @@ static	int		tm_momport = 15003;
 static	int		local_conn = -1;
 static	int		init_done = 0;
 static	char		*localhost = LOCALHOST_SHORTNAME;
+
+
+static int
+flush_tm(flatcc_builder_t *B)
+{
+	ns(TmReq_end_as_root(B));
+
+	return dis_flush(local_conn, B);
+}
 
 /*
  **	Events are the central focus of this library.  They are tracked
@@ -557,46 +565,26 @@ failed:
  *
  */
 static int
-startcom(int com, tm_event_t event)
+startcom(flatcc_builder_t *B, int com, tm_event_t event)
 {
-	int     ret;
+	flatcc_builder_init(B);
 
 	if (localmom() == -1)
 		return -1;
 
-	ret = diswsi(local_conn, TM_PROTOCOL);
-	if (ret != DIS_SUCCESS)
-		goto done;
-	ret = diswsi(local_conn, TM_PROTOCOL_VER);
-	if (ret != DIS_SUCCESS)
-		goto done;
-	ret = diswcs(local_conn, tm_jobid, tm_jobid_len);
-	if (ret != DIS_SUCCESS)
-		goto done;
-	ret = diswcs(local_conn, tm_jobcookie, tm_jobcookie_len);
-	if (ret != DIS_SUCCESS)
-		goto done;
-	ret = diswsi(local_conn, com);
-	if (ret != DIS_SUCCESS)
-		goto done;
-	ret = diswsi(local_conn, event);
-	if (ret != DIS_SUCCESS)
-		goto done;
-	ret = diswui(local_conn, tm_jobtid);
-	if (ret != DIS_SUCCESS)
-		goto done;
-	return DIS_SUCCESS;
+	ns(TmReq_start_as_root(B));
+	ns(Header_start(B));
+	ns(Header_protType_add(B, ns(ProtType_TaskMgr)));
+	ns(Header_version_add(B, TM_PROTOCOL_VER));
+	ns(Header_reqId_add(B, com));
+	ns(TmReq_hdr_add(B, ns(Header_end(B))));
 
-done:
-	DBPRT(("startcom: send error %s\n", dis_emsg[ret]))
-	CS_close_socket(local_conn);
-#ifdef WIN32
-	closesocket(local_conn);
-#else
-	close(local_conn);
-#endif
-	local_conn = -1;
-	return ret;
+	ns(TmReq_jobId_add(B, flatbuffers_string_create_str(B, tm_jobid)));
+	ns(TmReq_cookie_add(B, flatbuffers_string_create_str(B, tm_jobcookie)));
+	ns(TmReq_event_add(B, (uint16_t) event));
+	ns(TmReq_event_add(B, (uint16_t) tm_jobtid));
+
+	return 0;
 }
 
 /**
@@ -618,6 +606,7 @@ tm_init(void *info, struct tm_roots *roots)
 	int			err;
 	int			nerr = 0;
 	extern	int		pbs_tcp_interrupt;
+	flatcc_builder_t B;
 
 	if (init_done)
 		return TM_BADINIT;
@@ -663,14 +652,9 @@ tm_init(void *info, struct tm_roots *roots)
 	init_done = 1;
 	nevent = new_event();
 
-	/*
-	 * send the following request:
-	 *	header		(tm_init)
-	 */
-
-	if (startcom(TM_INIT, nevent) != DIS_SUCCESS)
+	if (startcom(&B, TM_INIT, nevent) != 0)
 		return TM_ESYSTEM;
-	dis_flush(local_conn);
+	flush_tm(&B);
 	add_event(nevent, TM_ERROR_NODE, TM_INIT, (void *)roots);
 
 	if ((err = tm_poll(TM_NULL_EVENT, &revent, 1, &nerr)) != TM_SUCCESS)
@@ -707,6 +691,7 @@ tm_attach(char *jobid, char *cookie, pid_t pid, tm_task_id *tid, char *host, int
 	int		        sz = 0;
 	int		        ret = 0;
 #endif
+	flatcc_builder_t builder, *B = &builder;
 
 	pbs_tcp_interrupt = 1;
 
@@ -736,29 +721,22 @@ tm_attach(char *jobid, char *cookie, pid_t pid, tm_task_id *tid, char *host, int
 
 	nevent = new_event();
 
-	/*
-	 * send the following request:
-	 *	header		(tm_attach)
-	 *	int		uid
-	 *	int		pid
-	 */
-
-	if (startcom(TM_ATTACH, nevent) != DIS_SUCCESS)
+	if (startcom(B, TM_ATTACH, nevent) != 0)
 		return TM_ESYSTEM;
+
+	ns(TmAttach_start(B));
+
 #ifdef WIN32
 	sz = sizeof(usern);
 	ret = GetUserName(usern, &sz);
-	if (diswcs(local_conn, usern, strlen(usern)) != DIS_SUCCESS)	/* send uid */
-		return TM_ENOTCONNECTED;
+	ns(TmAttach_user_add(B, flatbuffers_string_create_str(B, usern)));
 #else
-	if (diswsi(local_conn, getuid()) != DIS_SUCCESS)	/* send uid */
-		return TM_ENOTCONNECTED;
+	ns(TmAttach_uid_add(B, getuid()));
 #endif
 
-	if (diswsi(local_conn, pid) != DIS_SUCCESS)	/* send pid */
-		return TM_ENOTCONNECTED;
-
-	dis_flush(local_conn);
+	ns(TmAttach_uid_add(B, (int) pid));
+	ns(TmReq_body_add(B, ns(TmBody_as_TmAttach(ns(TmAttach_end(B))))));
+	flush_tm(B);
 	add_event(nevent, TM_ERROR_NODE, TM_ATTACH, (void *)tid);
 
 	init_done = 1;		/* fake having called tm_init */
@@ -825,11 +803,11 @@ tm_nodeinfo(tm_node_id **list, int *nnodes)
  *
  */
 int
-tm_spawn(int argc, char **argv, char **envp,
-		tm_node_id where, tm_task_id *tid, tm_event_t *event)
+tm_spawn(int argc, char **argv, char **envp, tm_node_id where, tm_task_id *tid, tm_event_t *event)
 {
-	char		*cp;
-	int		i;
+	char *cp;
+	int i;
+	flatcc_builder_t builder, *B = &builder;
 
 	if (!init_done)
 		return TM_BADINIT;
@@ -837,38 +815,33 @@ tm_spawn(int argc, char **argv, char **envp,
 		return TM_ENOTFOUND;
 
 	*event = new_event();
-	if (startcom(TM_SPAWN, *event) != DIS_SUCCESS)
+	if (startcom(B, TM_SPAWN, *event) != 0)
 		return TM_ENOTCONNECTED;
 
-	if (diswsi(local_conn, where) != DIS_SUCCESS)	/* send where */
-		return TM_ENOTCONNECTED;
+	ns(TmSpawn_start(B));
+	ns(TmSpawn_where_add(B, (int) where));
 
-	if (diswsi(local_conn, argc) != DIS_SUCCESS)	/* send argc */
-		return TM_ENOTCONNECTED;
-
-	/* send argv strings across */
-
-	for (i=0; i < argc; i++) {
-		cp = argv[i];
-		if (diswcs(local_conn, cp, strlen(cp)) != DIS_SUCCESS)
-			return TM_ENOTCONNECTED;
+	flatbuffers_string_vec_start(B);
+	for (i = 0; i < argc; i++) {
+		flatbuffers_string_vec_push(B, flatbuffers_string_create_str(B, argv[i]));
 	}
+	ns(TmSpawn_argv_add(B, flatbuffers_string_vec_end(B)));
 
-	/* send envp strings across */
 	if (envp != NULL) {
+		flatbuffers_string_vec_start(B);
 		for (i=0; (cp = envp[i]) != NULL; i++) {
 #if defined(PBS_SECURITY) && (PBS_SECURITY == KRB5)
 			/* never send KRB5CCNAME; it would rewrite the value on target host */
 			if (strncmp(envp[i], "KRB5CCNAME", strlen("KRB5CCNAME")) == 0)
 				continue;
 #endif
-			if (diswcs(local_conn, cp, strlen(cp)) != DIS_SUCCESS)
-				return TM_ENOTCONNECTED;
+			flatbuffers_string_vec_push(B, flatbuffers_string_create_str(B, envp[i]));
 		}
+		ns(TmSpawn_envp_add(B, flatbuffers_string_vec_end(B)));
 	}
-	if (diswcs(local_conn, "", 0) != DIS_SUCCESS)
-		return TM_ENOTCONNECTED;
-	dis_flush(local_conn);
+
+	ns(TmReq_body_add(B, ns(TmBody_as_TmSpawn(ns(TmSpawn_end(B))))));
+	flush_tm(B);
 	add_event(*event, where, TM_SPAWN, (void *)tid);
 	return TM_SUCCESS;
 }
@@ -890,22 +863,22 @@ tm_spawn(int argc, char **argv, char **envp,
 int
 tm_kill(tm_task_id tid, int sig, tm_event_t *event)
 {
-	task_info	*tp;
+	task_info *tp;
+	flatcc_builder_t builder, *B = &builder;
 
 	if (!init_done)
 		return TM_BADINIT;
 	if ((tp = find_task(tid)) == NULL)
 		return TM_ENOTFOUND;
 	*event = new_event();
-	if (startcom(TM_SIGNAL, *event) != DIS_SUCCESS)
+	if (startcom(B, TM_SIGNAL, *event) != 0)
 		return TM_ENOTCONNECTED;
-	if (diswsi(local_conn, tp->t_node) != DIS_SUCCESS)
-		return TM_ENOTCONNECTED;
-	if (diswui(local_conn, tid) != DIS_SUCCESS)
-		return TM_ENOTCONNECTED;
-	if (diswsi(local_conn, sig) != DIS_SUCCESS)
-		return TM_ENOTCONNECTED;
-	dis_flush(local_conn);
+	ns(TmSignal_start(B));
+	ns(TmSignal_nid_add(B, (int) tp->t_node));
+	ns(TmSignal_tid_add(B, (int) tid));
+	ns(TmSignal_sig_add(B, sig));
+	ns(TmReq_body_add(B, ns(TmBody_as_TmSignal(ns(TmSignal_end(B))))));
+	flush_tm(B);
 	add_event(*event, tp->t_node, TM_SIGNAL, NULL);
 	return TM_SUCCESS;
 }
@@ -927,20 +900,21 @@ tm_kill(tm_task_id tid, int sig, tm_event_t *event)
 int
 tm_obit(tm_task_id tid, int *obitval, tm_event_t *event)
 {
-	task_info	*tp;
+	task_info *tp;
+	flatcc_builder_t builder, *B = &builder;
 
 	if (!init_done)
 		return TM_BADINIT;
 	if ((tp = find_task(tid)) == NULL)
 		return TM_ENOTFOUND;
 	*event = new_event();
-	if (startcom(TM_OBIT, *event) != DIS_SUCCESS)
+	if (startcom(B, TM_OBIT, *event) != 0)
 		return TM_ESYSTEM;
-	if (diswsi(local_conn, tp->t_node) != DIS_SUCCESS)
-		return TM_ESYSTEM;
-	if (diswui(local_conn, tid) != DIS_SUCCESS)
-		return TM_ESYSTEM;
-	dis_flush(local_conn);
+	ns(TmObit_start(B));
+	ns(TmObit_nid_add(B, (int) tp->t_node));
+	ns(TmObit_tid_add(B, (int) tid));
+	ns(TmReq_body_add(B, ns(TmBody_as_TmObit(ns(TmObit_end(B))))));
+	flush_tm(B);
 	add_event(*event, tp->t_node, TM_OBIT, (void *)obitval);
 	return TM_SUCCESS;
 }
@@ -969,21 +943,22 @@ struct	taskhold {
  *
  */
 int
-tm_taskinfo(tm_node_id node, tm_task_id *tid_list,
-		int list_size, int *ntasks, tm_event_t *event)
+tm_taskinfo(tm_node_id node, tm_task_id *tid_list, int list_size, int *ntasks, tm_event_t *event)
 {
-	struct	taskhold	*thold;
+	struct taskhold *thold;
+	flatcc_builder_t builder, *B = &builder;
 
 	if (!init_done)
 		return TM_BADINIT;
 	if (tid_list == NULL || list_size == 0 || ntasks == NULL)
 		return TM_EBADENVIRONMENT;
 	*event = new_event();
-	if (startcom(TM_TASKS, *event) != DIS_SUCCESS)
+	if (startcom(B, TM_TASKS, *event) != 0)
 		return TM_ESYSTEM;
-	if (diswsi(local_conn, node) != DIS_SUCCESS)
-		return TM_ESYSTEM;
-	dis_flush(local_conn);
+	ns(TmInfo_start(B));
+	ns(TmInfo_nid_add(B, (int) node));
+	ns(TmReq_body_add(B, ns(TmBody_as_TmInfo(ns(TmInfo_end(B))))));
+	flush_tm(B);
 
 	thold = (struct taskhold *)malloc(sizeof(struct taskhold));
 	assert(thold != NULL);
@@ -1045,18 +1020,20 @@ struct	reschold {
 int
 tm_rescinfo(tm_node_id node, char *resource, int len, tm_event_t *event)
 {
-	struct	reschold	*rhold;
+	struct	reschold *rhold;
+	flatcc_builder_t builder, *B = &builder;
 
 	if (!init_done)
 		return TM_BADINIT;
 	if (resource == NULL || len == 0)
 		return TM_EBADENVIRONMENT;
 	*event = new_event();
-	if (startcom(TM_RESOURCES, *event) != DIS_SUCCESS)
+	if (startcom(B, TM_RESOURCES, *event) != 0)
 		return TM_ESYSTEM;
-	if (diswsi(local_conn, node) != DIS_SUCCESS)
-		return TM_ESYSTEM;
-	dis_flush(local_conn);
+	ns(TmInfo_start(B));
+	ns(TmInfo_nid_add(B, (int) node));
+	ns(TmReq_body_add(B, ns(TmBody_as_TmInfo(ns(TmInfo_end(B))))));
+	flush_tm(B);
 
 	rhold = (struct reschold *)malloc(sizeof(struct reschold));
 	assert(rhold != NULL);
@@ -1087,18 +1064,18 @@ tm_rescinfo(tm_node_id node, char *resource, int len, tm_event_t *event)
 int
 tm_publish(char *name, void *info, int len, tm_event_t *event)
 {
+	flatcc_builder_t builder, *B = &builder;
 
 	if (!init_done)
 		return TM_BADINIT;
 	*event = new_event();
-	if (startcom(TM_POSTINFO, *event) != DIS_SUCCESS)
+	if (startcom(B, TM_POSTINFO, *event) != 0)
 		return TM_ESYSTEM;
-	if (diswst(local_conn, name) != DIS_SUCCESS)
-		return TM_ESYSTEM;
-	if (diswcs(local_conn, info, len) != DIS_SUCCESS)
-		return TM_ESYSTEM;
-
-	dis_flush(local_conn);
+	ns(TmPublish_start(B));
+	ns(TmPublish_name_add(B, flatbuffers_string_create_str(B, name)));
+	ns(TmPublish_info_add(B, flatbuffers_string_create(B, info, len)));
+	ns(TmReq_body_add(B, ns(TmBody_as_TmPublish(ns(TmPublish_end(B))))));
+	flush_tm(B);
 	add_event(*event, TM_ERROR_NODE, TM_POSTINFO, NULL);
 	return TM_SUCCESS;
 }
@@ -1130,23 +1107,23 @@ struct	infohold {
 int
 tm_subscribe(tm_task_id tid, char *name, void *info, int len, int *info_len, tm_event_t *event)
 {
-	task_info		*tp;
-	struct	infohold	*ihold;
+	task_info *tp;
+	struct infohold *ihold;
+	flatcc_builder_t builder, *B = &builder;
 
 	if (!init_done)
 		return TM_BADINIT;
 	if ((tp = find_task(tid)) == NULL)
 		return TM_ENOTFOUND;
 	*event = new_event();
-	if (startcom(TM_GETINFO, *event) != DIS_SUCCESS)
+	if (startcom(B, TM_GETINFO, *event) != 0)
 		return TM_ESYSTEM;
-	if (diswsi(local_conn, tp->t_node) != DIS_SUCCESS)
-		return TM_ESYSTEM;
-	if (diswui(local_conn, tid) != DIS_SUCCESS)
-		return TM_ESYSTEM;
-	if (diswst(local_conn, name) != DIS_SUCCESS)
-		return TM_ESYSTEM;
-	dis_flush(local_conn);
+	ns(TmSubscribe_start(B));
+	ns(TmSubscribe_name_add(B, flatbuffers_string_create_str(B, name)));
+	ns(TmSubscribe_nid_add(B, (int)tp->t_node));
+	ns(TmSubscribe_tid_add(B, (int)tid));
+	ns(TmReq_body_add(B, ns(TmBody_as_TmSubscribe(ns(TmSubscribe_end(B))))));
+	flush_tm(B);
 
 	ihold = (struct infohold *)malloc(sizeof(struct infohold));
 	assert(ihold != NULL);

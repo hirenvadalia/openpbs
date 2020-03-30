@@ -148,7 +148,6 @@ typedef union is_req {
 
 typedef struct pbs_is {
 	int is_cmd;
-	char *is_msgid;
 	is_req_t *is_req;
 	breq_t *is_breq; /* IS_CMD */
 	breply_t *is_breply; /* IS_CMD_REPLY */

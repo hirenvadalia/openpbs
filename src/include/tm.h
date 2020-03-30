@@ -45,7 +45,8 @@
 #ifndef _TM_H
 #define _TM_H
 
-#include	"tm_.h"
+#include "tm_.h"
+#include "pbs_wire.h"
 
 /*
  **	The tm_roots structure contains data for the last

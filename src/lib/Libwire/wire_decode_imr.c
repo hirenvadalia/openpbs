@@ -284,13 +284,17 @@ wire_im_read(int sock, pbs_im_t *pims)
 		case IM_ERROR:
 		case IM_ERROR2:
 			/* this is reply */
-			// FIXME: alloc im_reply here
+			pims->im_reply = (im_reply_t *)calloc(1, sizeof(im_reply_t));
+			if (pims->im_reply == NULL)
+				return PBSE_SYSTEM;
 			return __wire_im_read_reply(req, pims->im_reply);
 			break;
 
 		default:
 			/* this is request */
-			// FIXME: alloc im_req here
+			pims->im_req = (im_req_t *)calloc(1, sizeof(im_req_t));
+			if (pims->im_req == NULL)
+				return PBSE_SYSTEM;
 			return __wire_im_read_req(req, pims->im_req);
 			break;
 	}
