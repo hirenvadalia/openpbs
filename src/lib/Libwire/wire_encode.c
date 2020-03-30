@@ -41,22 +41,6 @@
 #include "libpbs.h"
 #include "log.h"
 
-#define PBSE_FLATCC_ERROR 0
-
-#define FB_STR(var, B, str) \
-do { \
-	var = PBSE_FLATCC_ERROR; \
-	if ((var = flatbuffers_string_create_str(B, str)) == PBSE_FLATCC_ERROR) \
-		return PBSE_FLATCC_ERROR; \
-} while(0)
-
-#define FB_STRN(var, B, str, len) \
-do { \
-	var = PBSE_FLATCC_ERROR; \
-	if ((var = flatbuffers_string_create(B, str, len)) == PBSE_FLATCC_ERROR) \
-		return PBSE_FLATCC_ERROR; \
-} while(0)
-
 #define FB_ATTROPL(var, B, attrs) \
 do { \
 	var = PBSE_FLATCC_ERROR; \
@@ -71,8 +55,23 @@ do { \
 		return PBSE_FLATCC_ERROR; \
 } while(0)
 
+int
+wire_encode_batch_start(flatcc_builder_t *B, int prot, char **msgid)
+{
+	flatcc_builder_init(B);
+
+	if (prot == PROT_TPP) {
+		if (is_compose_cmd(B, IS_CMD, msgid) != PBSE_NONE)
+			return PBSE_FLATCC_ERROR;
+		ns(Req_start(B));
+	} else {
+		ns(Req_start_as_root(B));
+	}
+
+}
+
 ns(Header_ref_t)
-wire_encode_hdr(flatcc_builder_t *B, int reqid, char *user)
+wire_encode_hdr(flatcc_builder_t *B, int reqid, char *user, int prot, char **msgid)
 {
 	flatbuffers_string_ref_t usr = 0;
 
@@ -158,7 +157,7 @@ wire_encode_QueueJob(flatcc_builder_t *B, char *jobid, char *destin, struct attr
 	ns(Qjob_start(B));
 	FB_STR(s, B, jobid == NULL ? "" : jobid);
 	ns(Qjob_jobId_add(B, s));
-	FB_STR(s, B, jobid == NULL ? "" : jobid);
+	FB_STR(s, B, destin == NULL ? "" : destin);
 	ns(Qjob_destin_add(B, s));
 	FB_ATTROPL(attrs, B, aoplp);
 	ns(Qjob_attrs_add(B, attrs));

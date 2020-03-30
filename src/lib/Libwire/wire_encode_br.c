@@ -43,7 +43,30 @@
 #endif
 #include "pbs_ifl.h"
 #include "libpbs.h"
-#include "dis.h"
+
+#define START_REQ(B, prot, msgid, type) do { \
+	ns(Header_ref_t) hdr = PBSE_FLATCC_ERROR; \
+	if (wire_encode_batch_start(B, prot, msgid) == PBSE_FLATCC_ERROR) \
+		return (pbs_errno = PBSE_PROTOCOL); \
+	hdr = wire_encode_hdr(B, type, pbs_current_user, prot, msgid); \
+	ns(Req_hdr_add(B, hdr)); \
+} while(0)
+
+#define END_REQ(name, prot, B, body, extend) do { \
+	if (body == PBSE_FLATCC_ERROR) \
+		return (pbs_errno = PBSE_PROTOCOL); \
+	ns(Req_body_add(B, ns(ReqBody_as_ ## name(body)))); \
+	if (extend != NULL) { \
+		flatbuffers_string_ref_t s = 0; \
+		FB_STR(s, B, extend); \
+		ns(Req_extend_add(B, s)); \
+	} \
+	if (prot == PROT_TPP) { \
+		ns(InterSvr_breq_add(B, ns(Req_end(B)))); \
+		ns(InterSvr_end_as_root(B)); \
+	} else \
+		ns(Req_end_as_root(B)); \
+} while(0)
 
 
 /**
@@ -52,34 +75,15 @@
  * @param[in] stream  - The TPP stream on which to send message
  * @param[in] command - The message type (cmd) to encode
  *
- * @return error code
- * @retval  DIS_SUCCESS - Success
- * @retval !DIS_SUCCESS - Failure
+ * @return void
  */
-// FIXME: Move this to wire_encode_is_request.c
-int
-is_compose(int stream, int command)
+void
+is_compose(flatcc_builder_t *B, int command)
 {
-	int	ret;
+	int ret;
 
-	if (stream < 0)
-		return DIS_EOF;
-	DIS_tpp_funcs();
-
-	ret = diswsi(stream, IS_PROTOCOL);
-	if (ret != DIS_SUCCESS)
-		goto done;
-	ret = diswsi(stream, IS_PROTOCOL_VER);
-	if (ret != DIS_SUCCESS)
-		goto done;
-	ret = diswsi(stream, command);
-	if (ret != DIS_SUCCESS)
-		goto done;
-
-	return DIS_SUCCESS;
-
-done:
-	return ret;
+	ns(InterSvr_start_as_root(B));
+	ns(InterSvr_cmd_add(B, command));
 }
 
 /**
@@ -92,9 +96,9 @@ done:
  *
  * @param[out] id - The return msgid created
  *
- * @return error code
- * @retval  DIS_SUCCESS  - Success
- * @retval  DIS_NOMALLOC - Failure
+ * @return int
+ * @retval PBSE_NONE  - Success
+ * @retval !PBSE_NONE - Failure
  */
 int
 get_msgid(char **id)
@@ -117,9 +121,9 @@ get_msgid(char **id)
 	sprintf(msgid, "%ju:%d", (uintmax_t)now, counter);
 #endif
 	if ((*id = strdup(msgid)) == NULL)
-		return DIS_NOMALLOC;
+		return PBSE_SYSTEM;
 
-	return DIS_SUCCESS;
+	return PBSE_NONE;
 }
 
 /**
@@ -142,21 +146,41 @@ get_msgid(char **id)
  * @retval !DIS_SUCCESS - Failure
  */
 int
-is_compose_cmd(int stream, int command, char **ret_msgid)
+is_compose_cmd(flatcc_builder_t *B, int command, char **ret_msgid)
 {
-	int ret;
+	flatbuffers_string_ref_t s;
 
-	if ((ret = is_compose(stream, command)) != DIS_SUCCESS)
-		return ret;
+	is_compose(B, command);
 
 	if (ret_msgid == NULL || *ret_msgid == NULL || *ret_msgid[0] == '\0') /* NULL or empty id provided */
-		if ((ret = get_msgid(ret_msgid)) != 0)
-			return ret;
+		if (get_msgid(ret_msgid) != PBSE_NONE)
+			return PBSE_SYSTEM;
+	FB_STR(s, B, *ret_msgid);
+	ns(InterSvr_msgId_add(B, s));
+	return PBSE_SYSTEM;
+}
 
-	if ((ret = diswst(stream, *ret_msgid)) != DIS_SUCCESS)
-		return ret;
+int
+PBSD_jobid(int c, char *jobid, int prot, char **msgid, int req_type)
+{
+	struct batch_reply *reply;
+	flatcc_builder_t builder, *B = &builder;
+	ns(JobId_ref_t) body = PBSE_FLATCC_ERROR;
 
-	return DIS_SUCCESS;
+	START_REQ(B, prot, msgid, req_type);
+	body = wire_encode_JobId(B, jobid);
+	END_REQ(JobId, prot, B, body, NULL);
+
+	if (dis_flush(c, B))
+		return (pbs_errno = PBSE_PROTOCOL);
+
+	if (prot == PROT_TCP) {
+		reply = PBSD_rdrpy(c);
+		PBSD_FreeReply(reply);
+		return get_conn_errno(c);
+	}
+
+	return PBSE_NONE;
 }
 
 /**
@@ -177,44 +201,7 @@ is_compose_cmd(int stream, int command, char **ret_msgid)
 int
 PBSD_rdytocmt(int c, char *jobid, int prot, char **msgid)
 {
-	int     rc;
-	struct batch_reply *reply;
-
-	if (prot == PROT_TCP) {
-		DIS_tcp_funcs();
-	} else {
-		if ((rc = is_compose_cmd(c, IS_CMD, msgid)) != DIS_SUCCESS)
-			return rc;
-	}
-
-	if ((rc=encode_DIS_ReqHdr(c, PBS_BATCH_RdytoCommit, pbs_current_user)) ||
-		(rc = encode_DIS_JobId(c, jobid))  ||
-		(rc = encode_DIS_ReqExtend(c, NULL))) {
-		if (prot == PROT_TCP) {
-			if (set_conn_errtxt(c, dis_emsg[rc]) != 0) {
-				return (pbs_errno = PBSE_SYSTEM);
-			}
-		}
-		return (pbs_errno = PBSE_PROTOCOL);
-	}
-
-	if (prot == PROT_TPP) {
-		pbs_errno = PBSE_NONE;
-		if (dis_flush(c))
-			pbs_errno = PBSE_PROTOCOL;
-		return pbs_errno;
-	}
-
-	if (dis_flush(c))
-		return (pbs_errno = PBSE_PROTOCOL);
-
-	/* read reply */
-
-	reply = PBSD_rdrpy(c);
-
-	PBSD_FreeReply(reply);
-
-	return get_conn_errno(c);
+	return PBSD_jobid(c, jobid, prot, msgid, PBS_BATCH_RdytoCommit);
 }
 
 /**
@@ -235,43 +222,7 @@ PBSD_rdytocmt(int c, char *jobid, int prot, char **msgid)
 int
 PBSD_commit(int c, char *jobid, int prot, char **msgid)
 {
-	struct batch_reply *reply;
-	int rc;
-
-	if (prot == PROT_TCP) {
-		DIS_tcp_funcs();
-	} else {
-		if ((rc = is_compose_cmd(c, IS_CMD, msgid)) != DIS_SUCCESS)
-			return rc;
-	}
-
-	if ((rc = encode_DIS_ReqHdr(c, PBS_BATCH_Commit, pbs_current_user)) ||
-		(rc = encode_DIS_JobId(c, jobid)) ||
-		(rc = encode_DIS_ReqExtend(c, NULL))) {
-		if (prot == PROT_TCP) {
-			if (set_conn_errtxt(c, dis_emsg[rc]) != 0) {
-				return (pbs_errno = PBSE_SYSTEM);
-			}
-		}
-		return (pbs_errno = PBSE_PROTOCOL);
-	}
-
-	if (prot == PROT_TPP) {
-		pbs_errno = PBSE_NONE;
-		if (dis_flush(c))
-			pbs_errno = PBSE_PROTOCOL;
-		return pbs_errno;
-	}
-
-	if (dis_flush(c)) {
-		return (pbs_errno = PBSE_PROTOCOL);
-	}
-
-	reply = PBSD_rdrpy(c);
-
-	PBSD_FreeReply(reply);
-
-	return get_conn_errno(c);
+	return PBSD_jobid(c, jobid, prot, msgid, PBS_BATCH_Commit);
 }
 
 /**
@@ -298,48 +249,24 @@ PBSD_commit(int c, char *jobid, int prot, char **msgid)
 static int
 PBSD_scbuf(int c, int reqtype, int seq, char *buf, int len, char *jobid, enum job_file which, int prot, char **msgid)
 {
-	struct batch_reply   *reply;
-	int	rc;
+	struct batch_reply *reply;
+	flatcc_builder_t builder, *B = &builder;
+	ns(JobFile_ref_t) body = PBSE_FLATCC_ERROR;
+
+	START_REQ(B, prot, msgid, reqtype);
+	body = wire_encode_JobFile(B, seq, buf, len, jobid ? jobid : "", which);
+	END_REQ(JobFile, prot, B, body, NULL);
+
+	if (dis_flush(c, B))
+		return (pbs_errno = PBSE_PROTOCOL);
 
 	if (prot == PROT_TCP) {
-		DIS_tcp_funcs();
-	} else {
-		if ((rc = is_compose_cmd(c, IS_CMD, msgid)) != DIS_SUCCESS)
-			return rc;
+		reply = PBSD_rdrpy(c);
+		PBSD_FreeReply(reply);
+		return get_conn_errno(c);
 	}
 
-	if (jobid == NULL)
-		jobid = "";	/* use null string for null pointer */
-
-	if ((rc = encode_DIS_ReqHdr(c, reqtype, pbs_current_user)) ||
-		(rc = encode_DIS_JobFile(c, seq, buf, len, jobid, which)) ||
-		(rc = encode_DIS_ReqExtend(c, NULL))) {
-		if (prot == PROT_TCP) {
-			if (set_conn_errtxt(c, dis_emsg[rc]) != 0) {
-				return (pbs_errno = PBSE_SYSTEM);
-			}
-		}
-		return (pbs_errno = PBSE_PROTOCOL);
-	}
-
-	if (prot == PROT_TPP) {
-		pbs_errno = PBSE_NONE;
-		if (dis_flush(c))
-			pbs_errno = PBSE_PROTOCOL;
-		return pbs_errno;
-	}
-
-	if (dis_flush(c)) {
-		return (pbs_errno = PBSE_PROTOCOL);
-	}
-
-	/* read reply */
-
-	reply = PBSD_rdrpy(c);
-
-	PBSD_FreeReply(reply);
-
-	return get_conn_errno(c);
+	return PBSE_NONE;
 }
 
 /**
@@ -375,19 +302,16 @@ PBSD_jscript(int c, char *script_file, int prot, char **msgid)
 	i = 0;
 	cc = read(fd, s_buf, SCRIPT_CHUNK_Z);
 	while ((cc > 0) &&
-		((rc = PBSD_scbuf(c, PBS_BATCH_jobscript, i, s_buf, cc, NULL, JScript, prot, msgid)) == 0)) {
+		((rc = PBSD_scbuf(c, PBS_BATCH_jobscript, i, s_buf, cc, NULL, JScript, prot, msgid)) == PBSE_NONE)) {
 		i++;
 		cc = read(fd, s_buf, SCRIPT_CHUNK_Z);
 	}
 
 	close(fd);
-	if (cc < 0)	/* read failed */
+	if (cc < 0)
 		return (-1);
 
-	if (prot == PROT_TPP)
-		return (rc);
-
-	return get_conn_errno(c);
+	return rc;
 }
 
 /**
@@ -425,12 +349,9 @@ PBSD_jscript_direct(int c, char *script, int prot, char **msgid)
 		i++;
 		p += tosend;
 		len -= tosend;
-	} while ((rc == 0) && (len > 0));
+	} while ((rc == PBSE_NONE) && (len > 0));
 
-	if (prot == PROT_TPP)
-		return (rc);
-
-	return get_conn_errno(c);
+	return rc;
 }
 
 
@@ -470,19 +391,15 @@ PBSD_jobfile(int c, int req_type, char *path, char *jobid, enum job_file which, 
 	i = 0;
 	cc = read(fd, s_buf, SCRIPT_CHUNK_Z);
 	while ((cc > 0) &&
-		((rc = PBSD_scbuf(c, req_type, i, s_buf, cc, jobid, which, prot, msgid)) == 0)) {
+		((rc = PBSD_scbuf(c, req_type, i, s_buf, cc, jobid, which, prot, msgid)) == PBSE_NONE)) {
 		i++;
 		cc = read(fd, s_buf, SCRIPT_CHUNK_Z);
 	}
 
 	close(fd);
-	if (cc < 0)	/* read failed */
+	if (cc < 0)
 		return (-1);
-
-	if (prot == PROT_TPP)
-		return rc;
-
-	return get_conn_errno(c);
+	return rc;
 }
 
 /**
@@ -506,54 +423,29 @@ char *
 PBSD_queuejob(int c, char *jobid, char *destin, struct attropl *attrib, char *extend, int prot, char **msgid)
 {
 	struct batch_reply *reply;
+	flatcc_builder_t builder, *B = &builder;
+	ns(Qjob_ref_t) body = PBSE_FLATCC_ERROR;
 	char *return_jobid = NULL;
-	int rc;
 
-	if (prot == PROT_TCP) {
-		DIS_tcp_funcs();
-	} else {
-		if ((rc = is_compose_cmd(c, IS_CMD, msgid)) != DIS_SUCCESS) {
-			pbs_errno = PBSE_PROTOCOL;
-			return return_jobid;
-		}
-	}
+	START_REQ(B, prot, msgid, PBS_BATCH_QueueJob);
+	body = wire_encode_QueueJob(B, jobid, destin, attrib);
+	END_REQ(Qjob, prot, B, body, extend);
 
-	/* first, set up the body of the Queue Job request */
-
-	if ((rc = encode_DIS_ReqHdr(c, PBS_BATCH_QueueJob, pbs_current_user)) ||
-		(rc = encode_DIS_QueueJob(c, jobid, destin, attrib)) ||
-		(rc = encode_DIS_ReqExtend(c, extend))) {
-		if (prot == PROT_TCP) {
-			if (set_conn_errtxt(c, dis_emsg[rc]) != 0) {
-				pbs_errno = PBSE_SYSTEM;
-				return NULL;
-			}
-			pbs_errno = PBSE_PROTOCOL;
-		}
-		return return_jobid;
-	}
+	if (dis_flush(c, B))
+		return (pbs_errno = PBSE_PROTOCOL);
 
 	if (prot == PROT_TPP) {
-		pbs_errno = PBSE_NONE;
-		if (dis_flush(c))
-			pbs_errno = PBSE_PROTOCOL;
-
-		return (""); /* return something NON-NULL for tpp */
-	}
-
-	if (dis_flush(c)) {
-		pbs_errno = PBSE_PROTOCOL;
-		return return_jobid;
+		pbs_errno = PBSE_NONE; /* return something NON-NULL for tpp */
+		return ("");
 	}
 
 	/* read reply from stream into presentation element */
-
 	reply = PBSD_rdrpy(c);
 	if (reply == NULL) {
 		pbs_errno = PBSE_PROTOCOL;
 	} else if (reply->brp_choice &&
-		reply->brp_choice != BATCH_REPLY_CHOICE_Text &&
-		reply->brp_choice != BATCH_REPLY_CHOICE_Queue) {
+			reply->brp_choice != BATCH_REPLY_CHOICE_Text &&
+			reply->brp_choice != BATCH_REPLY_CHOICE_Queue) {
 		pbs_errno = PBSE_PROTOCOL;
 	} else if (get_conn_errno(c) == 0) {
 		return_jobid = strdup(reply->brp_un.brp_jid);
@@ -586,29 +478,15 @@ PBSD_queuejob(int c, char *jobid, char *destin, struct attropl *attrib, char *ex
 int
 PBSD_cred(int c, char *credid, char *jobid, int cred_type, char *data, long validity, int prot, char **msgid)
 {
-	int			rc;
+	flatcc_builder_t builder, *B = &builder;
+	ns(Cred_ref_t) body = PBSE_FLATCC_ERROR;
 
-	if (prot == PROT_TCP) {
-		DIS_tcp_funcs();
-	} else {
-		if ((rc = is_compose_cmd(c, IS_CMD, msgid)) != DIS_SUCCESS)
-			return rc;
-	}
+	START_REQ(B, prot, msgid, PBS_BATCH_Cred);
+	body = wire_encode_Cred(B, jobid, credid, cred_type, data, strlen(data), validity);
+	END_REQ(Cred, prot, B, body, NULL);
 
-	if ((rc = encode_DIS_ReqHdr(c, PBS_BATCH_Cred, pbs_current_user)) ||
-		(rc = encode_DIS_Cred(c, jobid, credid, cred_type, data, strlen(data), validity)) ||
-		(rc = encode_DIS_ReqExtend(c, NULL))) {
-		if (prot == PROT_TCP) {
-			if (set_conn_errtxt(c, dis_emsg[rc]) != 0)
-				return (pbs_errno = PBSE_SYSTEM);
-		}
+	if (dis_flush(c, B))
 		return (pbs_errno = PBSE_PROTOCOL);
-	}
-
-	if (dis_flush(c)) {
-		return (pbs_errno = PBSE_PROTOCOL);
-	}
-
 	return PBSE_NONE;
 }
 
@@ -634,47 +512,24 @@ PBSD_cred(int c, char *credid, char *jobid, int cred_type, char *data, long vali
 static int
 PBSD_hookbuf(int c, int reqtype, int seq, char *buf, int len, char *hook_filename, int prot, char **msgid)
 {
-	struct batch_reply   *reply;
-	int	rc;
+	struct batch_reply *reply;
+	flatcc_builder_t builder, *B = &builder;
+	ns(CopyHook_ref_t) body = PBSE_FLATCC_ERROR;
+
+	START_REQ(B, prot, msgid, reqtype);
+	body = wire_encode_CopyHook(B, seq, buf, len, hook_filename);
+	END_REQ(CopyHook, prot, B, body, NULL);
+
+	if (dis_flush(c, B))
+		return (pbs_errno = PBSE_PROTOCOL);
 
 	if (prot == PROT_TCP) {
-		DIS_tcp_funcs();
-	} else {
-		if ((rc = is_compose_cmd(c, IS_CMD, msgid)) != DIS_SUCCESS)
-			return rc;
+		reply = PBSD_rdrpy(c);
+		PBSD_FreeReply(reply);
+		return get_conn_errno(c);
 	}
 
-	if ((hook_filename == NULL) || (hook_filename[0] == '\0'))
-		return (pbs_errno = PBSE_PROTOCOL);
-
-	if ((rc = encode_DIS_ReqHdr(c, reqtype, pbs_current_user)) ||
-		(rc = encode_DIS_CopyHookFile(c, seq, buf, len,
-		hook_filename)) ||
-		(rc = encode_DIS_ReqExtend(c, NULL))) {
-
-		if (prot == PROT_TCP) {
-			if (set_conn_errtxt(c, dis_emsg[rc]) != 0)
-				return (pbs_errno = PBSE_SYSTEM);
-		}
-		return (pbs_errno = PBSE_PROTOCOL);
-	}
-
-	if (prot == PROT_TPP) {
-		pbs_errno = PBSE_NONE;
-		if (dis_flush(c))
-			pbs_errno = PBSE_PROTOCOL;
-		return pbs_errno;
-	}
-
-	if (dis_flush(c)) {
-		return (pbs_errno = PBSE_PROTOCOL);
-	}
-
-	/* read reply */
-	reply = PBSD_rdrpy(c);
-	PBSD_FreeReply(reply);
-
-	return get_conn_errno(c);
+	return PBSE_NONE;
 }
 
 /**
@@ -701,8 +556,8 @@ PBSD_copyhookfile(int c, char *hook_filepath, int prot, char **msgid)
 	int cc;
 	int rc = -2;
 	char s_buf[SCRIPT_CHUNK_Z];
-	char	*p;
-	char	hook_file[MAXPATHLEN+1];
+	char *p;
+	char hook_file[MAXPATHLEN+1];
 
 	if ((fd = open(hook_filepath, O_RDONLY, 0)) < 0) {
 		if (prot == PROT_TPP)
@@ -713,24 +568,24 @@ PBSD_copyhookfile(int c, char *hook_filepath, int prot, char **msgid)
 
 	/* set hook_file to the relative path of 'hook_filepath' */
 	strncpy(hook_file, hook_filepath, MAXPATHLEN);
-	if ((p=strrchr(hook_filepath, '/')) != NULL) {
-		strncpy(hook_file, p+1, MAXPATHLEN);
+	if ((p = strrchr(hook_filepath, '/')) != NULL) {
+		strncpy(hook_file, p + 1, MAXPATHLEN);
 	}
 
 	i = 0;
 	cc = read(fd, s_buf, SCRIPT_CHUNK_Z);
 
 	while ((cc > 0) &&
-		((rc = PBSD_hookbuf(c, PBS_BATCH_CopyHookFile, i, s_buf, cc, hook_file, prot, msgid)) == 0)) {
+		((rc = PBSD_hookbuf(c, PBS_BATCH_CopyHookFile, i, s_buf, cc, hook_file, prot, msgid)) == PBSE_NONE)) {
 		i++;
 		cc = read(fd, s_buf, SCRIPT_CHUNK_Z);
 	}
 
 	close(fd);
-	if (cc < 0)	/* read failed */
+	if (cc < 0)
 		return (-1);
 
-	return rc; /* rc has the return value from PBSD_hookbuf */
+	return rc;
 }
 
 /**
@@ -751,45 +606,24 @@ PBSD_copyhookfile(int c, char *hook_filepath, int prot, char **msgid)
 int
 PBSD_delhookfile(int c, char *hook_filename, int prot, char **msgid)
 {
-	struct batch_reply   *reply;
-	int	rc;
+	struct batch_reply *reply;
+	flatcc_builder_t builder, *B = &builder;
+	ns(CopyHook_ref_t) body = PBSE_FLATCC_ERROR;
+
+	START_REQ(B, prot, msgid, PBS_BATCH_DelHookFile);
+	body = wire_encode_DelHook(B, hook_filename);
+	END_REQ(CopyHook, prot, B, body, NULL);
+
+	if (dis_flush(c, B))
+		return (pbs_errno = PBSE_PROTOCOL);
 
 	if (prot == PROT_TCP) {
-		DIS_tcp_funcs();
-	} else {
-		if ((rc = is_compose_cmd(c, IS_CMD, msgid)) != DIS_SUCCESS)
-			return rc;
+		reply = PBSD_rdrpy(c);
+		PBSD_FreeReply(reply);
+		return get_conn_errno(c);
 	}
 
-	if ((hook_filename == NULL) || (hook_filename[0] == '\0'))
-		return (pbs_errno = PBSE_PROTOCOL);
-
-	if ((rc = encode_DIS_ReqHdr(c, PBS_BATCH_DelHookFile, pbs_current_user)) ||
-		(rc = encode_DIS_DelHookFile(c, hook_filename)) ||
-		(rc = encode_DIS_ReqExtend(c, NULL))) {
-		if (prot == PROT_TCP) {
-			if (set_conn_errtxt(c, dis_emsg[rc]) != 0)
-				return (pbs_errno = PBSE_SYSTEM);
-		}
-		return (pbs_errno = PBSE_PROTOCOL);
-	}
-
-	if (prot == PROT_TPP) {
-		pbs_errno = PBSE_NONE;
-		if (dis_flush(c))
-			pbs_errno = PBSE_PROTOCOL;
-		return pbs_errno;
-	}
-
-	if (dis_flush(c)) {
-		return (pbs_errno = PBSE_PROTOCOL);
-	}
-
-	/* read reply */
-	reply = PBSD_rdrpy(c);
-	PBSD_FreeReply(reply);
-
-	return get_conn_errno(c);
+	return PBSE_NONE;
 }
 
 /**
@@ -811,43 +645,24 @@ PBSD_delhookfile(int c, char *hook_filename, int prot, char **msgid)
 int
 PBSD_jcred(int c, int type, char *buf, int len, int prot, char **msgid)
 {
-	int			rc;
-	struct batch_reply	*reply = NULL;
+	struct batch_reply *reply;
+	flatcc_builder_t builder, *B = &builder;
+	ns(Cred_ref_t) body = PBSE_FLATCC_ERROR;
+
+	START_REQ(B, prot, msgid, PBS_BATCH_JobCred);
+	body = wire_encode_JobCred(B, type, buf, len);
+	END_REQ(Cred, prot, B, body, NULL);
+
+	if (dis_flush(c, B))
+		return (pbs_errno = PBSE_PROTOCOL);
 
 	if (prot == PROT_TCP) {
-		DIS_tcp_funcs();
-	} else {
-		if ((rc = is_compose_cmd(c, IS_CMD, msgid)) != DIS_SUCCESS)
-			return rc;
+		reply = PBSD_rdrpy(c);
+		PBSD_FreeReply(reply);
+		return get_conn_errno(c);
 	}
 
-	if ((rc =encode_DIS_ReqHdr(c, PBS_BATCH_JobCred, pbs_current_user)) ||
-		(rc = encode_DIS_JobCred(c, type, buf, len)) ||
-		(rc = encode_DIS_ReqExtend(c, NULL))) {
-		if (prot == PROT_TCP) {
-			if (set_conn_errtxt(c, dis_emsg[rc]) != 0)
-				return (pbs_errno = PBSE_SYSTEM);
-		}
-		return (pbs_errno = PBSE_PROTOCOL);
-	}
-
-	if (prot == PROT_TPP) {
-		pbs_errno = PBSE_NONE;
-		if (dis_flush(c))
-			pbs_errno = PBSE_PROTOCOL;
-
-		return (pbs_errno);
-	}
-
-	if (dis_flush(c)) {
-		return (pbs_errno = PBSE_PROTOCOL);
-	}
-
-	reply = PBSD_rdrpy(c);
-
-	PBSD_FreeReply(reply);
-
-	return get_conn_errno(c);
+	return PBSE_NONE;
 }
 
 /**
@@ -874,36 +689,18 @@ PBSD_jcred(int c, int type, char *buf, int len, int prot, char **msgid)
 int
 PBSD_mgr_put(int c, int function, int command, int objtype, char *objname, struct attropl *aoplp, char *extend, int prot, char **msgid)
 {
-	int rc;
+	struct batch_reply *reply;
+	flatcc_builder_t builder, *B = &builder;
+	ns(Manage_ref_t) body = PBSE_FLATCC_ERROR;
 
-	if (prot == PROT_TCP) {
-		DIS_tcp_funcs();
-	} else {
-		if ((rc = is_compose_cmd(c, IS_CMD, msgid)) != DIS_SUCCESS)
-			return rc;
-	}
+	START_REQ(B, prot, msgid, function);
+	body = wire_encode_Manage(B, command, objtype, objname, aoplp);
+	END_REQ(Manage, prot, B, body, extend);
 
-	if ((rc = encode_DIS_ReqHdr(c, function, pbs_current_user)) ||
-		(rc = encode_DIS_Manage(c, command, objtype, objname, aoplp)) ||
-		(rc = encode_DIS_ReqExtend(c, extend))) {
-		if (prot == PROT_TCP) {
-			if (set_conn_errtxt(c, dis_emsg[rc]) != 0)
-				return (pbs_errno = PBSE_SYSTEM);
-		}
+	if (dis_flush(c, B))
 		return (pbs_errno = PBSE_PROTOCOL);
-	}
 
-	if (prot == PROT_TPP) {
-		pbs_errno = PBSE_NONE;
-		if (dis_flush(c))
-			pbs_errno = PBSE_PROTOCOL;
-		return pbs_errno;
-	}
-
-	if (dis_flush(c)) {
-		return (pbs_errno = PBSE_PROTOCOL);
-	}
-	return 0;
+	return PBSE_NONE;
 }
 
 /**
@@ -920,36 +717,20 @@ PBSD_mgr_put(int c, int function, int command, int objtype, char *objname, struc
 char *
 PBSD_modify_resv(int connect, char *resv_id, struct attropl *attrib, char *extend)
 {
-	struct batch_reply	*reply = NULL;
-	int			rc = -1;
-	char			*ret = NULL;
+	int rc = 0;
+	struct batch_reply *reply = NULL;
+	char *ret = NULL;
 
-	DIS_tcp_funcs();
-
-	/* first, set up the body of the Modify Reservation request */
-
-	if ((rc = encode_DIS_ReqHdr(connect, PBS_BATCH_ModifyResv, pbs_current_user)) ||
-		(rc = encode_DIS_ModifyResv(connect, resv_id, attrib)) ||
-		(rc = encode_DIS_ReqExtend(connect, extend))) {
-			if (set_conn_errtxt(connect, dis_emsg[rc]) != 0) {
-				pbs_errno = PBSE_SYSTEM;
-				return NULL;
-			}
-			if (pbs_errno == PBSE_PROTOCOL)
-				return NULL;
-	}
-	if (dis_flush(connect)) {
-		pbs_errno = PBSE_PROTOCOL;
-		return NULL;
-	}
+	rc = PBSD_mgr_put(connect, PBS_BATCH_ModifyResv, 0, MGR_OBJ_RESV, resv_id ? resv_id : "", attrib, extend, PROT_TCP, NULL);
+	if (rc != PBSE_NONE)
+		return rc;
 
 	reply = PBSD_rdrpy(connect);
 	if (reply == NULL)
 		pbs_errno = PBSE_PROTOCOL;
 	else {
-		if ((reply->brp_code == PBSE_NONE) && (reply->brp_un.brp_txt.brp_str)) {
-			ret = strdup(reply->brp_un.brp_txt.brp_str);
-			if (!ret)
+		if (reply->brp_code == PBSE_NONE && reply->brp_un.brp_txt.brp_str != NULL) {
+			if ((ret = strdup(reply->brp_un.brp_txt.brp_str)) == NULL)
 				pbs_errno = PBSE_SYSTEM;
 		}
 		PBSD_FreeReply(reply);
@@ -976,27 +757,18 @@ PBSD_modify_resv(int connect, char *resv_id, struct attropl *attrib, char *exten
 int
 PBSD_msg_put(int c, char *jobid, int fileopt, char *msg, char *extend, int prot, char **msgid)
 {
-	int rc = 0;
+	struct batch_reply *reply;
+	flatcc_builder_t builder, *B = &builder;
+	ns(Msg_ref_t) body = PBSE_FLATCC_ERROR;
 
-	if (prot == PROT_TCP) {
-		DIS_tcp_funcs();
-	} else {
-		if ((rc = is_compose_cmd(c, IS_CMD, msgid)) != DIS_SUCCESS)
-			return rc;
-	}
+	START_REQ(B, prot, msgid, PBS_BATCH_MessJob);
+	body = wire_encode_Message(B, jobid, fileopt, msg);
+	END_REQ(Msg, prot, B, body, extend);
 
-	if ((rc = encode_DIS_ReqHdr(c, PBS_BATCH_MessJob, pbs_current_user)) ||
-		(rc = encode_DIS_MessageJob(c, jobid, fileopt, msg)) ||
-		(rc = encode_DIS_ReqExtend(c, extend))) {
+	if (dis_flush(c, B))
 		return (pbs_errno = PBSE_PROTOCOL);
-	}
 
-	if (dis_flush(c)) {
-		pbs_errno = PBSE_PROTOCOL;
-		rc	  = pbs_errno;
-	}
-
-	return rc;
+	return PBSE_NONE;
 }
 
 /**
@@ -1017,27 +789,17 @@ PBSD_msg_put(int c, char *jobid, int fileopt, char *msg, char *extend, int prot,
 int
 PBSD_py_spawn_put(int c, char *jobid, char **argv, char **envp, int prot, char **msgid)
 {
-	int rc = 0;
+	flatcc_builder_t builder, *B = &builder;
+	ns(Spawn_ref_t) body = PBSE_FLATCC_ERROR;
 
-	if (prot == PROT_TCP) {
-		DIS_tcp_funcs();
-	} else {
-		if ((rc = is_compose_cmd(c, IS_CMD, msgid)) != DIS_SUCCESS)
-			return rc;
-	}
+	START_REQ(B, prot, msgid, PBS_BATCH_PySpawn);
+	body = wire_encode_PySpawn(B, jobid, argv, envp);
+	END_REQ(Spawn, prot, B, body, NULL);
 
-	if ((rc = encode_DIS_ReqHdr(c, PBS_BATCH_PySpawn, pbs_current_user)) ||
-		(rc = encode_DIS_PySpawn(c, jobid, argv, envp)) ||
-		(rc = encode_DIS_ReqExtend(c, NULL))) {
-			return (pbs_errno = PBSE_PROTOCOL);
-	}
+	if (dis_flush(c, B))
+		return (pbs_errno = PBSE_PROTOCOL);
 
-	if (dis_flush(c)) {
-		pbs_errno = PBSE_PROTOCOL;
-		rc = pbs_errno;
-	}
-
-	return rc;
+	return PBSE_NONE;
 }
 
 /*
@@ -1048,27 +810,17 @@ PBSD_py_spawn_put(int c, char *jobid, char **argv, char **envp, int prot, char *
 int
 PBSD_relnodes_put(int c, char *jobid, char *node_list, char *extend, int prot, char **msgid)
 {
-	int rc = 0;
+	flatcc_builder_t builder, *B = &builder;
+	ns(RelNodes_ref_t) body = PBSE_FLATCC_ERROR;
 
-	if (prot == PROT_TCP) {
-		DIS_tcp_funcs();
-	} else {
-		if ((rc = is_compose_cmd(c, IS_CMD, msgid)) != DIS_SUCCESS)
-			return rc;
-	}
+	START_REQ(B, prot, msgid, PBS_BATCH_RelnodesJob);
+	body = wire_encode_RelNodes(B, jobid, node_list);
+	END_REQ(RelNodes, prot, B, body, extend);
 
-	if ((rc = encode_DIS_ReqHdr(c, PBS_BATCH_RelnodesJob, pbs_current_user)) ||
-		(rc = encode_DIS_RelnodesJob(c, jobid, node_list)) ||
-		(rc = encode_DIS_ReqExtend(c, extend))) {
+	if (dis_flush(c, B))
 		return (pbs_errno = PBSE_PROTOCOL);
-	}
 
-	if (dis_flush(c)) {
-		pbs_errno = PBSE_PROTOCOL;
-		rc	  = pbs_errno;
-	}
-
-	return rc;
+	return PBSE_NONE;
 }
 
 /**
@@ -1085,47 +837,25 @@ PBSD_relnodes_put(int c, char *jobid, char *node_list, char *extend, int prot, c
 preempt_job_info*
 PBSD_preempt_jobs(int connect, char **preempt_jobs_list)
 {
-	struct batch_reply *reply = NULL;
+	struct batch_reply *reply;
 	preempt_job_info *ppj_reply = NULL;
-	preempt_job_info *ppj_temp = NULL;
-	int rc = -1;
+	flatcc_builder_t builder, *B = &builder;
+	ns(Preempt_ref_t) body = PBSE_FLATCC_ERROR;
 
-	DIS_tcp_funcs();
+	START_REQ(B, PROT_TCP, NULL, PBS_BATCH_PreemptJobs);
+	body = wire_encode_PreemptJobs(B, preempt_jobs_list);
+	END_REQ(Preempt, PROT_TCP, B, body, NULL);
 
-	/* first, set up the body of the Preempt Jobs request */
-
-	if ((rc = encode_DIS_ReqHdr(connect, PBS_BATCH_PreemptJobs, pbs_current_user)) ||
-		(rc = encode_DIS_PreemptJobs(connect, preempt_jobs_list)) ||
-		(rc = encode_DIS_ReqExtend(connect, NULL))) {
-			if (set_conn_errtxt(connect, dis_emsg[rc]) != 0) {
-				pbs_errno = PBSE_SYSTEM;
-				return NULL;
-			}
-			if (pbs_errno == PBSE_PROTOCOL)
-				return NULL;
-	}
-	if (dis_flush(connect)) {
-		pbs_errno = PBSE_PROTOCOL;
-		return NULL;
-	}
+	if (dis_flush(connect, B))
+		return (pbs_errno = PBSE_PROTOCOL);
 
 	reply = PBSD_rdrpy(connect);
 	if (reply == NULL)
 		pbs_errno = PBSE_PROTOCOL;
 	else {
-		int i = 0;
-		int count = 0;
-		ppj_temp = reply->brp_un.brp_preempt_jobs.ppj_list;
-		count = reply->brp_un.brp_preempt_jobs.count;
-
-		ppj_reply = calloc(sizeof(struct preempt_job_info), count);
-		if (ppj_reply == NULL)
-			return NULL;
-
-		for (i = 0; i < count; i++) {
-			strcpy(ppj_reply[i].job_id, ppj_temp[i].job_id);
-			strcpy(ppj_reply[i].order, ppj_temp[i].order);
-		}
+		ppj_reply = reply->brp_un.brp_preempt_jobs.ppj_list;
+		reply->brp_un.brp_preempt_jobs.ppj_list = NULL;
+		reply->brp_un.brp_preempt_jobs.count = 0;
 		PBSD_FreeReply(reply);
 	}
 	return ppj_reply;
@@ -1150,31 +880,17 @@ PBSD_preempt_jobs(int connect, char **preempt_jobs_list)
 int
 PBSD_sig_put(int c, char *jobid, char *signal, char *extend, int prot, char **msgid)
 {
-	int rc = 0;
+	flatcc_builder_t builder, *B = &builder;
+	ns(Signal_ref_t) body = PBSE_FLATCC_ERROR;
 
-	if (prot == PROT_TCP) {
-		DIS_tcp_funcs();
-	} else {
-		if ((rc = is_compose_cmd(c, IS_CMD, msgid)) != DIS_SUCCESS)
-			return rc;
-	}
+	START_REQ(B, prot, msgid, PBS_BATCH_SignalJob);
+	body = wire_encode_Signal(B, jobid, signal);
+	END_REQ(Signal, prot, B, body, extend);
 
-	if ((rc = encode_DIS_ReqHdr(c, PBS_BATCH_SignalJob, pbs_current_user)) ||
-		(rc = encode_DIS_SignalJob(c, jobid, signal)) ||
-		(rc = encode_DIS_ReqExtend(c, extend))) {
-		if (prot == PROT_TCP) {
-			if (set_conn_errtxt(c, dis_emsg[rc]) != 0) {
-				return (pbs_errno = PBSE_SYSTEM);
-			}
-		}
+	if (dis_flush(c, B))
 		return (pbs_errno = PBSE_PROTOCOL);
-	}
 
-	if (dis_flush(c)) {
-		pbs_errno = PBSE_PROTOCOL;
-		rc = pbs_errno;
-	}
-	return rc;
+	return PBSE_NONE;
 }
 
 /**
@@ -1196,31 +912,17 @@ PBSD_sig_put(int c, char *jobid, char *signal, char *extend, int prot, char **ms
 int
 PBSD_status_put(int c, int function, char *id, struct attrl *attrib, char *extend, int prot, char **msgid)
 {
-	int rc = 0;
+	flatcc_builder_t builder, *B = &builder;
+	ns(Stat_ref_t) body = PBSE_FLATCC_ERROR;
 
-	if (prot == PROT_TCP) {
-		DIS_tcp_funcs();
-	} else {
-		if ((rc = is_compose_cmd(c, IS_CMD, msgid)) != DIS_SUCCESS)
-			return rc;
-	}
+	START_REQ(B, prot, msgid, function);
+	body = wire_encode_Status(B, id, attrib);
+	END_REQ(Stat, prot, B, body, extend);
 
-	if ((rc = encode_DIS_ReqHdr(c, function, pbs_current_user))   ||
-		(rc = encode_DIS_Status(c, id, attrib)) ||
-		(rc = encode_DIS_ReqExtend(c, extend))) {
-		if (prot == PROT_TCP) {
-			if (set_conn_errtxt(c, dis_emsg[rc]) != 0) {
-				return (pbs_errno = PBSE_SYSTEM);
-			}
-		}
+	if (dis_flush(c, B))
 		return (pbs_errno = PBSE_PROTOCOL);
-	}
 
-	if (dis_flush(c)) {
-		return (pbs_errno = PBSE_PROTOCOL);
-	}
-
-	return 0;
+	return PBSE_NONE;
 }
 
 /**
@@ -1242,30 +944,18 @@ char *
 PBSD_submit_resv(int connect, char *resv_id, struct attropl *attrib, char *extend)
 {
 	struct batch_reply *reply;
-	char  *return_resv_id = NULL;
-	int    rc;
+	flatcc_builder_t builder, *B = &builder;
+	ns(Qjob_ref_t) body = PBSE_FLATCC_ERROR;
+	char *return_resv_id = NULL;
 
-	DIS_tcp_funcs();
+	START_REQ(B, PROT_TCP, NULL, PBS_BATCH_SubmitResv);
+	body = wire_encode_QueueJob(B, resv_id, NULL, attrib);
+	END_REQ(Qjob, PROT_TCP, B, body, extend);
 
-	/* first, set up the body of the Submit Reservation request */
-
-	if ((rc = encode_DIS_ReqHdr(connect, PBS_BATCH_SubmitResv, pbs_current_user)) ||
-		(rc = encode_DIS_SubmitResv(connect, resv_id, attrib)) ||
-		(rc = encode_DIS_ReqExtend(connect, extend))) {
-		if (set_conn_errtxt(connect, dis_emsg[rc]) != 0) {
-			pbs_errno = PBSE_SYSTEM;
-			return NULL;
-		}
-		pbs_errno = PBSE_PROTOCOL;
-		return return_resv_id;
-	}
-	if (dis_flush(connect)) {
-		pbs_errno = PBSE_PROTOCOL;
-		return return_resv_id;
-	}
+	if (dis_flush(connect, B))
+		return (pbs_errno = PBSE_PROTOCOL);
 
 	/* read reply from stream into presentation element */
-
 	reply = PBSD_rdrpy(connect);
 	if (reply == NULL) {
 		pbs_errno = PBSE_PROTOCOL;

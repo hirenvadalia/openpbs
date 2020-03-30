@@ -51,7 +51,7 @@ extern "C" {
 
 /* Convenient namespace macro to manage long namespace prefix for flatbuffer */
 #define ns(x) FLATBUFFERS_WRAP_NAMESPACE(PBS_ifl, x)
-
+#define PBSE_FLATCC_ERROR 0
 #define COPYSTR(dest, src, len) \
 do { \
 	memset(dest, '\0', len); \
@@ -73,6 +73,20 @@ do { \
 	dest = strdup((char *)src); \
 	if (dest == NULL) \
 		return PBSE_SYSTEM; \
+} while(0)
+
+#define FB_STR(var, B, str) \
+do { \
+	var = PBSE_FLATCC_ERROR; \
+	if ((var = flatbuffers_string_create_str(B, str)) == PBSE_FLATCC_ERROR) \
+		return PBSE_FLATCC_ERROR; \
+} while(0)
+
+#define FB_STRN(var, B, str, len) \
+do { \
+	var = PBSE_FLATCC_ERROR; \
+	if ((var = flatbuffers_string_create(B, str, len)) == PBSE_FLATCC_ERROR) \
+		return PBSE_FLATCC_ERROR; \
 } while(0)
 
 typedef struct pbs_tcp_auth_data {
