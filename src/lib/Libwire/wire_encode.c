@@ -438,7 +438,7 @@ ns(CopyFileCred_ref_t)
 wire_encode_CopyFiles_Cred(flatcc_builder_t *B, struct rq_cpyfile_cred *pcf)
 {
 	flatbuffers_string_ref_t s = 0;
-	ns(CopyFile_ref_t) files = 0;
+	ns(CopyFileCred_ref_t) files = 0;
 
 	ns(CopyFileCred_start(B));
 	files = wire_encode_CopyFiles(B, &(pcf->rq_copyfile));

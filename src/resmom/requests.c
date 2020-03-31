@@ -486,7 +486,6 @@ return_file(job *pjob, enum job_file which, int sock)
 	int		      amt;
 	char		      buf[RT_BLK_SZ];
 	int		      fds;
-	struct batch_request *prq;
 	int		      rc = 0;
 	int		      seq = 0;
 	int direct_write_possible = 1;
@@ -514,44 +513,13 @@ return_file(job *pjob, enum job_file which, int sock)
 	if (fds < 0)
 		return (0);
 
-	/* Build a "request" to the Server which will contain */
-	/* a block of the file and send it on its way         */
-
-	prq = alloc_br(PBS_BATCH_MvJobFile);
-	if (prq == NULL) {
-		close(fds);
-		return (-1);
-	}
-
 	(void)strcpy(prq->rq_host, mom_host);
 	(void)strcpy(prq->rq_ind.rq_jobfile.rq_jobid, pjob->ji_qs.ji_jobid);
 
-	while ((amt = read(fds, buf, RT_BLK_SZ)) > 0) {
-		/* prq->rq_ind.rq_jobfile.rq_sequence = seq++; */
-		/* prq->rq_ind.rq_jobfile.rq_type = (int)which; */
-		/* prq->rq_ind.rq_jobfile.rq_size = amt; */
-		/* prq->rq_ind.rq_jobfile.rq_data = buf; */
-
-
-		DIS_tcp_funcs();
-		if ((rc = encode_DIS_ReqHdr(sock, PBS_BATCH_MvJobFile,
-			pbs_current_user)) ||
-			(rc = encode_DIS_JobFile(sock, seq++, buf, amt,
-			pjob->ji_qs.ji_jobid, which)) ||
-			(rc = encode_DIS_ReqExtend(sock, NULL))) {
-			break;
-		}
-
-		dis_flush(sock);
-
-		if ((DIS_reply_read(sock, &prq->rq_reply, 0) != 0) ||
-			(prq->rq_reply.brp_code != 0)) {
-			rc = -1;
-			break;
-		}
-
+	rc = 0;
+	while (rc == 0 && (amt = read(fds, buf, RT_BLK_SZ)) > 0) {
+		rc = PBSD_scbuf(sock, PBS_BATCH_MvJobFile, seq++, buf, amt, pjob->ji_qs.ji_jobid, which, PROT_TCP, NULL);
 	}
-	free_br(prq);
 	(void)close(fds);
 
 	if (rc == 0) {

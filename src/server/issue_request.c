@@ -527,41 +527,19 @@ issue_Drequest(int conn, struct batch_request *request, void (*func)(), struct w
 			break;
 
 		case PBS_BATCH_Rerun:
-			if (prot == PROT_TPP) {
-				rc = is_compose_cmd(sock, IS_CMD, &msgid);
-				if (rc != 0)
-					break;
-			}
-			rc = encode_DIS_ReqHdr(sock, PBS_BATCH_Rerun, pbs_current_user);
-			if (rc != 0)
-				break;
-			rc = encode_DIS_JobId(sock, request->rq_ind.rq_rerun);
-			if (rc != 0)
-				break;
-			rc = encode_DIS_ReqExtend(sock, 0);
-			if (rc != 0)
-				break;
-			rc = dis_flush(sock);
+			rc = PBSD_jobid_put(sock, request->rq_ind.rq_rerun, prot, &msgid, PBS_BATCH_Rerun);
 			break;
 
 
 		case PBS_BATCH_RegistDep:
-			if (prot == PROT_TPP) {
-				rc = is_compose_cmd(sock, IS_CMD, &msgid);
-				if (rc != 0)
-					break;
-			}
-			rc = encode_DIS_ReqHdr(sock,
-				PBS_BATCH_RegistDep, pbs_current_user);
-			if (rc != 0)
-				break;
-			rc = encode_DIS_Register(sock, request);
-			if (rc != 0)
-				break;
-			rc = encode_DIS_ReqExtend(sock, 0);
-			if (rc != 0)
-				break;
-			rc = dis_flush(sock);
+			rc = PBSD_register_put(sock,
+						request->rq_ind.rq_register.rq_owner,
+						request->rq_ind.rq_register.rq_parent,
+						request->rq_ind.rq_register.rq_child,
+						request->rq_ind.rq_register.rq_dependtype,
+						request->rq_ind.rq_register.rq_op,
+						request->rq_ind.rq_register.rq_cost,
+						prot, &msgid);
 			break;
 
 		case PBS_BATCH_SignalJob:
@@ -583,97 +561,41 @@ issue_Drequest(int conn, struct batch_request *request, void (*func)(), struct w
 			break;
 
 		case PBS_BATCH_TrackJob:
-			if (prot == PROT_TPP) {
-				rc = is_compose_cmd(sock, IS_CMD, &msgid);
-				if (rc != 0)
-					break;
-			}
-			rc = encode_DIS_ReqHdr(sock, PBS_BATCH_TrackJob, pbs_current_user);
-			if (rc != 0)
-				break;
-			rc = encode_DIS_TrackJob(sock, request);
-			if (rc != 0)
-				break;
-			rc = encode_DIS_ReqExtend(sock, request->rq_extend);
-			if (rc != 0)
-				break;
-			rc = dis_flush(sock);
+			rc = PBSD_trackjob_put(sock,
+						request->rq_ind.rq_track.rq_jid,
+						request->rq_ind.rq_track.rq_hopcount,
+						request->rq_ind.rq_track.rq_location,
+						request->rq_ind.rq_track.rq_state[0])
 			break;
 
 		case PBS_BATCH_CopyFiles:
-			if (prot == PROT_TPP) {
-				rc = is_compose_cmd(sock, IS_CMD, &msgid);
-				if (rc != 0)
-					break;
-			}
-			rc = encode_DIS_ReqHdr(sock,
-				PBS_BATCH_CopyFiles, pbs_current_user);
-			if (rc != 0)
-				break;
-			rc = encode_DIS_CopyFiles(sock, request);
-			if (rc != 0)
-				break;
-			rc = encode_DIS_ReqExtend(sock, get_job_credid(request->rq_ind.rq_cpyfile.rq_jobid));
-			if (rc != 0)
-				break;
-			rc = dis_flush(sock);
+			rc = PBSD_files_put(sock,
+						PBS_BATCH_CopyFiles,
+						&(request->rq_ind.rq_cpyfile),
+						get_job_credid(request->rq_ind.rq_cpyfile.rq_jobid),
+						prot, &msgid);
 			break;
 
 		case PBS_BATCH_CopyFiles_Cred:
-			if (prot == PROT_TPP) {
-				rc = is_compose_cmd(sock, IS_CMD, &msgid);
-				if (rc != 0)
-					break;
-			}
-			rc = encode_DIS_ReqHdr(sock,
-				PBS_BATCH_CopyFiles_Cred, pbs_current_user);
-			if (rc != 0)
-				break;
-			rc = encode_DIS_CopyFiles_Cred(sock, request);
-			if (rc != 0)
-				break;
-			rc = encode_DIS_ReqExtend(sock, 0);
-			if (rc != 0)
-				break;
-			rc = dis_flush(sock);
+			rc = PBSD_files_cred_put(sock,
+						PBS_BATCH_CopyFiles_Cred,
+						&(request->rq_ind.rq_cpyfile_cred),
+						prot, &msgid);
 			break;
 
 		case PBS_BATCH_DelFiles:
-			if (prot == PROT_TPP) {
-				rc = is_compose_cmd(sock, IS_CMD, &msgid);
-				if (rc != 0)
-					break;
-			}
-			rc = encode_DIS_ReqHdr(sock,
-				PBS_BATCH_DelFiles, pbs_current_user);
-			if (rc != 0)
-				break;
-			rc = encode_DIS_CopyFiles(sock, request);
-			if (rc != 0)
-				break;
-			rc = encode_DIS_ReqExtend(sock, 0);
-			if (rc != 0)
-				break;
-			rc = dis_flush(sock);
+			rc = PBSD_files_put(sock,
+						PBS_BATCH_DelFiles,
+						&(request->rq_ind.rq_cpyfile),
+						NULL,
+						prot, &msgid);
 			break;
 
 		case PBS_BATCH_DelFiles_Cred:
-			if (prot == PROT_TPP) {
-				rc = is_compose_cmd(sock, IS_CMD, &msgid);
-				if (rc != 0)
-					break;
-			}
-			rc = encode_DIS_ReqHdr(sock,
-				PBS_BATCH_DelFiles_Cred, pbs_current_user);
-			if (rc != 0)
-				break;
-			rc = encode_DIS_CopyFiles_Cred(sock, request);
-			if (rc != 0)
-				break;
-			rc = encode_DIS_ReqExtend(sock, 0);
-			if (rc != 0)
-				break;
-			rc = dis_flush(sock);
+			rc = PBSD_files_cred_put(sock,
+						PBS_BATCH_DelFiles_Cred,
+						&(request->rq_ind.rq_cpyfile_cred),
+						prot, &msgid);
 			break;
 
 		case PBS_BATCH_FailOver:

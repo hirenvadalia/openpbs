@@ -49,6 +49,8 @@
 	if (wire_encode_batch_start(B, prot, msgid) == PBSE_FLATCC_ERROR) \
 		return (pbs_errno = PBSE_PROTOCOL); \
 	hdr = wire_encode_hdr(B, type, pbs_current_user, prot, msgid); \
+	if (hdr == PBSE_FLATCC_ERROR) \
+		return (pbs_errno = PBSE_PROTOCOL); \
 	ns(Req_hdr_add(B, hdr)); \
 } while(0)
 
@@ -161,9 +163,8 @@ is_compose_cmd(flatcc_builder_t *B, int command, char **ret_msgid)
 }
 
 int
-PBSD_jobid(int c, char *jobid, int prot, char **msgid, int req_type)
+PBSD_jobid_put(int c, char *jobid, int prot, char **msgid, int req_type)
 {
-	struct batch_reply *reply;
 	flatcc_builder_t builder, *B = &builder;
 	ns(JobId_ref_t) body = PBSE_FLATCC_ERROR;
 
@@ -174,11 +175,69 @@ PBSD_jobid(int c, char *jobid, int prot, char **msgid, int req_type)
 	if (dis_flush(c, B))
 		return (pbs_errno = PBSE_PROTOCOL);
 
-	if (prot == PROT_TCP) {
-		reply = PBSD_rdrpy(c);
-		PBSD_FreeReply(reply);
-		return get_conn_errno(c);
-	}
+	return PBSE_NONE;
+}
+
+int
+PBSD_register_put(int c, char *owner, char *parent, char *child, int type, int op, int cost, int prot, char **msgid)
+{
+	flatcc_builder_t builder, *B = &builder;
+	ns(Register_ref_t) body = PBSE_FLATCC_ERROR;
+
+	START_REQ(B, prot, msgid, PBS_BATCH_RegistDep);
+	body = wire_encode_Register(B, owner, parent, child, type, op, cost);
+	END_REQ(Register, prot, B, body, NULL);
+
+	if (dis_flush(c, B))
+		return (pbs_errno = PBSE_PROTOCOL);
+
+	return PBSE_NONE;
+}
+
+int
+PBSD_trackjob_put(int c, char *jobid, int hops, char *location, char state, int prot, char **msgid)
+{
+	flatcc_builder_t builder, *B = &builder;
+	ns(Track_ref_t) body = PBSE_FLATCC_ERROR;
+
+	START_REQ(B, prot, msgid, PBS_BATCH_TrackJob);
+	body = wire_encode_TrackJob(B, jobid, hops, location, state);
+	END_REQ(Track, prot, B, body, NULL);
+
+	if (dis_flush(c, B))
+		return (pbs_errno = PBSE_PROTOCOL);
+
+	return PBSE_NONE;
+}
+
+int
+PBSD_files_put(int c, int reqtype, struct rq_cpyfile *pcf, char *extend, int prot, char **msgid)
+{
+	flatcc_builder_t builder, *B = &builder;
+	ns(CopyFile_ref_t) body = PBSE_FLATCC_ERROR;
+
+	START_REQ(B, prot, msgid, reqtype);
+	body = wire_encode_CopyFiles(B, pcf);
+	END_REQ(CopyFile, prot, B, body, extend);
+
+	if (dis_flush(c, B))
+		return (pbs_errno = PBSE_PROTOCOL);
+
+	return PBSE_NONE;
+}
+
+int
+PBSD_files_cred_put(int c, int reqtype, struct rq_cpyfile_cred *pcf, int prot, char **msgid)
+{
+	flatcc_builder_t builder, *B = &builder;
+	ns(CopyFileCred_ref_t) body = PBSE_FLATCC_ERROR;
+
+	START_REQ(B, prot, msgid, reqtype);
+	body = wire_encode_CopyFilesCred(B, pcf);
+	END_REQ(CopyFile, prot, B, body, NULL);
+
+	if (dis_flush(c, B))
+		return (pbs_errno = PBSE_PROTOCOL);
 
 	return PBSE_NONE;
 }
@@ -201,7 +260,19 @@ PBSD_jobid(int c, char *jobid, int prot, char **msgid, int req_type)
 int
 PBSD_rdytocmt(int c, char *jobid, int prot, char **msgid)
 {
-	return PBSD_jobid(c, jobid, prot, msgid, PBS_BATCH_RdytoCommit);
+	int rc;
+
+	rc = PBSD_jobid(c, jobid, prot, msgid, PBS_BATCH_RdytoCommit);
+	if (rc != PBSE_NONE)
+		return rc;
+
+	if (prot == PROT_TCP) {
+		struct batch_reply *reply = PBSD_rdrpy(c);
+		PBSD_FreeReply(reply);
+		return get_conn_errno(c);
+	}
+
+	return PBSE_NONE;
 }
 
 /**
@@ -222,7 +293,19 @@ PBSD_rdytocmt(int c, char *jobid, int prot, char **msgid)
 int
 PBSD_commit(int c, char *jobid, int prot, char **msgid)
 {
-	return PBSD_jobid(c, jobid, prot, msgid, PBS_BATCH_Commit);
+	int rc;
+
+	rc = PBSD_jobid(c, jobid, prot, msgid, PBS_BATCH_Commit);
+	if (rc != PBSE_NONE)
+		return rc;
+
+	if (prot == PROT_TCP) {
+		struct batch_reply *reply = PBSD_rdrpy(c);
+		PBSD_FreeReply(reply);
+		return get_conn_errno(c);
+	}
+
+	return PBSE_NONE;
 }
 
 /**
@@ -246,7 +329,7 @@ PBSD_commit(int c, char *jobid, int prot, char **msgid)
  * @retval      !0(pbs_errno)   failure
  *
  */
-static int
+int
 PBSD_scbuf(int c, int reqtype, int seq, char *buf, int len, char *jobid, enum job_file which, int prot, char **msgid)
 {
 	struct batch_reply *reply;
@@ -994,8 +1077,11 @@ PBSD_submit_resv(int connect, char *resv_id, struct attropl *attrib, char *exten
 int
 PBSD_ucred(int c, char *user, int type, char *buf, int len)
 {
-	int			rc;
-	struct batch_reply	*reply = NULL;
+	int rc;
+	struct batch_reply *reply;
+	flatcc_builder_t builder, *B = &builder;
+	ns(Header_ref_t) hdr = PBSE_FLATCC_ERROR;
+	ns(Cred_ref_t) body = PBSE_FLATCC_ERROR;
 
 	/* initialize the thread context data, if not already initialized */
 	if (pbs_client_thread_init_thread_context() != 0)
@@ -1006,29 +1092,35 @@ PBSD_ucred(int c, char *user, int type, char *buf, int len)
 	if (pbs_client_thread_lock_connection(c) != 0)
 		return pbs_errno;
 
-	DIS_tcp_funcs();
-
-	if ((rc =encode_DIS_ReqHdr(c, PBS_BATCH_UserCred, pbs_current_user)) ||
-		(rc = encode_DIS_UserCred(c, user, type, buf, len)) ||
-		(rc = encode_DIS_ReqExtend(c, NULL))) {
-		if (set_conn_errtxt(c, dis_emsg[rc]) != 0) {
-			pbs_errno = PBSE_SYSTEM;
-		} else {
-			pbs_errno = PBSE_PROTOCOL;
-		}
+	if (wire_encode_batch_start(B, PROT_TCP, NULL) == PBSE_FLATCC_ERROR) {
+		pbs_errno = PBSE_PROTOCOL;
 		(void)pbs_client_thread_unlock_connection(c);
 		return pbs_errno;
 	}
-	if (dis_flush(c)) {
+	hdr = wire_encode_hdr(B, PBS_BATCH_UserCred, pbs_current_user, PROT_TCP, NULL);
+	if (hdr == PBSE_FLATCC_ERROR) {
+		pbs_errno = PBSE_PROTOCOL;
+		(void)pbs_client_thread_unlock_connection(c);
+		return pbs_errno;
+	}
+	ns(Req_hdr_add(B, hdr));
+	body = wire_encode_UserCred(B, user, type, buf, len);
+	if (body == PBSE_FLATCC_ERROR) {
+		pbs_errno = PBSE_PROTOCOL;
+		(void)pbs_client_thread_unlock_connection(c);
+		return pbs_errno;
+	}
+	ns(Req_body_add(B, ns(ReqBody_as_Cred(body))));
+	ns(Req_end_as_root(B));
+
+	if (dis_flush(c, B)) {
 		pbs_errno = PBSE_PROTOCOL;
 		(void)pbs_client_thread_unlock_connection(c);
 		return pbs_errno;
 	}
 
 	reply = PBSD_rdrpy(c);
-
 	PBSD_FreeReply(reply);
-
 	rc = get_conn_errno(c);
 
 	/* unlock the thread lock and update the thread context data */
@@ -1053,8 +1145,11 @@ PBSD_ucred(int c, char *user, int type, char *buf, int len)
 int
 PBSD_user_migrate(int c, char *tohost)
 {
-	int			rc;
-	struct batch_reply	*reply = NULL;
+	int rc;
+	struct batch_reply *reply;
+	flatcc_builder_t builder, *B = &builder;
+	ns(Header_ref_t) hdr = PBSE_FLATCC_ERROR;
+	ns(UserMigrate_ref_t) body = PBSE_FLATCC_ERROR;
 
 	/* initialize the thread context data, if not already initialized */
 	if (pbs_client_thread_init_thread_context() != 0)
@@ -1065,30 +1160,35 @@ PBSD_user_migrate(int c, char *tohost)
 	if (pbs_client_thread_lock_connection(c) != 0)
 		return pbs_errno;
 
-	DIS_tcp_funcs();
-
-	if ((rc =encode_DIS_ReqHdr(c, PBS_BATCH_UserMigrate,
-		pbs_current_user)) ||
-		(rc = encode_DIS_UserMigrate(c, tohost)) ||
-		(rc = encode_DIS_ReqExtend(c, NULL))) {
-		if (set_conn_errtxt(c, dis_emsg[rc]) != 0) {
-			pbs_errno = PBSE_SYSTEM;
-		} else {
-			pbs_errno = PBSE_PROTOCOL;
-		}
+	if (wire_encode_batch_start(B, PROT_TCP, NULL) == PBSE_FLATCC_ERROR) {
+		pbs_errno = PBSE_PROTOCOL;
 		(void)pbs_client_thread_unlock_connection(c);
 		return pbs_errno;
 	}
-	if (dis_flush(c)) {
+	hdr = wire_encode_hdr(B, PBS_BATCH_UserMigrate, pbs_current_user, PROT_TCP, NULL);
+	if (hdr == PBSE_FLATCC_ERROR) {
+		pbs_errno = PBSE_PROTOCOL;
+		(void)pbs_client_thread_unlock_connection(c);
+		return pbs_errno;
+	}
+	ns(Req_hdr_add(B, hdr));
+	body = wire_encode_UserMigrate(B, tohost);
+	if (body == PBSE_FLATCC_ERROR) {
+		pbs_errno = PBSE_PROTOCOL;
+		(void)pbs_client_thread_unlock_connection(c);
+		return pbs_errno;
+	}
+	ns(Req_body_add(B, ns(ReqBody_as_UserMigrate(body))));
+	ns(Req_end_as_root(B));
+
+	if (dis_flush(c, B)) {
 		pbs_errno = PBSE_PROTOCOL;
 		(void)pbs_client_thread_unlock_connection(c);
 		return pbs_errno;
 	}
 
 	reply = PBSD_rdrpy(c);
-
 	PBSD_FreeReply(reply);
-
 	rc = get_conn_errno(c);
 
 	/* unlock the thread lock and update the thread context data */
@@ -1097,8 +1197,6 @@ PBSD_user_migrate(int c, char *tohost)
 
 	return rc;
 }
-
-static struct batch_status *alloc_bs();
 
 /**
  * @brief
@@ -1147,11 +1245,8 @@ PBSD_status(int c, int function, char *objid, struct attrl *attrib, char *extend
  */
 struct batch_status *PBSD_status_get(int c)
 {
-	struct brp_cmdstat  *stp; /* pointer to a returned status record */
-	struct batch_status *bsp  = NULL;
 	struct batch_status *rbsp = NULL;
 	struct batch_reply  *reply;
-	int i;
 
 	/* read reply from stream into presentation element */
 
@@ -1163,32 +1258,28 @@ struct batch_status *PBSD_status_get(int c)
 		reply->brp_choice != BATCH_REPLY_CHOICE_Status) {
 		pbs_errno = PBSE_PROTOCOL;
 	} else if (get_conn_errno(c) == 0) {
-		/* have zero or more attrl structs to decode here */
-		stp = reply->brp_un.brp_statc;
-		i = 0;
+		int i = 0;
+		struct batch_status *bsp  = NULL;
+		struct brp_cmdstat *stp = reply->brp_un.brp_statc;
+
 		pbs_errno = 0;
 		while (stp != NULL) {
 			if (i++ == 0) {
-				rbsp = bsp = alloc_bs();
-				if (bsp == NULL) {
-					pbs_errno = PBSE_SYSTEM;
-					break;
-				}
+				rbsp = bsp = calloc(1, sizeof(struct batch_status));
 			} else {
-				bsp->next = alloc_bs();
+				bsp->next = calloc(1, sizeof(struct batch_status));
 				bsp = bsp->next;
-				if (bsp == NULL) {
-					pbs_errno = PBSE_SYSTEM;
-					break;
-				}
+			}
+			if (bsp == NULL) {
+				pbs_errno = PBSE_SYSTEM;
+				break;
 			}
 			if ((bsp->name = strdup(stp->brp_objname)) == NULL) {
 				pbs_errno = PBSE_SYSTEM;
 				break;
 			}
 			bsp->attribs = stp->brp_attrl;
-			if (stp->brp_attrl)
-				stp->brp_attrl = 0;
+			stp->brp_attrl = 0;
 			bsp->next = NULL;
 			stp = stp->brp_stlink;
 		}
@@ -1199,26 +1290,6 @@ struct batch_status *PBSD_status_get(int c)
 	}
 	PBSD_FreeReply(reply);
 	return rbsp;
-}
-
-/**
- * @brief
- *	Allocate a batch status reply structure
- */
-
-static struct batch_status *alloc_bs()
-{
-	struct batch_status *bsp;
-
-	bsp = MH(struct batch_status);
-	if (bsp) {
-
-		bsp->next = NULL;
-		bsp->name = NULL;
-		bsp->attribs = NULL;
-		bsp->text = NULL;
-	}
-	return bsp;
 }
 
 /**
@@ -1255,8 +1326,7 @@ PBSD_manager(int c, int function, int command, int objtype, char *objname, struc
 			return pbs_errno;
 
 	/* now verify the attributes, if verification is enabled */
-	if ((pbs_verify_attributes(c, function, objtype,
-		command, aoplp)) != 0)
+	if ((pbs_verify_attributes(c, function, objtype, command, aoplp)) != 0)
 		return pbs_errno;
 
 	/* lock pthread mutex here for this connection */
@@ -1266,7 +1336,7 @@ PBSD_manager(int c, int function, int command, int objtype, char *objname, struc
 
 	/* send the manage request */
 	i = PBSD_mgr_put(c, function, command, objtype, objname, aoplp, extend, PROT_TCP, NULL);
-	if (i) {
+	if (i != PBSE_NONE) {
 		(void)pbs_client_thread_unlock_connection(c);
 		return i;
 	}
@@ -1274,7 +1344,6 @@ PBSD_manager(int c, int function, int command, int objtype, char *objname, struc
 	/* read reply from stream into presentation element */
 	reply = PBSD_rdrpy(c);
 	PBSD_FreeReply(reply);
-
 	rc = get_conn_errno(c);
 
 	/* unlock the thread lock and update the thread context data */
