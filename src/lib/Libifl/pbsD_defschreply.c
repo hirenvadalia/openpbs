@@ -70,14 +70,10 @@
 int
 pbs_defschreply(int c, int cmd, char *id, int err, char *txt, char *extend)
 {
-	int	rc;
-	struct batch_reply   *reply;
-	int	has_txt = 0;
+	int rc;
 
 	if ((id == NULL) || (*id == '\0'))
 		return (pbs_errno = PBSE_IVALREQ);
-	if ((txt != NULL) && (*txt != '\0'))
-		has_txt = 1;
 
 	/* initialize the thread context data, if not already initialized */
 	if (pbs_client_thread_init_thread_context() != 0)
@@ -88,53 +84,7 @@ pbs_defschreply(int c, int cmd, char *id, int err, char *txt, char *extend)
 	if (pbs_client_thread_lock_connection(c) != 0)
 		return pbs_errno;
 
-	/* setup DIS support routines for following DIS calls */
-
-	DIS_tcp_funcs();
-
-	/* encode request */
-
-	if ((rc = encode_DIS_ReqHdr(c, PBS_BATCH_DefSchReply,
-		pbs_current_user)) ||
-		(rc = diswui(c, cmd)  != 0)                        ||
-		(rc = diswst(c, id)  != 0)                        ||
-		(rc = diswui(c, err)  != 0)) {
-		if (set_conn_errtxt(c, dis_emsg[rc]) != 0) {
-			pbs_errno = PBSE_SYSTEM;
-		} else {
-			pbs_errno = PBSE_PROTOCOL;
-		}
-		(void)pbs_client_thread_unlock_connection(c);
-		return pbs_errno;
-	}
-	rc = diswsi(c, has_txt);
-	if ((has_txt == 1) && (rc == 0)) {
-		rc = diswst(c, txt);
-	}
-	if (rc == 0)
-		rc = encode_DIS_ReqExtend(c, extend);
-	if (rc) {
-		if (set_conn_errtxt(c, dis_emsg[rc]) != 0) {
-			pbs_errno = PBSE_SYSTEM;
-		} else {
-			pbs_errno = PBSE_PROTOCOL;
-		}
-		(void)pbs_client_thread_unlock_connection(c);
-		return pbs_errno;
-	}
-
-	if (dis_flush(c)) {
-		pbs_errno = PBSE_PROTOCOL;
-		(void)pbs_client_thread_unlock_connection(c);
-		return pbs_errno;
-	}
-
-	/* get reply */
-
-	reply = PBSD_rdrpy(c);
-	rc = get_conn_errno(c);
-
-	PBSD_FreeReply(reply);
+	rc = PBSD_defschreply(c, cmd, id, err, txt, extend, PROT_TCP, NULL);
 
 	/* unlock the thread lock and update the thread context data */
 	if (pbs_client_thread_unlock_connection(c) != 0)

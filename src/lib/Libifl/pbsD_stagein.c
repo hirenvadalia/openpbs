@@ -66,8 +66,7 @@
 int
 pbs_stagein(int c, char *jobid, char *location, char *extend)
 {
-	int	rc;
-	struct batch_reply   *reply;
+	int rc;
 
 	if ((jobid == NULL) || (*jobid == '\0'))
 		return (pbs_errno = PBSE_IVALREQ);
@@ -83,36 +82,7 @@ pbs_stagein(int c, char *jobid, char *location, char *extend)
 	if (pbs_client_thread_lock_connection(c) != 0)
 		return pbs_errno;
 
-	/* setup DIS support routines for following DIS calls */
-
-	DIS_tcp_funcs();
-
-	/* send stagein request, a run request with a different id */
-
-	if ((rc = encode_DIS_ReqHdr(c, PBS_BATCH_StageIn, pbs_current_user)) ||
-		(rc = encode_DIS_Run(c, jobid, location, 0)) ||
-		(rc = encode_DIS_ReqExtend(c, extend))) {
-		if (set_conn_errtxt(c, dis_emsg[rc]) != 0) {
-			pbs_errno = PBSE_SYSTEM;
-		} else {
-			pbs_errno = PBSE_PROTOCOL;
-		}
-		(void)pbs_client_thread_unlock_connection(c);
-		return pbs_errno;
-	}
-
-	if (dis_flush(c)) {
-		pbs_errno = PBSE_PROTOCOL;
-		(void)pbs_client_thread_unlock_connection(c);
-		return pbs_errno;
-	}
-
-	/* get reply */
-
-	reply = PBSD_rdrpy(c);
-	rc = get_conn_errno(c);
-
-	PBSD_FreeReply(reply);
+	rc = PBSD_run(c, PBS_BATCH_StageIn, jobid, location, resch, extend, PROT_TCP, NULL);
 
 	/* unlock the thread lock and update the thread context data */
 	if (pbs_client_thread_unlock_connection(c) != 0)

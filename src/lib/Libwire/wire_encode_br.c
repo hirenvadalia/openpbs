@@ -242,6 +242,50 @@ PBSD_files_cred_put(int c, int reqtype, struct rq_cpyfile_cred *pcf, int prot, c
 	return PBSE_NONE;
 }
 
+int
+PBSD_run(int c, int reqtype, char *jobid, char *location, unsigned long resch, char *extend, int prot, char **msgid)
+{
+	flatcc_builder_t builder, *B = &builder;
+	ns(Run_ref_t) body = PBSE_FLATCC_ERROR;
+
+	START_REQ(B, prot, msgid, reqtype);
+	body = wire_encode_Run(B, jobid, location, resch);
+	END_REQ(Run, prot, B, body, extend);
+
+	if (dis_flush(c, B))
+		return (pbs_errno = PBSE_PROTOCOL);
+
+	if (prot == PROT_TCP) {
+		struct batch_reply *reply = PBSD_rdrpy(c);
+		PBSD_FreeReply(reply);
+		return get_conn_errno(c);
+	}
+
+	return PBSE_NONE;
+}
+
+int
+PBSD_defschreply(int c, int cmd, char *id, int err, char *txt, char *extend, int prot, char **msgid)
+{
+	flatcc_builder_t builder, *B = &builder;
+	ns(SchedDefRep_ref_t) body = PBSE_FLATCC_ERROR;
+
+	START_REQ(B, prot, msgid, PBS_BATCH_DefSchReply);
+	body = wire_encode_SchedDefRep(B, cmd, id, err, txt);
+	END_REQ(SchedDefRep, prot, B, body, extend);
+
+	if (dis_flush(c, B))
+		return (pbs_errno = PBSE_PROTOCOL);
+
+	if (prot == PROT_TCP) {
+		struct batch_reply *reply = PBSD_rdrpy(c);
+		PBSD_FreeReply(reply);
+		return get_conn_errno(c);
+	}
+
+	return PBSE_NONE;
+}
+
 /**
  * @brief
  *	-PBSD_rdytocmt This function does the Ready To Commit sub-function of

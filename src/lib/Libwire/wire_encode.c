@@ -243,7 +243,7 @@ wire_encode_MoveJob(flatcc_builder_t *B, char *jobid, char *destin)
 }
 
 ns(Run_ref_t)
-wire_encode_Run(flatcc_builder_t *B, char *id, char *where, unsigned long arg)
+wire_encode_Run(flatcc_builder_t *B, char *id, char *where, unsigned long resch)
 {
 	flatbuffers_string_ref_t s = 0;
 
@@ -252,7 +252,7 @@ wire_encode_Run(flatcc_builder_t *B, char *id, char *where, unsigned long arg)
 	ns(Run_jobId_add(B, s));
 	FB_STR(s, B, where);
 	ns(Run_dest_add(B, s));
-	ns(Run_resch_add(B, arg));
+	ns(Run_resch_add(B, resch));
 
 	return ns(Run_end(B));
 }
