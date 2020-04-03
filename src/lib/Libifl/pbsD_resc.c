@@ -118,51 +118,6 @@ encode_DIS_Resc(int sock, char **rlist, int ct, pbs_resource_t rh)
 
 /**
  * @brief
- * 	-PBS_resc() - internal common code for sending resource requests
- *
- * @par Functionality:
- *	Formats and sends the requests for pbs_rescquery(), pbs_rescreserve(),
- *	and pbs_rescfree().   Note, while the request is overloaded for all
- *	three, each has its own expected reply format.
- *
- * @param[in] c - communication handle
- * @param[in] reqtype - request type
- * @param[in] rescl- pointer to resource list
- * @param[in] ct - count of query strings
- * @param[in] rh - resource handle
- *
- * @return      int
- * @retval      0       success
- * @retval      !0      error
- *
- */
-static int
-PBS_resc(int c, int reqtype, char **rescl, int ct, pbs_resource_t rh)
-{
-	int rc;
-
-	/* setup DIS support routines for following DIS calls */
-
-	DIS_tcp_funcs();
-
-	if ((rc = encode_DIS_ReqHdr(c, reqtype, pbs_current_user)) ||
-		(rc = encode_DIS_Resc(c, rescl, ct, rh)) ||
-		(rc = encode_DIS_ReqExtend(c, NULL))) {
-		if (set_conn_errtxt(c, dis_emsg[rc]) != 0) {
-			pbs_errno = PBSE_SYSTEM;
-		} else {
-			pbs_errno = PBSE_PROTOCOL;
-		}
-		return (pbs_errno);
-	}
-	if (dis_flush(c)) {
-		return (pbs_errno = PBSE_PROTOCOL);
-	}
-	return (0);
-}
-
-/**
- * @brief
  * 	-pbs_rescquery() - query the availability of resources
  *
  * @param[in] c - communication handle
@@ -180,8 +135,7 @@ PBS_resc(int c, int reqtype, char **rescl, int ct, pbs_resource_t rh)
  */
 
 int
-pbs_rescquery(int c, char **resclist, int num_resc,
-	int *available, int *allocated, int *reserved, int *down)
+pbs_rescquery(int c, char **resclist, int num_resc, int *available, int *allocated, int *reserved, int *down)
 {
 	int i;
 	struct batch_reply *reply;
@@ -207,19 +161,15 @@ pbs_rescquery(int c, char **resclist, int num_resc,
 	}
 
 	/* send request */
-
-	if ((rc = PBS_resc(c, PBS_BATCH_Rescq, resclist,
-		num_resc, (pbs_resource_t)0)) != 0) {
+	if ((rc = PBSD_rescquery_put(c, PBS_BATCH_Rescq, resclist, num_resc, (pbs_resource_t)0)) != PBSE_NONE) {
 		(void)pbs_client_thread_unlock_connection(c);
 		return rc;
 	}
 
 	/* read in reply */
-
 	reply = PBSD_rdrpy(c);
-	if ((rc = get_conn_errno(c)) == PBSE_NONE &&
-		reply->brp_choice == BATCH_REPLY_CHOICE_RescQuery) {
-		struct	brp_rescq	*resq = &reply->brp_un.brp_rescq;
+	if ((rc = get_conn_errno(c)) == PBSE_NONE && reply->brp_choice == BATCH_REPLY_CHOICE_RescQuery) {
+		struct brp_rescq *resq = &reply->brp_un.brp_rescq;
 
 		if (resq == NULL || num_resc != resq->brq_number) {
 			rc = PBSE_IRESVE;
@@ -233,11 +183,11 @@ pbs_rescquery(int c, char **resclist, int num_resc,
 
 		/* copy in available and allocated numbers */
 
-		for (i=0; i<num_resc; i++) {
+		for (i = 0; i < num_resc; i++) {
 			available[i] = resq->brq_avail[i];
 			allocated[i] = resq->brq_alloc[i];
-			reserved[i]  = resq->brq_resvd[i];
-			down[i]	     = resq->brq_down[i];
+			reserved[i] = resq->brq_resvd[i];
+			down[i] = resq->brq_down[i];
 		}
 	}
 
@@ -301,10 +251,9 @@ pbs_rescreserve(int c, char **rl, int num_resc, pbs_resource_t *prh)
 		return pbs_errno;
 	}
 	/* send request */
-
-	if ((rc = PBS_resc(c, PBS_BATCH_ReserveResc, rl, num_resc, *prh)) != 0) {
+	if ((rc = PBSD_rescquery_put(c, PBS_BATCH_ReserveResc, rl, num_resc, *prh)) != PBSE_NONE) {
 		(void)pbs_client_thread_unlock_connection(c);
-		return (rc);
+		return rc;
 	}
 
 	/*
@@ -314,8 +263,7 @@ pbs_rescreserve(int c, char **rl, int num_resc, pbs_resource_t *prh)
 
 	reply = PBSD_rdrpy(c);
 
-	if (((rc = get_conn_errno(c)) == PBSE_NONE) ||
-		(rc == PBSE_RMPART)) {
+	if (((rc = get_conn_errno(c)) == PBSE_NONE) || rc == PBSE_RMPART) {
 		*prh = reply->brp_auxcode;
 	}
 	PBSD_FreeReply(reply);
@@ -359,15 +307,13 @@ pbs_rescrelease(int c, pbs_resource_t rh)
 	if (pbs_client_thread_lock_connection(c) != 0)
 		return pbs_errno;
 
-	if ((rc = PBS_resc(c, PBS_BATCH_ReleaseResc, NULL, 0, rh)) != 0) {
+	if ((rc = PBSD_rescquery_put(c, PBS_BATCH_ReleaseResc, NULL, 0, rh)) != PBSE_NONE) {
 		(void)pbs_client_thread_unlock_connection(c);
-		return (rc);
+		return rc;
 	}
 
 	/* now get reply */
-
 	reply = PBSD_rdrpy(c);
-
 	PBSD_FreeReply(reply);
 
 	rc = get_conn_errno(c);

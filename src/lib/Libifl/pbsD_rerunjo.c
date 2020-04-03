@@ -83,26 +83,8 @@ __pbs_rerunjob(int c, char *jobid, char *extend)
 	if (pbs_client_thread_lock_connection(c) != 0)
 		return pbs_errno;
 
-	/* setup DIS support routines for following DIS calls */
-
-	DIS_tcp_funcs();
-
-	if ((rc = encode_DIS_ReqHdr(c, PBS_BATCH_Rerun, pbs_current_user)) ||
-		(rc = encode_DIS_JobId(c, jobid)) ||
-		(rc = encode_DIS_ReqExtend(c, extend))) {
-		if (set_conn_errtxt(c, dis_emsg[rc]) != 0) {
-			pbs_errno = PBSE_SYSTEM;
-		} else {
-			pbs_errno = PBSE_PROTOCOL;
-		}
-		(void)pbs_client_thread_unlock_connection(c);
-		return pbs_errno;
-	}
-
-	/* write data */
-
-	if (dis_flush(c)) {
-		pbs_errno = PBSE_PROTOCOL;
+	rc = PBSD_jobid_put(c, PBS_BATCH_Rerun, jobid, extend, PROT_TCP, NULL);
+	if (rc != PBSE_NONE) {
 		(void)pbs_client_thread_unlock_connection(c);
 		return pbs_errno;
 	}
@@ -113,13 +95,9 @@ __pbs_rerunjob(int c, char *jobid, char *extend)
 	pbs_tcp_timeout = PBS_DIS_TCP_TIMEOUT_VLONG;
 
 	/* read reply from stream into presentation element */
-
 	reply = PBSD_rdrpy(c);
-
 	/* reset timeout */
 	pbs_tcp_timeout = old_tcp_timeout;
-
-
 	PBSD_FreeReply(reply);
 
 	rc = get_conn_errno(c);

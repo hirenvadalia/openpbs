@@ -306,7 +306,6 @@ struct batch_reply
 extern int is_compose(int, int);
 extern int is_compose_cmd(int, int, char **);
 extern void PBS_free_aopl(struct attropl *);
-extern void advise(char *, ...);
 extern int PBSD_rdytocmt(int, char *, int, char **);
 extern int PBSD_commit(int, char *, int, char **);
 extern int PBSD_jcred(int, int, char *, int, int, char **);

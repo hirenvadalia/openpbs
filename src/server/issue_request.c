@@ -527,7 +527,7 @@ issue_Drequest(int conn, struct batch_request *request, void (*func)(), struct w
 			break;
 
 		case PBS_BATCH_Rerun:
-			rc = PBSD_jobid_put(sock, request->rq_ind.rq_rerun, prot, &msgid, PBS_BATCH_Rerun);
+			rc = PBSD_jobid_put(sock, PBS_BATCH_Rerun, request->rq_ind.rq_rerun, NULL, prot, &msgid);
 			break;
 
 

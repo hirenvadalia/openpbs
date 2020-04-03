@@ -163,14 +163,46 @@ is_compose_cmd(flatcc_builder_t *B, int command, char **ret_msgid)
 }
 
 int
-PBSD_jobid_put(int c, char *jobid, int prot, char **msgid, int req_type)
+PBSD_jobid_put(int c, int reqtype, char *jobid, char *extend, int prot, char **msgid)
 {
 	flatcc_builder_t builder, *B = &builder;
 	ns(JobId_ref_t) body = PBSE_FLATCC_ERROR;
 
-	START_REQ(B, prot, msgid, req_type);
+	START_REQ(B, prot, msgid, reqtype);
 	body = wire_encode_JobId(B, jobid);
-	END_REQ(JobId, prot, B, body, NULL);
+	END_REQ(JobId, prot, B, body, extend);
+
+	if (dis_flush(c, B))
+		return (pbs_errno = PBSE_PROTOCOL);
+
+	return PBSE_NONE;
+}
+
+int
+PBSD_movejob_put(int c, int reqtype, char *jobid, char *destin, char *extend, int prot, char **msgid)
+{
+	flatcc_builder_t builder, *B = &builder;
+	ns(Move_ref_t) body = PBSE_FLATCC_ERROR;
+
+	START_REQ(B, prot, msgid, reqtype);
+	body = wire_encode_MoveJob(B, jobid, destin);
+	END_REQ(Move, prot, B, body, extend);
+
+	if (dis_flush(c, B))
+		return (pbs_errno = PBSE_PROTOCOL);
+
+	return PBSE_NONE;
+}
+
+int
+PBSD_rescquery_put(int c, int reqtype, char **rescl, int ct, pbs_resource_t rh, int prot, char **msgid)
+{
+	flatcc_builder_t builder, *B = &builder;
+	ns(RescQuery_ref_t) body = PBSE_FLATCC_ERROR;
+
+	START_REQ(B, prot, msgid, reqtype);
+	body = wire_encode_RescQuery(B, rescl, ct, rh);
+	END_REQ(RescQuery, prot, B, body, NULL);
 
 	if (dis_flush(c, B))
 		return (pbs_errno = PBSE_PROTOCOL);
