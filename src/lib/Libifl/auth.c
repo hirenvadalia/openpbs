@@ -391,10 +391,8 @@ tcp_send_auth_req(int sock, unsigned int port, char *user)
 {
 	struct batch_reply *reply;
 	int rc;
-	int am_len = strlen(pbs_conf.auth_method);
-	int em_len = strlen(pbs_conf.encrypt_method);
 
-	if (pbs_conf.encrypt_mode != ENCRYPT_DISABLE && em_len == 0) {
+	if (pbs_conf.encrypt_mode != ENCRYPT_DISABLE && strlen(pbs_conf.encrypt_method) == 0) {
 		pbs_errno = PBSE_SYSTEM;
 		return -1;
 	}
@@ -402,30 +400,9 @@ tcp_send_auth_req(int sock, unsigned int port, char *user)
 	set_conn_errno(sock, 0);
 	set_conn_errtxt(sock, NULL);
 
-	if (encode_DIS_ReqHdr(sock, PBS_BATCH_Authenticate, user) ||
-		diswui(sock, am_len) || /* auth method length */
-		diswcs(sock, pbs_conf.auth_method, am_len) || /* auth method */
-		diswui(sock, pbs_conf.encrypt_mode)) { /* encrypt mode */
-		pbs_errno = PBSE_SYSTEM;
-		return -1;
-	}
-
-	if (pbs_conf.encrypt_mode != ENCRYPT_DISABLE) {
-		if (diswui(sock, em_len) || /* encrypt method length */
-			diswcs(sock, pbs_conf.encrypt_method, em_len)) { /* encrypt method */
-			pbs_errno = PBSE_SYSTEM;
-			return -1;
-		}
-	}
-
-	if (diswui(sock, port) || /* port (only used in resvport auth) */
-		encode_DIS_ReqExtend(sock, NULL)) {
-		pbs_errno = PBSE_SYSTEM;
-		return -1;
-	}
-
-	if (dis_flush(sock)) {
-		pbs_errno = PBSE_SYSTEM;
+	if (PBSD_auth_put(sock, pbs_conf.auth_method,
+				pbs_conf.encrypt_mode != ENCRYPT_DISABLE ? pbs_conf.encrypt_method : NULL,
+				pbs_conf.encrypt_mode, port, PROT_TCP, NULL) != PBSE_NONE) {
 		return -1;
 	}
 

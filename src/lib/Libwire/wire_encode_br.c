@@ -55,9 +55,11 @@
 } while(0)
 
 #define END_REQ(name, prot, B, body, extend) do { \
-	if (body == PBSE_FLATCC_ERROR) \
-		return (pbs_errno = PBSE_PROTOCOL); \
-	ns(Req_body_add(B, ns(ReqBody_as_ ## name(body)))); \
+	if (body != -1) { \
+		if (body == PBSE_FLATCC_ERROR) \
+			return (pbs_errno = PBSE_PROTOCOL); \
+		ns(Req_body_add(B, ns(ReqBody_as_ ## name(body)))); \
+	} \
 	if (extend != NULL) { \
 		flatbuffers_string_ref_t s = 0; \
 		FB_STR(s, B, extend); \
@@ -203,6 +205,68 @@ PBSD_rescquery_put(int c, int reqtype, char **rescl, int ct, pbs_resource_t rh, 
 	START_REQ(B, prot, msgid, reqtype);
 	body = wire_encode_RescQuery(B, rescl, ct, rh);
 	END_REQ(RescQuery, prot, B, body, NULL);
+
+	if (dis_flush(c, B))
+		return (pbs_errno = PBSE_PROTOCOL);
+
+	return PBSE_NONE;
+}
+
+int PBSD_dmncmd_put(int c, int reqtype, int cmd, char *extend, int prot, char **msgid)
+{
+	flatcc_builder_t builder, *B = &builder;
+	ns(DmnCmd_ref_t) body = PBSE_FLATCC_ERROR;
+
+	START_REQ(B, prot, msgid, reqtype);
+	body = wire_encode_DmnCmd(B, cmd);
+	END_REQ(DmnCmd, prot, B, body, extend);
+
+	if (dis_flush(c, B))
+		return (pbs_errno = PBSE_PROTOCOL);
+
+	return PBSE_NONE;
+}
+
+int
+PBSD_empty_put(int c, int reqtype, char *extend, int prot, char **msgid)
+{
+	flatcc_builder_t builder, *B = &builder;
+
+	START_REQ(B, prot, msgid, reqtype);
+	/* Not used but still use DmnCmd in END_REQ to make compiler happy */
+	END_REQ(DmnCmd, prot, B, -1, extend);
+
+	if (dis_flush(c, B))
+		return (pbs_errno = PBSE_PROTOCOL);
+
+	return PBSE_NONE;
+}
+
+int
+PBSD_select_put(int c, int reqtype, struct attropl *aoplp, struct attrl *alp, char *extend, int prot, char **msgid)
+{
+	flatcc_builder_t builder, *B = &builder;
+	ns(Select_ref_t) body = PBSE_FLATCC_ERROR;
+
+	START_REQ(B, prot, msgid, reqtype);
+	body = wire_encode_Select(B, aoplp, alp);
+	END_REQ(Select, prot, B, body, extend);
+
+	if (dis_flush(c, B))
+		return (pbs_errno = PBSE_PROTOCOL);
+
+	return PBSE_NONE;
+}
+
+int
+PBSD_auth_put(int c, char *auth_method, char *encrypt_method, int encrypt_mode, int port, int prot, char **msgid)
+{
+	flatcc_builder_t builder, *B = &builder;
+	ns(Auth_ref_t) body = PBSE_FLATCC_ERROR;
+
+	START_REQ(B, prot, msgid, PBS_BATCH_Authenticate);
+	body = wire_encode_Auth(B, auth_method, encrypt_method, encrypt_mode, port);
+	END_REQ(Auth, prot, B, body, NULL);
 
 	if (dis_flush(c, B))
 		return (pbs_errno = PBSE_PROTOCOL);

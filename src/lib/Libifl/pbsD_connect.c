@@ -444,13 +444,7 @@ __pbs_connect_extend(char *server, char *extend_data)
 	 * no leading authentication message needing to be sent on the client
 	 * socket, so will send a "dummy" message and discard the replyback.
 	 */
-	if ((i = encode_DIS_ReqHdr(sock, PBS_BATCH_Connect, pbs_current_user)) ||
-		(i = encode_DIS_ReqExtend(sock, extend_data))) {
-		CLOSESOCKET(sock);
-		pbs_errno = PBSE_SYSTEM;
-		return -1;
-	}
-	if (dis_flush(sock)) {
+	if (i = PBSD_empty_put(connect, PBS_BATCH_Connect, extend_data, PROT_TCP, NULL) != PBSE_NONE) {
 		CLOSESOCKET(sock);
 		pbs_errno = PBSE_SYSTEM;
 		return -1;
@@ -568,8 +562,7 @@ __pbs_disconnect(int connect)
 	/* send close-connection message */
 
 	DIS_tcp_funcs();
-	if ((encode_DIS_ReqHdr(connect, PBS_BATCH_Disconnect, pbs_current_user) == 0) &&
-		(dis_flush(connect) == 0)) {
+	if (PBSD_empty_put(connect, PBS_BATCH_Disconnect, NULL, PROT_TCP, NULL) == PBSE_NONE) {
 		for (;;) {	/* wait for server to close connection */
 #ifdef WIN32
 			if (recv(connect, &x, 1, 0) < 1)
@@ -838,12 +831,7 @@ err:
 	 * no leading authentication message needing to be sent on the client
 	 * socket, so will send a "dummy" message and discard the replyback.
 	 */
-	if ((i = encode_DIS_ReqHdr(sock, PBS_BATCH_Connect, pbs_current_user)) ||
-		(i = encode_DIS_ReqExtend(sock, NULL))) {
-		pbs_errno = PBSE_SYSTEM;
-		return -1;
-	}
-	if (dis_flush(sock)) {
+	if (i = PBSD_empty_put(connect, PBS_BATCH_Connect, NULL, PROT_TCP, NULL) != PBSE_NONE) {
 		pbs_errno = PBSE_SYSTEM;
 		return -1;
 	}

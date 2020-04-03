@@ -56,8 +56,6 @@
 #include "dis.h"
 #include "pbs_ecl.h"
 
-
-static int PBSD_select_put(int, int, struct attropl *, struct attrl *, char *);
 static char **PBSD_select_get(int);
 
 /**
@@ -93,7 +91,7 @@ __pbs_selectjob(int c, struct attropl *attrib, char *extend)
 	if (pbs_client_thread_lock_connection(c) != 0)
 		return NULL;
 
-	if (PBSD_select_put(c, PBS_BATCH_SelectJobs, attrib, NULL, extend) == 0)
+	if (PBSD_select_put(c, PBS_BATCH_SelectJobs, attrib, NULL, extend, PROT_TCP, NULL) == PBSE_NONE)
 		ret = PBSD_select_get(c);
 
 	/* unlock the thread lock and update the thread context data */
@@ -145,7 +143,7 @@ __pbs_selstat(int c, struct attropl *attrib, struct attrl   *rattrib, char *exte
 		return NULL;
 
 
-	if (PBSD_select_put(c, PBS_BATCH_SelStat, attrib, rattrib, extend) == 0)
+	if (PBSD_select_put(c, PBS_BATCH_SelStat, attrib, rattrib, extend, PROT_TCP, NULL) == PBSE_NONE)
 		ret = PBSD_status_get(c);
 
 	/* unlock the thread lock and update the thread context data */
@@ -153,53 +151,6 @@ __pbs_selstat(int c, struct attropl *attrib, struct attrl   *rattrib, char *exte
 		return NULL;
 
 	return ret;
-}
-
-
-/**
- * @brief
- *	-encode and puts selectjob request  data
- *
- * @param[in] c - communication handle
- * @param[in] type - type of request
- * @param[in] attrib - pointer to attropl structure(selection criteria)
- * @param[in] extend - extend string to encode req
- * @param[in] rattrib - list of attributes to return
- *
- * @return      int
- * @retval      0	success
- * @retval      !0	error
- *
- */
-static int
-PBSD_select_put(int c, int type, struct attropl *attrib,
-			struct attrl *rattrib, char *extend)
-{
-	int rc;
-
-	/* setup DIS support routines for following DIS calls */
-
-	DIS_tcp_funcs();
-
-	if ((rc = encode_DIS_ReqHdr(c, type, pbs_current_user)) ||
-		(rc = encode_DIS_attropl(c, attrib)) ||
-		(rc = encode_DIS_attrl(c, rattrib))  ||
-		(rc = encode_DIS_ReqExtend(c, extend))) {
-		if (set_conn_errtxt(c, dis_emsg[rc]) != 0) {
-			pbs_errno = PBSE_SYSTEM;
-		} else {
-			pbs_errno = PBSE_PROTOCOL;
-		}
-		return (pbs_errno);
-	}
-
-	/* write data */
-
-	if (dis_flush(c)) {
-		return (pbs_errno = PBSE_PROTOCOL);
-	}
-
-	return 0;
 }
 
 /**

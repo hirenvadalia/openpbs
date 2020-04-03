@@ -257,7 +257,7 @@ svr_disconnect_with_wait_option(int sock, int wait)
 	if (pbs_client_thread_lock_connection(sock) != 0)
 		return;
 	DIS_tcp_funcs();
-	if ((encode_DIS_ReqHdr(sock, PBS_BATCH_Disconnect, pbs_current_user) == 0) && (dis_flush(sock) == 0)) {
+	if (PBSD_empty_put(sock, PBS_BATCH_Disconnect, NULL, PROT_TCP, NULL) == PBSE_NONE) {
 		conn_t *conn = get_conn(sock);
 
 		/* if no error, will be closed when process_request */

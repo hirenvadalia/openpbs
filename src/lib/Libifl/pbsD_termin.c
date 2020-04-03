@@ -76,32 +76,15 @@ __pbs_terminate(int c, int manner, char *extend)
 	if (pbs_client_thread_lock_connection(c) != 0)
 		return pbs_errno;
 
-	/* setup DIS support routines for following DIS calls */
-
-	DIS_tcp_funcs();
-
-	if ((rc=encode_DIS_ReqHdr(c, PBS_BATCH_Shutdown, pbs_current_user)) ||
-		(rc = encode_DIS_ShutDown(c, manner)) ||
-		(rc = encode_DIS_ReqExtend(c, extend))) {
-		if (set_conn_errtxt(c, dis_emsg[rc]) != 0) {
-			pbs_errno = PBSE_SYSTEM;
-		} else {
-			pbs_errno = PBSE_PROTOCOL;
-		}
-		(void)pbs_client_thread_unlock_connection(c);
-		return pbs_errno;
-	}
-	if (dis_flush(c)) {
-		pbs_errno = PBSE_PROTOCOL;
+	rc = PBSD_dmncmd_put(c, PBS_BATCH_Shutdown, manner, extend, PROT_TCP, NULL);
+	if (rc != PBSE_NONE) {
 		(void)pbs_client_thread_unlock_connection(c);
 		return pbs_errno;
 	}
 
 	/* read in reply */
-
 	reply = PBSD_rdrpy(c);
 	rc = get_conn_errno(c);
-
 	PBSD_FreeReply(reply);
 
 	/* unlock the thread lock and update the thread context data */

@@ -349,14 +349,8 @@ put_failover(int sock, struct batch_request *request)
 {
 	int rc;
 
-
 	DBPRT(("Failover: sending FO(%d) request\n", request->rq_ind.rq_failover))
-	DIS_tcp_funcs();
-	if ((rc = encode_DIS_ReqHdr(sock, PBS_BATCH_FailOver, pbs_current_user))==0)
-		if ((rc = diswui(sock, request->rq_ind.rq_failover)) == 0)
-			if ((rc=encode_DIS_ReqExtend(sock, 0)) == 0)
-				rc = dis_flush(sock);
-	return rc;
+	return PBSD_dmncmd_put(sock, PBS_BATCH_FailOver, request->rq_ind.rq_failover, NULL, PROT_TCP, NULL);
 }
 
 
