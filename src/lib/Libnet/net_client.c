@@ -68,7 +68,7 @@
 /**
  * @file	net_client.c
  */
-static int conn_timeout = PBS_DIS_TCP_TIMEOUT_CONNECT; /* timeout for connect */
+static int conn_timeout = PBS_WIRE_TCP_TIMEOUT_CONNECT; /* timeout for connect */
 
 #ifdef WIN32
 /**

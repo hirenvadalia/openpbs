@@ -70,7 +70,6 @@ extern void process_Areply(int);
 extern void process_Dreply(int);
 extern void process_DreplyTPP(int);
 extern void process_request(int);
-extern void process_dis_request(int);
 extern int save_flush(void);
 extern void save_setup(int);
 extern int save_struct(char *, unsigned int);

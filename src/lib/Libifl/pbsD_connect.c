@@ -462,7 +462,7 @@ __pbs_connect_extend(char *server, char *extend_data)
 		return -1;
 	}
 
-	pbs_tcp_timeout = PBS_DIS_TCP_TIMEOUT_VLONG;	/* set for 3 hours */
+	pbs_tcp_timeout = PBS_WIRE_TCP_TIMEOUT_VLONG;	/* set for 3 hours */
 
 	/*
 	 * Disable Nagle's algorithm on the TCP connection to server.
@@ -851,7 +851,7 @@ err:
 
 	/* setup DIS support routines for following pbs_* calls */
 	DIS_tcp_funcs();
-	pbs_tcp_timeout = PBS_DIS_TCP_TIMEOUT_VLONG;	/* set for 3 hours */
+	pbs_tcp_timeout = PBS_WIRE_TCP_TIMEOUT_VLONG;	/* set for 3 hours */
 
 	return sock;
 }

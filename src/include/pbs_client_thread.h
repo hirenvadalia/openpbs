@@ -96,13 +96,9 @@ struct pbs_client_thread_context {
 	/** stores the global pbs errno */
 	int			th_pbs_errno;
 	/** head pointer to the linked list of connection contexts */
-	struct pbs_client_thread_connect_context
-	*th_conn_context;
+	struct pbs_client_thread_connect_context *th_conn_context;
 	/** pointer to the array of attribute error structures */
-	struct ecl_attribute_errors
-	*th_errlist;
-	/** pointer to the location for the dis_buffer for each thread */
-	char			*th_dis_buffer;
+	struct ecl_attribute_errors *th_errlist;
 	/** pointer to the cred_info structure used by pbs_submit_with_cred */
 	void			*th_cred_info;
 	/** used by totpool and usepool functions */

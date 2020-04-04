@@ -137,12 +137,6 @@ typedef struct	vnode_attr {
 	int	 vna_flag;	/* attribute/resource  flags */
 } vna_t;
 
-#define	PS_DIS_V1		1
-#define	PS_DIS_V2		2
-#define	PS_DIS_V3		3
-#define	PS_DIS_V4		4
-#define	PS_DIS_CURVERSION	PS_DIS_V4
-
 /**
  * @brief
  *	An attribute named VNATTR_PNAMES attached to a ``special'' vnode

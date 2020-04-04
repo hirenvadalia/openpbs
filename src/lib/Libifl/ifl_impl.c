@@ -428,7 +428,7 @@ pbs_preempt_jobs(int c, char **preempt_jobs_list) {
  * @param[in] extend - extend string to encode req
  *
  * @return      int
- * @retval      DIS_SUCCESS(0)  success
+ * @retval      0               success
  * @retval      error code      error
  *
  */

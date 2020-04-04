@@ -210,8 +210,8 @@ dis_reply_write(int sfds, struct batch_request *preq)
 		act.sa_handler = reply_alarm;
 		if (sigaction(SIGALRM, &act, &oact) == -1)
 			return (PBS_NET_RC_RETRY);
-		alarm(PBS_DIS_TCP_TIMEOUT_REPLY);
-		pbs_tcp_timeout = PBS_DIS_TCP_TIMEOUT_REPLY;
+		alarm(PBS_WIRE_TCP_TIMEOUT_REPLY);
+		pbs_tcp_timeout = PBS_WIRE_TCP_TIMEOUT_REPLY;
 #endif
 		/*
 		 * clear pbs_tcp_errno - set on error in dis_flush when called

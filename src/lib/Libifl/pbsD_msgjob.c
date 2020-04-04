@@ -86,15 +86,7 @@ __pbs_msgjob(int c, char *jobid, int fileopt, char *msg, char *extend)
 	if (pbs_client_thread_lock_connection(c) != 0)
 		return pbs_errno;
 
-	/* setup DIS support routines for following DIS calls */
-	DIS_tcp_funcs();
-
-	if ((rc = PBSD_msg_put(c, jobid, fileopt, msg, extend, PROT_TCP, NULL)) != 0) {
-		if (set_conn_errtxt(c, dis_emsg[rc]) != 0) {
-			pbs_errno = PBSE_SYSTEM;
-		} else {
-			pbs_errno = PBSE_PROTOCOL;
-		}
+	if ((rc = PBSD_msg_put(c, jobid, fileopt, msg, extend, PROT_TCP, NULL)) != PBSE_NONE) {
 		(void)pbs_client_thread_unlock_connection(c);
 		return pbs_errno;
 	}
@@ -102,7 +94,6 @@ __pbs_msgjob(int c, char *jobid, int fileopt, char *msg, char *extend)
 	/* read reply */
 	reply = PBSD_rdrpy(c);
 	rc = get_conn_errno(c);
-
 	PBSD_FreeReply(reply);
 
 	/* unlock the thread lock and update the thread context data */
@@ -150,28 +141,17 @@ pbs_py_spawn(int c, char *jobid, char **argv, char **envp)
 	if (pbs_client_thread_lock_connection(c) != 0)
 		return -1;
 
-	/* setup DIS support routines for following DIS calls */
-
-	DIS_tcp_funcs();
-
-	if ((rc = PBSD_py_spawn_put(c, jobid, argv, envp, 0, NULL)) != 0) {
-		if (set_conn_errtxt(c, dis_emsg[rc]) != 0) {
-			pbs_errno = PBSE_SYSTEM;
-		} else {
-			pbs_errno = PBSE_PROTOCOL;
-		}
+	if ((rc = PBSD_py_spawn_put(c, jobid, argv, envp, PROT_TCP, NULL)) != PBSE_NONE) {
 		(void)pbs_client_thread_unlock_connection(c);
 		return -1;
 	}
 
 	/* read reply */
-
 	reply = PBSD_rdrpy(c);
 	if ((reply == NULL) || (get_conn_errno(c) != 0))
 		rc = -1;
 	else
 		rc = reply->brp_auxcode;
-
 	PBSD_FreeReply(reply);
 
 	/* unlock the thread lock and update the thread context data */
@@ -270,16 +250,7 @@ char *extend;
 	if (pbs_client_thread_lock_connection(c) != 0)
 		return pbs_errno;
 
-	/* setup DIS support routines for following DIS calls */
-
-	DIS_tcp_funcs();
-
-	if ((rc = PBSD_relnodes_put(c, jobid, node_list, extend, 0, NULL)) != 0) {
-		if (set_conn_errtxt(c, dis_emsg[rc]) != 0) {
-			pbs_errno = PBSE_SYSTEM;
-		} else {
-			pbs_errno = PBSE_PROTOCOL;
-		}
+	if ((rc = PBSD_relnodes_put(c, jobid, node_list, extend, PROT_TCP, NULL)) != PBSE_NONE) {
 		(void)pbs_client_thread_unlock_connection(c);
 		return pbs_errno;
 	}

@@ -518,7 +518,7 @@ req_rerunjob2(struct batch_request *preq, job *pjob)
 	/* requeue request  */
 	time_now = time(NULL);
 	if ((server.sv_attr[(int)SRV_ATR_JobRequeTimeout].at_flags & ATR_VFLAG_SET) == 0) {
-		rerun_to = time_now + PBS_DIS_TCP_TIMEOUT_RERUN;
+		rerun_to = time_now + PBS_WIRE_TCP_TIMEOUT_RERUN;
 	} else {
 		rerun_to = time_now + server.sv_attr[(int)SRV_ATR_JobRequeTimeout].at_val.at_long;
 	}

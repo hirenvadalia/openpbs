@@ -92,7 +92,7 @@ __pbs_rerunjob(int c, char *jobid, char *extend)
 	/* Set timeout value to very long value as rerun request */
 	/* goes from Server to Mom and may take a long time      */
 	old_tcp_timeout = pbs_tcp_timeout;
-	pbs_tcp_timeout = PBS_DIS_TCP_TIMEOUT_VLONG;
+	pbs_tcp_timeout = PBS_WIRE_TCP_TIMEOUT_VLONG;
 
 	/* read reply from stream into presentation element */
 	reply = PBSD_rdrpy(c);

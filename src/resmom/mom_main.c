@@ -6335,7 +6335,7 @@ do_tcp(int fd)
 
 	pbs_tcp_timeout = 0;
 	proto = disrsi(fd, &ret);
-	pbs_tcp_timeout = PBS_DIS_TCP_TIMEOUT_SHORT;
+	pbs_tcp_timeout = PBS_WIRE_TCP_TIMEOUT_SHORT;
 
 	switch (ret) {
 		case DIS_SUCCESS:		/* worked */
@@ -6362,7 +6362,7 @@ do_tcp(int fd)
 			DBPRT(("%s: got a resource monitor request\n", __func__))
 			pbs_tcp_timeout = 0;
 			ret = rm_request(fd, version, PROT_TCP);
-			pbs_tcp_timeout = PBS_DIS_TCP_TIMEOUT_SHORT;
+			pbs_tcp_timeout = PBS_WIRE_TCP_TIMEOUT_SHORT;
 			break;
 
 		case	TM_PROTOCOL:

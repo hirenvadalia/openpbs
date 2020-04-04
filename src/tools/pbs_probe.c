@@ -107,10 +107,6 @@
 #define DFLT_MSGTBL_SZ (1024)
 
 /* ---- required and disallowed dir/file modes ----*/
-
-#define DFLT_REQ_DIR_MODES (S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IWOTH)
-#define DFLT_DIS_DIR_MODES (S_IWGRP | S_IWOTH)
-
 #define rwxrxrx		(S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH)
 #define frwxrxrx	(S_IFREG | S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH)
 #define drwxrxrx	(S_IFDIR | S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH)

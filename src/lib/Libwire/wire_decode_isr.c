@@ -83,11 +83,7 @@ free_vnlp(vnl_t *vnlp)
 
 /**
  * @brief
- *	vn_decode_DIS_V4 - decode version 4 vnode information from Mom
- *
- * @par Functionality:
- *	See vn_decode_DIS() above, This is called from there to decode
- *	V4 information.
+ *	wire_decode_vnodes - decode vnode information from Mom
  *
  * @param[in]	fd  -     socket descriptor from which to read
  * @param[out]	rcp -     pointer to place to return error code if error.

@@ -79,45 +79,6 @@ free_node_pool(struct node_pool *np)
 
 /**
  * @brief
- * 	-encode_DIS_resc() - encode a resource related request,
- *	Used by pbs_rescquery(), pbs_rescreserve() and pbs_rescfree()
- *
- * @param[in] sock - socket fd
- * @param[in] rlist - pointer to resource list
- * @param[in] ct - count of query strings
- * @param[in] rh - resource handle
- *
- * @return	int
- * @retval	0	success
- * @retval	!0	error
- *
- */
-
-static int
-encode_DIS_Resc(int sock, char **rlist, int ct, pbs_resource_t rh)
-{
-	int    i;
-	int    rc;
-
-	if ((rc = diswsi(sock, rh)) == 0) {  /* resource reservation handle */
-
-		/* next send the number of resource strings */
-
-		if ((rc = diswui(sock, ct)) == 0) {
-
-			/* now send each string (if any) */
-
-			for (i = 0; i < ct; ++i) {
-				if ((rc = diswst(sock, *(rlist + i))) != 0)
-					break;
-			}
-		}
-	}
-	return rc;
-}
-
-/**
- * @brief
  * 	-pbs_rescquery() - query the availability of resources
  *
  * @param[in] c - communication handle

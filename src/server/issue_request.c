@@ -683,14 +683,14 @@ process_Dreply(int sock)
 	/* read and decode the reply */
 	/* set long timeout on I/O   */
 
-	pbs_tcp_timeout = PBS_DIS_TCP_TIMEOUT_LONG;
+	pbs_tcp_timeout = PBS_WIRE_TCP_TIMEOUT_LONG;
 
 	if ((rc = DIS_reply_read(sock, &request->rq_reply, 0)) != 0) {
 		close_conn(sock);
 		request->rq_reply.brp_code = rc;
 		request->rq_reply.brp_choice = BATCH_REPLY_CHOICE_NULL;
 	}
-	pbs_tcp_timeout = PBS_DIS_TCP_TIMEOUT_SHORT;	/* short timeout */
+	pbs_tcp_timeout = PBS_WIRE_TCP_TIMEOUT_SHORT;	/* short timeout */
 
 	/* now dispatch the reply to the routine in the work task */
 

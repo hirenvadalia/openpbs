@@ -289,12 +289,12 @@ struct batch_reply
 #define PBS_IFF_CLIENT_ADDR "PBS_IFF_CLIENT_ADDR"
 
 /* time out values for tcp_dis read/write */
-#define PBS_DIS_TCP_TIMEOUT_CONNECT	10
-#define PBS_DIS_TCP_TIMEOUT_REPLY	10
-#define PBS_DIS_TCP_TIMEOUT_SHORT	30
-#define PBS_DIS_TCP_TIMEOUT_RERUN	45 /* timeout used in pbs_rerunjob() */
-#define PBS_DIS_TCP_TIMEOUT_LONG	600
-#define PBS_DIS_TCP_TIMEOUT_VLONG	10800
+#define PBS_WIRE_TCP_TIMEOUT_CONNECT	10
+#define PBS_WIRE_TCP_TIMEOUT_REPLY	10
+#define PBS_WIRE_TCP_TIMEOUT_SHORT	30
+#define PBS_WIRE_TCP_TIMEOUT_RERUN	45 /* timeout used in pbs_rerunjob() */
+#define PBS_WIRE_TCP_TIMEOUT_LONG	600
+#define PBS_WIRE_TCP_TIMEOUT_VLONG	10800
 
 #define FAILOVER_Register	0 /* secondary server register with primary */
 #define FAILOVER_HandShake	1 /* handshake from secondary to primary */

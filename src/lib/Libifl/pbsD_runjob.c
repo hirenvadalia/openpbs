@@ -58,7 +58,7 @@
  * @param[in] extend - extend string to encode req
  *
  * @return      int
- * @retval      DIS_SUCCESS(0)  success
+ * @retval      0               success
  * @retval      error code      error
  *
  */
