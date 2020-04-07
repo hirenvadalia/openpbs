@@ -273,11 +273,11 @@ wire_im_read(int sock, pbs_im_t *pims)
 	}
 
 	req = ns(InterMoM_as_root(buf));
-	COPYSTR_S(pims->im_jobid, ns(InterMom_jobId(req)));
-	COPYSTR_S(pims->im_cookie, ns(InterMom_cookie(req)));
-	pims->im_command = (int) ns(InterMom_cmd(req));
-	pims->im_event = (tm_event_t) ns(InterMom_event(req));
-	pims->im_fromtask = (tm_task_id) ns(InterMom_fromTask(req));
+	COPYSTR_S(pims->im_common.im_jobid, ns(InterMom_jobId(req)));
+	COPYSTR_S(pims->im_common.im_cookie, ns(InterMom_cookie(req)));
+	pims->im_common.im_command = (int) ns(InterMom_cmd(req));
+	pims->im_common.im_event = (tm_event_t) ns(InterMom_event(req));
+	pims->im_common.im_fromtask = (tm_task_id) ns(InterMom_fromTask(req));
 
 	switch (pims->im_command) {
 		case IM_ALL_OKAY:

@@ -134,7 +134,7 @@ get_msgid(char **id)
  * @brief - Compose a command to be sent over TPP stream
  *
  * @par Functionality:
- *	calls im_compose to create the message header, get_msgid to
+ *	calls is_compose to create the message header, get_msgid to
  * 	add a msg id to the header (unless one is passed)
  *
  * @param[in] stream - Tpp stream to write to

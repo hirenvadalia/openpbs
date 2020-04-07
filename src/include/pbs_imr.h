@@ -202,12 +202,16 @@ typedef union im_reply {
 	imr_err_t imr_err;
 } im_reply_t;
 
-typedef struct pbs_im {
+typedef struct im_common {
 	char *im_jobid;
 	char *im_cookie;
 	int im_command;
 	tm_event_t im_event;
 	tm_task_id im_fromtask;
+} im_common_t;
+
+typedef struct pbs_im {
+	im_common_t im_common;
 	im_req_t *im_req;
 	im_reply_t *im_reply;
 } pbs_im_t;
