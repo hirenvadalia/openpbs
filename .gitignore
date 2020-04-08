@@ -98,6 +98,7 @@ pip-delete-this-directory.txt
 # Build directory
 target/
 target-*/
+build/
 
 #PyCharm project directory
 .idea/
