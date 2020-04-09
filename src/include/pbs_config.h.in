@@ -35,35 +35,37 @@
  * trademark licensing policies.
  *
  */
-#ifndef _PBS_VERSION_H
-#define _PBS_VERSION_H
+#ifndef _PBS_CONFIG_H
+#define _PBS_CONFIG_H
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/*
- * The version of this file and the PBS version have no simple correlation.
- *
- */
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#cmakedefine HAVE_SYS_EVENTFD_H
+#cmakedefine HAVE_SYS_IOCTL_H
+#cmakedefine H_ERRNO_DECLARED
+#cmakedefine HAVE_SOCKLEN_T
+#cmakedefine PBS_HAVE_EPOLL
+#cmakedefine PBS_HAVE_EPOLL_PWAIT
+#cmakedefine PBS_HAVE_PPOLL
 
-
-
-#ifdef WIN32
-#define PBS_BUILD "mach=WIN32:security=:configure_args="
-#define PBS_VERSION "@PBS_WIN_VERSION@"
+#ifndef HAVE_SOCKLEN_T
+#define pbs_socklen_t int
 #else
-#include <pbs_config.h>
-#ifndef PBS_BUILD
-#define PBS_BUILD "mach=N/A:security=N/A:configure_args=N/A"
-#endif
+#include <sys/socket.h>
+#define pbs_socklen_t socklen_t
 #endif
 
-#define PRINT_VERSION_AND_EXIT(argc, argv) if (argc == 2 && strcasecmp(argv[1], "--version") == 0) { fprintf(stdout, "pbs_version = %s\n", PBS_VERSION); exit(0); }
+#define PBS_MACH "@PBS_MACH@"
+#define PBS_VERSION "@PBS_VERSION@"
+#define PBS_SERVER_HOME "@PBS_SERVER_HOME@"
+#define PBS_DATA_SERVICE_USER "@PBS_DATA_SERVICE_USER@"
+#define PBS_DATA_SERVICE_PORT "@PBS_DATA_SERVICE_PORT@"
+#define PBS_CONF_FILE "@PBS_CONF_FILE@"
+#define TMP_DIR "@TMP_DIR@"
+#define PBS_CORE_LIMIT "@PBS_CORE_LIMIT@"
 
 #ifdef __cplusplus
 }
 #endif
-#endif /* _PBS_VERSION_H */
+#endif /* _PBS_CONFIG_H */

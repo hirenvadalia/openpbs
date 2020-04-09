@@ -1,5 +1,3 @@
-project(Libattr)
-
 function(gen_attrdef_file name type)
 	add_custom_command(OUTPUT ${name}.c
 		COMMAND ${Python3_EXECUTABLE}
