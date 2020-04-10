@@ -48,6 +48,7 @@ extern "C" {
 #cmakedefine PBS_HAVE_EPOLL
 #cmakedefine PBS_HAVE_EPOLL_PWAIT
 #cmakedefine PBS_HAVE_PPOLL
+#cmakedefine SYSLOG
 
 #ifndef HAVE_SOCKLEN_T
 #define pbs_socklen_t int
@@ -64,6 +65,9 @@ extern "C" {
 #define PBS_CONF_FILE "@PBS_CONF_FILE@"
 #define TMP_DIR "@TMP_DIR@"
 #define PBS_CORE_LIMIT "@PBS_CORE_LIMIT@"
+#define MIN_STACK_LIMIT "@MIN_STACK_LIMIT@"
+#define SHELL_INVOKE @SHELL_INVOKE@
+#define PBS_COMPRESSION_ENABLED 1
 
 #ifdef __cplusplus
 }
