@@ -49,6 +49,8 @@ extern "C" {
 #cmakedefine PBS_HAVE_EPOLL_PWAIT
 #cmakedefine PBS_HAVE_PPOLL
 #cmakedefine SYSLOG
+#cmakedefine LIBICAL_API2
+#cmakedefine PBS_UNDOLR_ENABLED
 
 #ifndef HAVE_SOCKLEN_T
 #define pbs_socklen_t int
