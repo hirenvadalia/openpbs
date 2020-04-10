@@ -69,6 +69,11 @@ log_errf(int errnum, const char *routine, const char *fmt, ...)
 }
 
 void
+free_im(pbs_im_t *pims)
+{
+}
+
+void
 im_send_error(int stream, im_common_t *pimcs, int errcode, char *errmsg)
 {
 	// FIXME: do this
@@ -77,7 +82,7 @@ im_send_error(int stream, im_common_t *pimcs, int errcode, char *errmsg)
 }
 
 void
-req_im_join_job(int stream, im_common_t *pimcs, im_join_job_t *pimjs)
+im_req_join_job(int stream, im_common_t *pimcs, im_join_job_t *pimjs)
 {
 	int rc = 0;
 	job *pjob = NULL;
@@ -407,16 +412,192 @@ join_err:
 }
 
 void
+im_req_kill_job(int stream, job *pjob, im_common_t *pimcs)
+{
+	int hook_errcode = 0;
+	int hook_rc = 0;
+	hook *last_phook = NULL;
+	unsigned int hook_fail_action = 0;
+	char hook_msg[HOOK_MSG_SIZE + 1];
+	mom_hook_input_t hook_input;
+	mom_hook_output_t hook_output;
+
+	if (check_ms(stream, pjob))
+		return;
+
+	log_event(PBSEVENT_JOB, PBS_EVENTCLASS_JOB, LOG_DEBUG, pimcs->im_jobid, "KILL_JOB received");
+
+	mom_hook_input_init(&hook_input);
+	hook_input.pjob = pjob;
+
+	mom_hook_output_init(&hook_output);
+	hook_output.reject_errcode = &hook_errcode;
+	hook_output.last_phook = &last_phook;
+	hook_output.fail_action = &hook_fail_action;
+	if (mom_process_hooks(HOOK_EVENT_EXECJOB_PRETERM, PBS_MOM_SERVICE_NAME, mom_host, &hook_input, &hook_output, hook_msg, sizeof(hook_msg), 1) == 0) {
+		im_send_error(stream, pimcs, hook_errcode, hook_msg);
+		return;
+	}
+
+	/*
+	 * Send the jobs a signal but we have to wait to
+	 * do a reply to mother superior until the procs
+	 * die and are reaped
+	 *
+	 * see scan_for_exiting()
+	 */
+	DBPRT(("%s: KILL_JOB %s\n", __func__, pimcs->im_jobid))
+	kill_job(pjob, SIGKILL);
+	pjob->ji_qs.ji_substate = JOB_SUBSTATE_EXITING;
+	pjob->ji_qs.ji_state = JOB_STATE_EXITING;
+	pjob->ji_obit = pimcs->im_event;
+	exiting_tasks = 1;
+
+	mom_hook_input_init(&hook_input);
+	hook_input.pjob = pjob;
+
+	mom_hook_output_init(&hook_output);
+	hook_output.reject_errcode = &hook_errcode;
+	hook_output.last_phook = &last_phook;
+	hook_output.fail_action = &hook_fail_action;
+
+	(void)mom_process_hooks(HOOK_EVENT_EXECJOB_EPILOGUE, PBS_MOM_SERVICE_NAME, mom_host, &hook_input, &hook_output, hook_msg, sizeof(hook_msg), 1);
+}
+
+void
+im_req_exec_prologue(int stream, job *pjob, im_common_t *pimcs)
+{
+	int rc = 0;
+	int hook_errcode = 0;
+	int hook_rc = 0;
+	hook *last_phook = NULL;
+	unsigned int hook_fail_action = 0;
+	char hook_msg[HOOK_MSG_SIZE + 1];
+	mom_hook_input_t hook_input;
+	mom_hook_output_t hook_output;
+
+	DBPRT(("%s: %s for %s\n", __func__, "IM_EXEC_PROLOGUE", pjob->ji_qs.ji_jobid));
+	mom_hook_input_init(&hook_input);
+	hook_input.pjob = pjob;
+
+	mom_hook_output_init(&hook_output);
+	hook_output.reject_errcode = &hook_errcode;
+	hook_output.last_phook = &last_phook;
+	hook_output.fail_action = &hook_fail_action;
+
+	rc = mom_process_hooks(HOOK_EVENT_EXECJOB_PROLOGUE, PBS_MOM_SERVICE_NAME, mom_host, &hook_input, &hook_output, hook_msg, sizeof(hook_msg), 1);
+	switch (rc) {
+
+		case 1: /* explicit accept */
+		case 2:	/* no hook script executed - go ahead and accept event */
+			rc = im_compose(stream, pimcs, IM_ALL_OKAY, IM_OLD_PROTOCOL_VER);
+			if (rc != PBSE_NONE) {
+				im_eof(stream, rc);
+				return;
+			}
+			break;
+		default:
+			/* a value of '0' means explicit reject encountered. */
+			if (hook_rc != 0) {
+				/*
+				 * we've hit an internal error (malloc error, full disk, etc...), so
+				 * treat this now like a hook error so hook fail_action
+				 * will be consulted.
+				 * Before, behavior of an internal error was to ignore it!
+				 */
+				hook_errcode = PBSE_HOOKERROR;
+			}
+			// FIXME: we should flush in send_error here
+			im_send_error(stream, pimcs, hook_errcode, hook_msg);
+			if (hook_errcode == PBSE_HOOKERROR) {
+				send_hook_fail_action(last_phook);
+			}
+	}
+}
+
+void
+im_req_spawn_task(int stream, job *pjob, im_common_t *pimcs, im_spawn_task_t *pimsts)
+{
+	int rc = 0;
+	hnodent *np = NULL;
+	pbs_task *ptask = NULL;
+
+	DBPRT(("%s: SPAWN_TASK %s parent %d target %d taskid %u\n", __func__, pimcs->im_jobid, pimsts->im_pvnodeid, pimsts->im_tvnodeid, pimsts->im_taskid))
+
+	if ((np = find_node(pjob, stream, pimsts->im_pvnodeid)) == NULL) {
+		im_send_error(stream, pimcs, PBSE_BADHOST, NULL);
+		return;
+	}
+
+	/* The target node must be here */
+	if (pjob->ji_nodeid != TO_PHYNODE(pimsts->im_tvnodeid)) {
+		im_send_error(stream, pimcs, PBSE_INTERNAL, NULL);
+		return;
+	}
+#ifdef PMIX
+	pbs_pmix_register_client(pjob, pimsts->im_tvnodeid, &(pimsts->im_envp));
+#endif
+	if ((ptask = momtask_create(pjob)) == NULL) {
+		im_send_error(stream, pimcs, PBSE_SYSTEM, NULL);
+		return;
+	}
+	strcpy(ptask->ti_qs.ti_parentjobid, pimcs->im_jobid);
+	ptask->ti_qs.ti_parentnode = pimsts->im_pvnodeid;
+	ptask->ti_qs.ti_myvnode = pimsts->im_tvnodeid;
+	ptask->ti_qs.ti_parenttask = pimcs->im_fromtask;
+	if (task_save(ptask) == -1) {
+		im_send_error(stream, pimcs, PBSE_SYSTEM, NULL);
+		return;
+	}
+	rc = start_process(ptask, pimsts->im_argv, pimsts->im_envp, false);
+	if (rc != PBSE_NONE) {
+		im_send_error(stream, pimcs, rc, NULL);
+	} else {
+		rc = im_compose(stream, pimcs, IM_ALL_OKAY, IM_OLD_PROTOCOL_VER);
+		if (rc == PBSE_NONE) {
+			rc = diswui(stream, ptask->ti_qs.ti_task);
+		}
+	}
+}
+
+void
+im_req_get_tasks(int stream, job *pjob, im_common_t *pimcs, im_get_tasks_t *pimgts)
+{
+	int rc = 0;
+	hnodent *np = NULL;
+	pbs_task *ptask = NULL;
+
+	DBPRT(("%s: GET_TASKS %s from node %d to node %d\n", __func__, pimcs->im_jobid, pimgts->im_pvnodeid, pimgts->im_tvnodeid))
+	log_event(PBSEVENT_JOB, PBS_EVENTCLASS_JOB, LOG_DEBUG, pimcs->im_jobid, "GET_TASKS received");
+
+	if ((np = find_node(pjob, stream, pimgts->im_pvnodeid)) == NULL) {
+		im_send_error(stream, pimcs, PBSE_BADHOST, NULL);
+		return;
+	}
+	rc = im_compose(stream, pimcs, IM_ALL_OKAY, IM_OLD_PROTOCOL_VER);
+	if (rc != PBSE_NONE) // FIXME: what should we do here
+		return;
+	ptask = (pbs_task *)GET_NEXT(pjob->ji_tasks);
+	for (; ptask != NULL; ptask = (pbs_task *)GET_NEXT(ptask->ti_jobtask)) {
+		if (ptask->ti_qs.ti_myvnode == pimgts->im_tvnodeid) {
+			diswui(stream, ptask->ti_qs.ti_task);
+		}
+	}
+}
+
+void
 im_request(int stream, pbs_im_t *pims)
 {
 	struct sockaddr_in *addr = NULL;
 	u_long ipaddr = 0;
+	job *pjob = NULL;
 
 	/* check that machine is known */
 	addr = tpp_getaddr(stream);
 	if (addr == NULL) {
 		log_err(-1, __func__, "Sender unknown");
 		tpp_close(stream);
+		free_im(pims);
 		return;
 	}
 	ipaddr = ntohl(addr->sin_addr.s_addr);
@@ -424,16 +605,66 @@ im_request(int stream, pbs_im_t *pims)
 	if (!addrfind(ipaddr)) {
 		log_errf(-1, __func__, "bad connect from %s", netaddr(addr));
 		im_eof(stream, 0);
+		free_im(pims);
+		return;
+	}
+
+	if (pims->im_common.im_command == IM_JOIN_JOB) {
+		im_req_join_job(stream, &(pims->im_common), &(pims->im_req->im_join));
+		free_im(pims);
+		return;
+	} else if (pims->im_common.im_command == IM_ALL_OKAY ||
+			pims->im_common.im_command == IM_ERROR ||
+			pims->im_common.im_command == IM_ERROR2) {
+		im_handle_reply(stream, &(pims->im_common), &(pims->im_reply));
+		free_im(pims);
+		return;
+	}
+
+	/* find job for which im request came */
+	if ((pjob = find_job(pims->im_common.im_jobid)) == NULL) {
+		im_send_error(stream, &(pims->im_common), PBSE_JOBEXIST, NULL);
+		tpp_close(stream);
+		free_im(pims);
+		return;
+	}
+
+	/* check cookie */
+	if (!(pjob->ji_wattr[(int)JOB_ATR_Cookie].at_flags & ATR_VFLAG_SET)) {
+		DBPRT(("%s: job %s has no cookie\n", __func__, pims->im_common.im_jobid))
+		im_send_error(stream, &(pims->im_common), PBSE_BADSTATE, NULL);
+		tpp_close(stream);
+		free_im(pims);
+		return;
+	}
+	if (strcmp(pjob->ji_wattr[(int)JOB_ATR_Cookie].at_val.at_str, pims->im_common.im_cookie) != 0) {
+		DBPRT(("%s: job %s cookie %s message %s\n", __func__, pims->im_common.im_jobid, pjob->ji_wattr[(int)JOB_ATR_Cookie].at_val.at_str, pims->im_common.im_cookie))
+		im_send_error(stream, &(pims->im_common), PBSE_BADSTATE, NULL);
+		tpp_close(stream);
+		free_im(pims);
 		return;
 	}
 
 	switch (pims->im_common.im_command) {
-		case IM_JOIN_JOB:
-			req_im_join_job(stream, &(pims->im_common), &(pims->im_req->im_join));
+		case IM_KILL_JOB:
+			im_req_kill_job(stream, pjob, &(pims->im_common));
+			break;
+
+		case IM_EXEC_PROLOGUE:
+			im_req_exec_prologue(stream, pjob, &(pims->im_common));
+			break;
+
+		case IM_SPAWN_TASK:
+			im_req_spawn_task(stream, pjob, &(pims->im_common), &(pims->im_req->im_spawn));
+			break;
+
+		case IM_GET_TASKS:
+			im_req_get_tasks(stream, pjob, &(pims->im_common), &(pims->im_req->im_tasks));
 			break;
 
 		default:
 			break;
 	}
-	// FIXME: free pims here
+
+	free_im(pims);
 }
