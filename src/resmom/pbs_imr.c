@@ -586,11 +586,109 @@ im_req_get_tasks(int stream, job *pjob, im_common_t *pimcs, im_get_tasks_t *pimg
 }
 
 void
+im_req_signal_task(int stream, job *pjob, im_common_t *pimcs, im_sig_task_t *pimsts)
+{
+	int rc = 0;
+	hnodent *np = NULL;
+	pbs_task *ptask = NULL;
+
+	DBPRT(("%s: SIGNAL_TASK %s from node %d task %8.8X sig %d\n", __func__, pimcs->im_jobid, pimsts->im_pvnodeid, pimsts->im_tvnodeid, pimsts->im_signum))
+	log_eventf(PBSEVENT_JOB, PBS_EVENTCLASS_JOB, LOG_DEBUG, pimcs->im_jobid, "SIGNAL_TASK %8.8X sig %d", pimsts->im_taskid, pimsts->im_signum);
+	if ((np = find_node(pjob, stream, pimgts->im_pvnodeid)) == NULL) {
+		im_send_error(stream, pimcs, PBSE_BADHOST, NULL);
+		return;
+	}
+	ptask = task_find(pjob, pimsts->im_taskid);
+	if (ptask == NULL) {
+		im_send_error(stream, pimcs, PBSE_JOBEXIST, NULL);
+		return;
+	}
+	kill_task(ptask, pimsts->im_signum, 0);
+	rc = im_compose(stream, pimcs, IM_ALL_OKAY, IM_OLD_PROTOCOL_VER);
+	if (rc != PBSE_NONE) // FIXME: what should we do here
+		return;
+}
+
+void
+im_req_obit_task(int stream, job *pjob, im_common_t *pimcs, im_obit_task_t *pimots)
+{
+	int rc = 0;
+	hnodent *np = NULL;
+	pbs_task *ptask = NULL;
+
+	DBPRT(("%s: OBIT_TASK %s from node %d to task %8.8X\n", __func__, pimcs->im_jobid, pimots->im_pvnodeid, pimots->im_taskid))
+	log_eventf(PBSEVENT_JOB, PBS_EVENTCLASS_JOB, LOG_DEBUG, pimcs->im_jobid, "SIGNAL_TASK %8.8X sig %d", pimsts->im_taskid, pimsts->im_signum);
+	if ((np = find_node(pjob, stream, pimots->im_pvnodeid)) == NULL) {
+		im_send_error(stream, pimcs, PBSE_BADHOST, NULL);
+		return;
+	}
+	ptask = task_find(pjob, pimots->im_taskid);
+	if (ptask == NULL) {
+		im_send_error(stream, pimcs, PBSE_JOBEXIST, NULL);
+		return;
+	}
+
+	if (ptask->ti_qs.ti_status >= TI_STATE_EXITED) {
+		rc = im_compose(stream, pimcs, IM_ALL_OKAY, IM_OLD_PROTOCOL_VER);
+		if (rc != PBSE_NONE) // FIXME: what should we do here
+			return;
+		diswsi(stream, ptask->ti_qs.ti_exitstat);
+	}
+	else {
+		/* save obit request with task */
+		obitent *op = (obitent *)malloc(sizeof(obitent));
+		if (op != NULL) {
+			im_send_error(stream, pimcs, PBSE_SYSTEM, NULL);
+			return;
+		}
+		CLEAR_LINK(op->oe_next);
+		append_link(&ptask->ti_obits, &op->oe_next, op);
+		op->oe_type = OBIT_TYPE_TMEVENT;
+		op->oe_u.oe_tm.oe_fd = -1;
+		op->oe_u.oe_tm.oe_node = pimots->im_pvnodeid;
+		op->oe_u.oe_tm.oe_event = pimcs->im_event;
+		op->oe_u.oe_tm.oe_taskid = pimcs->im_fromtask;
+		/* No reply here, see scan_for_exiting() */
+	}
+}
+
+void
+im_req_get_info(int stream, job *pjob, im_common_t *pimcs, im_get_info_t *pimgis)
+{
+	int rc = 0;
+	hnodent *np = NULL;
+	pbs_task *ptask = NULL;
+	infoent *ip = NULL;
+
+	DBPRT(("%s: GET_INFO %s from node %d task %8.8X name %s\n", __func__, pimcs->im_jobid, pimgis->im_pvnodeid, pimgis->im_taskid, pimgis->im_name))
+	log_eventf(PBSEVENT_JOB, PBS_EVENTCLASS_JOB, LOG_DEBUG, pimcs->im_jobid, "GET_INFO task %8.8X name %s", pimgis->im_taskid, pimgis->im_name);
+	if ((np = find_node(pjob, stream, pimgts->im_pvnodeid)) == NULL) {
+		im_send_error(stream, pimcs, PBSE_BADHOST, NULL);
+		return;
+	}
+	ptask = task_find(pjob, pimgis->im_taskid);
+	if (ptask == NULL) {
+		im_send_error(stream, pimcs, PBSE_JOBEXIST, NULL);
+		return;
+	}
+
+	if ((ip = task_findinfo(ptask, pimgis->im_name)) == NULL) {
+		im_send_error(stream, pimcs, PBSE_JOBEXIST, NULL);
+		return;
+	}
+	rc = im_compose(stream, pimcs, IM_ALL_OKAY, IM_OLD_PROTOCOL_VER);
+	if (rc != PBSE_NONE) // FIXME: what should we do here
+		return;
+	diswcs(stream, ip->ie_info, ip->ie_len);
+}
+
+void
 im_request(int stream, pbs_im_t *pims)
 {
 	struct sockaddr_in *addr = NULL;
 	u_long ipaddr = 0;
 	job *pjob = NULL;
+	im_common_t *pimcs = &(pims->im_common);
 
 	/* check that machine is known */
 	addr = tpp_getaddr(stream);
@@ -609,21 +707,21 @@ im_request(int stream, pbs_im_t *pims)
 		return;
 	}
 
-	if (pims->im_common.im_command == IM_JOIN_JOB) {
-		im_req_join_job(stream, &(pims->im_common), &(pims->im_req->im_join));
+	if (pimcs->im_command == IM_JOIN_JOB) {
+		im_req_join_job(stream, pimcs, &(pims->im_req->im_join));
 		free_im(pims);
 		return;
-	} else if (pims->im_common.im_command == IM_ALL_OKAY ||
-			pims->im_common.im_command == IM_ERROR ||
-			pims->im_common.im_command == IM_ERROR2) {
-		im_handle_reply(stream, &(pims->im_common), &(pims->im_reply));
+	} else if (pimcs->im_command == IM_ALL_OKAY ||
+			pimcs->im_command == IM_ERROR ||
+			pimcs->im_command == IM_ERROR2) {
+		im_handle_reply(stream, pimcs, pims->im_reply);
 		free_im(pims);
 		return;
 	}
 
 	/* find job for which im request came */
-	if ((pjob = find_job(pims->im_common.im_jobid)) == NULL) {
-		im_send_error(stream, &(pims->im_common), PBSE_JOBEXIST, NULL);
+	if ((pjob = find_job(pimcs->im_jobid)) == NULL) {
+		im_send_error(stream, pimcs, PBSE_JOBEXIST, NULL);
 		tpp_close(stream);
 		free_im(pims);
 		return;
@@ -631,35 +729,47 @@ im_request(int stream, pbs_im_t *pims)
 
 	/* check cookie */
 	if (!(pjob->ji_wattr[(int)JOB_ATR_Cookie].at_flags & ATR_VFLAG_SET)) {
-		DBPRT(("%s: job %s has no cookie\n", __func__, pims->im_common.im_jobid))
-		im_send_error(stream, &(pims->im_common), PBSE_BADSTATE, NULL);
+		DBPRT(("%s: job %s has no cookie\n", __func__, pimcs->im_jobid))
+		im_send_error(stream, pimcs, PBSE_BADSTATE, NULL);
 		tpp_close(stream);
 		free_im(pims);
 		return;
 	}
-	if (strcmp(pjob->ji_wattr[(int)JOB_ATR_Cookie].at_val.at_str, pims->im_common.im_cookie) != 0) {
-		DBPRT(("%s: job %s cookie %s message %s\n", __func__, pims->im_common.im_jobid, pjob->ji_wattr[(int)JOB_ATR_Cookie].at_val.at_str, pims->im_common.im_cookie))
-		im_send_error(stream, &(pims->im_common), PBSE_BADSTATE, NULL);
+	if (strcmp(pjob->ji_wattr[(int)JOB_ATR_Cookie].at_val.at_str, pimcs->im_cookie) != 0) {
+		DBPRT(("%s: job %s cookie %s message %s\n", __func__, pimcs->im_jobid, pjob->ji_wattr[(int)JOB_ATR_Cookie].at_val.at_str, pimcs->im_cookie))
+		im_send_error(stream, pimcs, PBSE_BADSTATE, NULL);
 		tpp_close(stream);
 		free_im(pims);
 		return;
 	}
 
-	switch (pims->im_common.im_command) {
+	switch (pimcs->im_command) {
 		case IM_KILL_JOB:
-			im_req_kill_job(stream, pjob, &(pims->im_common));
+			im_req_kill_job(stream, pjob, pimcs);
 			break;
 
 		case IM_EXEC_PROLOGUE:
-			im_req_exec_prologue(stream, pjob, &(pims->im_common));
+			im_req_exec_prologue(stream, pjob, pimcs);
 			break;
 
 		case IM_SPAWN_TASK:
-			im_req_spawn_task(stream, pjob, &(pims->im_common), &(pims->im_req->im_spawn));
+			im_req_spawn_task(stream, pjob, pimcs, &(pims->im_req->im_spawn));
 			break;
 
 		case IM_GET_TASKS:
-			im_req_get_tasks(stream, pjob, &(pims->im_common), &(pims->im_req->im_tasks));
+			im_req_get_tasks(stream, pjob, pimcs, &(pims->im_req->im_tasks));
+			break;
+
+		case IM_SIGNAL_TASK:
+			im_req_signal_task(stream, pjob, pimcs, &(pims->im_req->im_sig));
+			break;
+
+		case IM_OBIT_TASK:
+			im_req_obit_task(stream, pjob, pimcs, &(pims->im_req->im_obit));
+			break;
+
+		case IM_GET_INFO:
+			im_req_get_info(stream, pjob, pimcs, &(pims->im_req->im_info));
 			break;
 
 		default:
