@@ -683,6 +683,218 @@ im_req_get_info(int stream, job *pjob, im_common_t *pimcs, im_get_info_t *pimgis
 }
 
 void
+im_req_get_resc(int stream, job *pjob, im_common_t *pimcs, im_get_resc_t *pimgrs)
+{
+	int rc = 0;
+	hnodent *np = NULL;
+	char *info = NULL;
+
+	DBPRT(("%s: GET_RESC %s from node %d\n", __func__, pmics->im_jobid, pimgrs->im_pvnodeid))
+	log_event(PBSEVENT_JOB, PBS_EVENTCLASS_JOB, LOG_DEBUG, pmics->im_jobid, "GET_RESC received");
+	if ((np = find_node(pjob, stream, pimgrs->im_pvnodeid)) == NULL) {
+		im_send_error(stream, pimcs, PBSE_BADHOST, NULL);
+		return;
+	}
+	info = resc_string(pjob);
+	rc = im_compose(stream, pimcs, IM_ALL_OKAY, IM_OLD_PROTOCOL_VER);
+	if (rc != PBSE_NONE) // FIXME: what should we do here
+		return;
+	diswst(stream, info);
+	free(info);
+}
+
+void
+im_req_poll_job(int stream, job *pjob, im_common_t *pimcs)
+{
+	int rc = 0;
+	int exitval = 0;
+
+	if (QA_testing != 0) {
+		/* for QA Testing only */
+		if (QA_testing & PBSQA_POLLJOB_CRASH)
+			exit(98);
+		else if (QA_testing & PBSQA_POLLJOB_SLEEP)
+			sleep(90);
+	}
+	if (check_ms(stream, pjob))
+		return;
+	DBPRT(("%s: POLL_JOB %s\n", __func__, pimcs->im_jobid))
+	pjob->ji_polltime = time_now;
+	rc = im_compose(stream, pimcs, IM_ALL_OKAY, IM_OLD_PROTOCOL_VER);
+	if (rc != PBSE_NONE) // FIXME: what should we do here
+		return;
+	/* Now comes a recomendation for killing the job */
+	exitval = (pjob->ji_qs.ji_svrflags & (JOB_SVFLG_OVERLMT1 | JOB_SVFLG_OVERLMT2)) ? 1 : 0;
+	diswsi(stream, exitval);
+	/* Send the information tallyed for the job. */
+	diswul(stream, resc_used(pjob, "cput", gettime));
+	diswul(stream, resc_used(pjob, "mem", getsize));
+	diswul(stream, resc_used(pjob, "cpupercent", gettime));
+	// FIXME: change below func to pass pjob
+	send_resc_used_to_ms(stream, pimcs->im_jobid);
+}
+
+void
+im_req_suspend_resume(int stream, job *pjob, im_common_t *pimcs)
+{
+	int rc = 0;
+
+	if (check_ms(stream, pjob))
+		return;
+	DBPRT(("%s: %s %s\n", __func__, (pimcs->im_command == IM_SUSPEND) ? "SUSPEND" : "RESUME", pimcs->im_jobid))
+	log_eventf(PBSEVENT_JOB, PBS_EVENTCLASS_JOB, LOG_DEBUG, pimcs->im_jobid, "%s received", (pimcs->im_command == IM_SUSPEND) ? "SUSPEND" : "RESUME");
+	if ((rc = local_supres(pjob, (pimcs->im_command == IM_SUSPEND) ? 1 : 0, NULL)) != PBSE_NONE) {
+		im_send_error(stream, pimcs, rc);
+		return;
+	}
+	pjob->ji_mompost = (pimcs->im_command == IM_SUSPEND) ? post_suspend : post_resume;
+	/*
+	 * If a child was started to handle the operation,
+	 * wait to reply until the kid returns.
+	 */
+	if (pjob->ji_momsubt) {
+		pjob->ji_postevent = pimcs->im_event;
+		pjob->ji_taskid = pimcs->im_fromtask;
+		return;
+	}
+
+	pjob->ji_mompost(pjob, PBSE_NONE);
+	rc = im_compose(stream, pimcs, IM_ALL_OKAY, IM_OLD_PROTOCOL_VER);
+	if (rc != PBSE_NONE) // FIXME: what should we do here
+		return;
+}
+
+void
+im_req_restart(int stream, job *pjob, im_common_t *pimcs)
+{
+	int rc = 0;
+	if (check_ms(stream, pjob))
+		return;
+	DBPRT(("%s: RESTART %s\n", __func__, pimcs->im_jobid))
+	log_event(PBSEVENT_JOB, PBS_EVENTCLASS_JOB, LOG_DEBUG, pimcs->im_jobid, "RESTART received");
+
+	if ((rc = local_restart(pjob, NULL)) != PBSE_NONE) {
+		im_send_error(stream, pimcs, rc);
+		return;
+	}
+
+	/*
+	 * If a child was started to handle the operation,
+	 * wait to reply until the kid returns.
+	 */
+	if (pjob->ji_momsubt) {
+		pjob->ji_postevent = pimcs->im_event;
+		pjob->ji_taskid = pimcs->im_fromtask;
+		return;
+	}
+
+	post_restart(pjob, PBSE_NONE);
+	rc = im_compose(stream, pimcs, IM_ALL_OKAY, IM_OLD_PROTOCOL_VER);
+	if (rc != PBSE_NONE) // FIXME: what should we do here
+		return;
+}
+
+void
+im_req_checkpoint(int stream, job *pjob, im_common_t *pimcs)
+{
+	int rc = 0;
+
+	if (check_ms(stream, pjob))
+		return;
+	DBPRT(("%s: %s %s\n", __func__, (pimcs->im_command == IM_CHECKPOINT) ? "CHECKPOINT" : "CHECKPOINT_ABORT", pimcs->im_jobid))
+	log_eventf(PBSEVENT_JOB, PBS_EVENTCLASS_JOB, LOG_DEBUG, pimcs->im_jobid, "%s received", (pimcs->im_command == IM_CHECKPOINT) ? "CHECKPOINT" : "CHECKPOINT_ABORT");
+	if ((rc = local_checkpoint(pjob, (pimcs->im_command == IM_CHECKPOINT) ? 1 : 0, NULL)) != PBSE_NONE) {
+		im_send_error(stream, pimcs, rc);
+		return;
+	}
+
+	/*
+	 * If a child was started to handle the operation,
+	 * wait to reply until the kid returns.
+	 */
+	if (pjob->ji_momsubt) {
+		pjob->ji_postevent = pimcs->im_event;
+		pjob->ji_taskid = pimcs->im_fromtask;
+		return;
+	}
+
+	post_chkpt(pjob, PBSE_NONE);
+	rc = im_compose(stream, pimcs, IM_ALL_OKAY, IM_OLD_PROTOCOL_VER);
+	if (rc != PBSE_NONE) // FIXME: what should we do here
+		return;
+}
+
+void
+im_req_abort(int stream, job *pjob, im_common_t *pimcs)
+{
+	if (check_ms(stream, pjob))
+		return;
+	DBPRT(("%s: ABORT_JOB %s\n", __func__, pimcs->im_jobid))
+	log_event(PBSEVENT_JOB, PBS_EVENTCLASS_JOB, LOG_DEBUG, pimcs->im_jobid, "ABORT_JOB received");
+	if (pjob->ji_qs.ji_svrflags & (JOB_SVFLG_CHKPT | JOB_SVFLG_ChkptMig)) {
+		kill_job(pjob, SIGKILL); /* is this right? */
+	} else {
+		int hook_errcode = 0;
+		hook *last_phook = NULL;
+		unsigned int hook_fail_action = 0;
+		char hook_msg[HOOK_MSG_SIZE + 1];
+		mom_hook_input_t hook_input;
+		mom_hook_output_t hook_output;
+
+		mom_hook_input_init(&hook_input);
+		hook_input.pjob = pjob;
+
+		mom_hook_output_init(&hook_output);
+		hook_output.reject_errcode = &hook_errcode;
+		hook_output.last_phook = &last_phook;
+		hook_output.fail_action = &hook_fail_action;
+		(void)mom_process_hooks(HOOK_EVENT_EXECJOB_ABORT, PBS_MOM_SERVICE_NAME, mom_host, &hook_input, &hook_output, hook_msg, sizeof(hook_msg), 1);
+		mom_deljob(pjob);
+	}
+}
+
+void
+im_req_requeue(int stream, job *pjob, im_common_t *pimcs)
+{
+	DBPRT(("%s: IM_REQUEUE job %s\n", __func__, pimcs->im_jobid))
+	log_event(PBSEVENT_JOB, PBS_EVENTCLASS_JOB, LOG_DEBUG, pimcs->im_jobid, "REQUEUE received");
+	if ((pjob->ji_qs.ji_svrflags & JOB_SVFLG_HERE) != 0) {
+		pjob->ji_qs.ji_un.ji_momt.ji_exitstat = JOB_EXEC_RERUN;
+		(void)kill_job(pjob, SIGKILL);
+		/* Server will decide if job is rerunnable or not */
+	}
+}
+
+void
+im_req_setup_job(int stream, job *pjob, im_common_t *pimcs)
+{
+	int rc = 0;
+
+	if (check_ms(stream, pjob))
+		return;
+	DBPRT(("%s: SETUP_JOB %s\n", __func__, pimcs->im_jobid))
+	log_event(PBSEVENT_JOB, PBS_EVENTCLASS_JOB, LOG_DEBUG, pimcs->im_jobid, "SETUP_JOB received");
+
+	/*
+	 * If there is a job_setup_final, call it,
+	 * otherwise, send the "not supported" error.
+	 */
+	if (job_setup_final == NULL) {
+		im_send_error(stream, pimcs, PBSE_NOSUP);
+		return;
+	}
+
+	rc = job_setup_final(pjob, stream);
+	if (rc != PBSE_NONE) {
+		im_send_error(stream, pimcs, rc);
+		return;
+	}
+	rc = im_compose(stream, pimcs, IM_ALL_OKAY, IM_OLD_PROTOCOL_VER);
+	if (rc != PBSE_NONE) // FIXME: what should we do here
+		return;
+}
+
+void
 im_request(int stream, pbs_im_t *pims)
 {
 	struct sockaddr_in *addr = NULL;
@@ -770,6 +982,36 @@ im_request(int stream, pbs_im_t *pims)
 
 		case IM_GET_INFO:
 			im_req_get_info(stream, pjob, pimcs, &(pims->im_req->im_info));
+			break;
+
+		case IM_GET_RESC:
+			im_req_get_resc(stream, pjob, pimcs, &(pims->im_req->im_gresc));
+			break;
+
+		case IM_POLL_JOB:
+			im_req_poll_job(stream, pjob, pimcs);
+			break;
+
+		case IM_SUSPEND:
+		case IM_RESUME:
+			im_req_suspend_resume(stream, pjob, pimcs);
+			break;
+
+		case IM_RESTART:
+			im_req_restart(stream, pjob, pimcs);
+			break;
+
+		case IM_CHECKPOINT:
+		case IM_CHECKPOINT_ABORT:
+			im_req_checkpoint(stream, pjob, pimcs);
+			break;
+
+		case IM_ABORT_JOB:
+			im_req_abort(stream, pjob, pimcs);
+			break;
+
+		case IM_REQUEUE:
+			im_req_requeue(stream, pjob, pimcs);
 			break;
 
 		default:
