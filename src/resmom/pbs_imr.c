@@ -69,6 +69,31 @@ log_errf(int errnum, const char *routine, const char *fmt, ...)
 }
 
 void
+log_joberrf(int errnum, const char *routine, char *jobid, const char *fmt, ...)
+{
+	va_list args;
+	int len;
+	char logbuf[LOG_BUF_SIZE];
+	char *buf;
+
+	va_start(args, fmt);
+	len = vsnprintf(logbuf, sizeof(logbuf), fmt, args);
+	if (len >= sizeof(logbuf)) {
+		buf = pbs_asprintf_format(len, fmt, args);
+		if (buf == NULL) {
+			va_end(args);
+			return;
+		}
+	} else
+		buf = logbuf;
+
+	log_joberr(errnum, routine, buf, jobid);
+	if (len >= sizeof(logbuf))
+		free(buf);
+	va_end(args);
+}
+
+void
 free_im(pbs_im_t *pims)
 {
 }
@@ -895,6 +920,78 @@ im_req_setup_job(int stream, job *pjob, im_common_t *pimcs)
 }
 
 void
+im_req_send_resc(int stream, job *pjob, im_common_t *pimcs, im_send_resc_t *pimsrs)
+{
+	int i = 0;
+	int resc_idx = -1;
+	char timebuf[TIMEBUF_SIZE] = {'\0'};
+
+	if ((pjob->ji_qs.ji_svrflags & JOB_SVFLG_HERE) == 0) {
+		log_joberr(-1, __func__, "got IM_SEND_RESC and I'm not MS", pimcs->im_jobid);
+		im_eof(stream, 0);
+		return;
+	}
+
+	for (i = 0; i < pjob->ji_numrescs; i++) {
+		if (pjob->ji_resources[i].nodehost != NULL && compare_short_hostname(pjob->ji_resources[i].nodehost, pimsrs->im_node) == 0) {
+			resc_idx = i;
+			break;
+		}
+	}
+	if (resc_idx == -1) {
+		noderes *tmparr = NULL;
+		/*
+		 * add an entry to pjob->ji_resources
+		 * for this incoming resource report
+		 */
+
+		tmparr = (noderes *)realloc(pjob->ji_resources, (pjob->ji_numrescs + 1) * sizeof(noderes));
+		if (tmparr == NULL) {
+			log_joberr(-1, __func__, "realloc failure for extending pjob->ji_resources", pimcs->im_jobid);
+			im_eof(stream, 0);
+			return;
+		}
+		pjob->ji_resources = tmparr;
+		resc_idx = pjob->ji_numrescs;
+		pjob->ji_resources[resc_idx].nodehost = strdup(pimsrs->im_node);
+		if (pjob->ji_resources[resc_idx].nodehost == NULL) {
+			log_joberr(-1, __func__, "strdup failure setting nodehost", pimcs->im_jobid);
+			im_eof(stream, 0);
+			return;
+		}
+		clear_attr(&(pjob->ji_resources[resc_idx].nr_used), &(job_attr_def[JOB_ATR_resc_used]));
+		pjob->ji_numrescs++;
+
+	}
+	pjob->ji_resources[resc_idx].nr_cput = pimsrs->im_cput;
+	convert_duration_to_str(pimsrs->im_cput, timebuf, sizeof(timebuf));
+	pjob->ji_resources[resc_idx].nr_mem = pimsrs->im_mem;
+	pjob->ji_resources[resc_idx].nr_cpupercent = pimsrs->im_cpupercent;
+	pjob->ji_resources[resc_idx].nr_status = PBS_NODERES_DELETE;
+	DBPRT(("%s: SEND_RESC %s OKAY rescidx %d cpu %lu mem %lu\n", __func__, pimcs->im_jobid, resc_idx, pimsrs->im_cput, pimsrs->im_mem))
+	log_eventf(PBSEVENT_DEBUG2, PBS_EVENTCLASS_JOB, LOG_DEBUG, pjob->ji_qs.ji_jobid, "%s cput=%s mem=%lukb", pimsrs->im_node, timebuf, pimsrs->im_mem);
+	update_ajob_status(pjob);
+}
+
+void
+im_req_update_job(int stream, job *pjob, im_common_t *pimcs, im_update_job_t *pimujs)
+{
+	int rc = 0;
+
+	if (check_ms(stream, NULL))
+		return;
+	// FIXME: move receive_job_update code here
+	if (receive_job_update(stream, pjob) != 0) {
+		log_event(PBSEVENT_DEBUG2, PBS_EVENTCLASS_JOB, LOG_DEBUG, pjob->ji_qs.ji_jobid, "receive_job_update failed");
+		im_eof(stream, 0);
+		return;
+	}
+	rc = im_compose(stream, pimcs, IM_ALL_OKAY, IM_OLD_PROTOCOL_VER);
+	if (rc != PBSE_NONE) // FIXME: what should we do here
+		return;
+}
+
+void
 im_request(int stream, pbs_im_t *pims)
 {
 	struct sockaddr_in *addr = NULL;
@@ -1014,7 +1111,21 @@ im_request(int stream, pbs_im_t *pims)
 			im_req_requeue(stream, pjob, pimcs);
 			break;
 
+		case IM_SEND_RESC:
+			im_req_send_resc(stream, pjob, pimcs, &(pims->im_req->im_sresc));
+			break;
+
+		case IM_UPDATE_JOB:
+			im_req_update_job(stream, pjob, pimcs &(pims->im_req->im_update));
+			break;
+
+		// case IM_PMIX:
+		// case IM_CRED:
+
 		default:
+			// FIXME: check all log_event in above calls
+			log_joberrf(-1, __func__, pimcs->im_jobid, "unknown command %d sent", pimcs->im_command);
+			im_eof(stream, 0);
 			break;
 	}
 
