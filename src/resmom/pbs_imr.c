@@ -992,6 +992,187 @@ im_req_update_job(int stream, job *pjob, im_common_t *pimcs, im_update_job_t *pi
 }
 
 void
+imr_ok_join_job(int stream, job *pjob, int nodeidx, hnodent *np)
+{
+	int rc = 0;
+	int i = 0;
+	eventent *ep = NULL;
+
+	if (nodeidx > 0 &&
+		nodeidx < pjob->ji_numnodes &&
+		(nodeidx - 1) < pjob->ji_numrescs &&
+		pjob->ji_resources[nodeidx - 1].nodehost == NULL)
+		pjob->ji_resources[nodeidx - 1].nodehost = strdup(pjob->ji_hosts[nodeidx].hn_host);
+		// FIXME: shouldn't we handle error?
+
+	if ((pjob->ji_qs.ji_svrflags & JOB_SVFLG_HERE) == 0) {
+		log_joberrf(-1, __func__, pjob->ji_qs.ji_jobid, "got JOIN_JOB OKAY and I'm not MS");
+		im_eof(stream, 0);
+		return;
+	}
+
+	DBPRT(("%s: JOIN_JOB %s OKAY\n", __func__, pjob->ji_qs.ji_jobid))
+
+	/*
+	 * If job_join_read exists, call it to read
+	 * any extra info included with the JOIN reply.
+	 * This function can return an error if there
+	 * is no extra information or deal with it
+	 * more gracefully and return SUCCESS.
+	 */
+	if (job_join_read != NULL) {
+		/* on error, log_message set */
+		rc = job_join_read(pjob, np, stream);
+		if (rc != PBSE_NONE) {
+			log_joberrf(rc, __func__, pjob->ji_qs.ji_jobid, log_buffer);
+			im_eof(stream, 0);
+			return;
+		}
+	}
+
+	for (i = 0; i < pjob->ji_numnodes; i++) {
+		hnodent *xp = &(pjob->ji_hosts[i]);
+		if ((ep = (eventent *)GET_NEXT(xp->hn_events)) != NULL)
+			break;
+	}
+
+	if (do_tolerate_node_failures(pjob) && nodeidx > 0 && nodeidx < pjob->ji_numnodes) {
+		reliable_job_node_add(&(pjob->ji_node_list), pjob->ji_hosts[nodeidx].hn_host);
+	}
+
+	if (ep == NULL) { /* no events */
+		int rcode = 0;
+		/*
+		 * All the JOIN messages have come in.
+		 * Call job_join_extra for local MS setup.
+		 */
+		rcode = pre_finish_exec(pjob, 1);
+		switch (rcode) {
+			case PRE_FINISH_SUCCESS_JOB_SETUP_SEND:
+			case PRE_FINISH_FAIL_JOIN_EXTRA:
+				return;
+			case PRE_FINISH_FAIL_NEW_CPUSET:
+				log_joberr(PBSE_SYSTEM, __func__, "new_cpuset failed on MS", pjob->ji_qs.ji_jobid);
+				/* whether or not job is node failure tolerant, we need it to bail out */
+				if (do_tolerate_node_failures(pjob))
+					/* force tolerant job to exit and rerun */
+					exec_bail(pjob, JOB_EXEC_RETRY, "create a cpuset");
+				else
+					job_start_error(pjob, PBSE_SYSTEM, mom_host, "create a cpuset");
+				im_eof(stream, 0);
+				return;
+			case PRE_FINISH_FAIL_JOB_SETUP_SEND:
+				log_joberr(PBSE_SYSTEM, __func__, "could not send setup", pjob->ji_qs.ji_jobid);
+			case PRE_FINISH_FAIL:
+				im_eof(stream, 0);
+				return;
+		}
+		/*
+		 * At this point, we are ready to call
+		 * finish_exec and launch the job.
+		 */
+		if (!do_tolerate_node_failures(pjob) || pjob->ji_qs.ji_substate == JOB_SUBSTATE_WAITING_JOIN_JOB) {
+			if (pjob->ji_qs.ji_substate == JOB_SUBSTATE_WAITING_JOIN_JOB) {
+				pjob->ji_qs.ji_substate = JOB_SUBSTATE_PRERUN;
+				job_save(pjob, SAVEJOB_QUICK);
+			}
+			finish_exec(pjob);
+			log_event(PBSEVENT_JOB, PBS_EVENTCLASS_JOB, LOG_DEBUG, pjob->ji_qs.ji_jobid, log_buffer);
+		}
+	}
+}
+
+void
+imr_ok_setup_job(int stream, job *pjob, hnodent *np)
+{
+	int i = 0;
+	int ok = 1;
+
+	if ((pjob->ji_qs.ji_svrflags & JOB_SVFLG_HERE) == 0) {
+		log_joberrf(-1, __func__, pjob->ji_qs.ji_jobid, "got SETUP_JOB OKAY and I'm not MS");
+		im_eof(stream, 0);
+		return;
+	}
+	DBPRT(("%s: SETUP_JOB %s from %s OKAY\n", __func__, pjob->ji_qs.ji_jobid, np->hn_host))
+	for (i = 0; i < pjob->ji_numnodes; i++) {
+		hnodent *xp = &(pjob->ji_hosts[i]);
+		if (GET_NEXT(np->hn_events) != NULL) {
+			ok = 0;
+			break;
+		}
+	}
+
+	if (ok) { /* all SETUPs done */
+		/*
+		 * Call finish_exec. The MS call to
+		 * job_setup_final is done in job_setup.
+		 */
+		finish_exec(pjob);
+		log_event(PBSEVENT_JOB, PBS_EVENTCLASS_JOB, LOG_DEBUG, pjob->ji_qs.ji_jobid, log_buffer);
+	}
+}
+void
+im_handle_reply_all_ok(int stream, job *pjob, im_common_t *pimcs, int nodeidx, hnodent *np, eventent *ep, imr_ok_t *pimroks)
+{
+	switch (ep->ee_command) {
+		case IM_JOIN_JOB:
+			imr_ok_join_job(stream, pjob, nodeidx, np);
+			break;
+
+		case IM_SETUP_JOB:
+			imr_ok_setup_job(stream, pjob, np);
+			break;
+
+		default:
+			break;
+	}
+}
+
+void
+im_handle_reply(int stream, job *pjob, im_common_t *pimcs, im_reply_t *pimrs)
+{
+	int nodeidx = 0;
+	hnodent *np = NULL;
+	eventent *ep = NULL;
+
+	for (nodeidx = 0; nodeidx < pjob->ji_numnodes; nodeidx++) {
+		np = &(pjob->ji_hosts[nodeidx]);
+		if (np->hn_stream == stream) {
+			np->hn_eof_ts = 0; /* reset down timestamp */
+			break;
+		}
+	}
+	if (nodeidx == pjob->ji_numnodes) {
+		if (!pjob->ji_updated)  {
+			log_joberrf(-1, __func__, pimcs->im_jobid, "stream %d not found to job nodes", stream)
+		}
+		return;
+	}
+	ep = (eventent *)GET_NEXT(np->hn_events);
+	while (ep != NULL) {
+		if (ep->ee_event == pimcs->im_event && ep->ee_taskid == pimcs->im_fromtask)
+			break;
+		ep = (eventent *)GET_NEXT(ep->ee_next);
+	}
+	if (ep == NULL) {
+		if (!pjob->ji_updated)  {
+			log_joberrf(-1, __func__, pimcs->im_jobid, "event %d taskid %8.8X not found", pimcs->im_event, pimcs->im_fromtask);
+		}
+		return;
+	}
+
+	delete_link(&(ep->ee_next));
+
+	if (pimcs->im_command == IM_ALL_OKAY) {
+		im_handle_reply_all_ok(stream, pjob, pimcs, nodeidx, np, ep, &(pimrs->imr_ok));
+	} else {
+		im_handle_reply_error(stream, pjob, pimcs, nodeidx, np, ep, &(pimrs->imr_err));
+	}
+
+	free(ep);
+}
+
+void
 im_request(int stream, pbs_im_t *pims)
 {
 	struct sockaddr_in *addr = NULL;
@@ -1018,12 +1199,6 @@ im_request(int stream, pbs_im_t *pims)
 
 	if (pimcs->im_command == IM_JOIN_JOB) {
 		im_req_join_job(stream, pimcs, &(pims->im_req->im_join));
-		free_im(pims);
-		return;
-	} else if (pimcs->im_command == IM_ALL_OKAY ||
-			pimcs->im_command == IM_ERROR ||
-			pimcs->im_command == IM_ERROR2) {
-		im_handle_reply(stream, pimcs, pims->im_reply);
 		free_im(pims);
 		return;
 	}
@@ -1053,6 +1228,12 @@ im_request(int stream, pbs_im_t *pims)
 	}
 
 	switch (pimcs->im_command) {
+		case IM_ALL_OKAY:
+		case IM_ERROR:
+		case IM_ERROR:
+			im_handle_reply(streams, pjob, pimcs, pims->im_reply);
+			break;
+
 		case IM_KILL_JOB:
 			im_req_kill_job(stream, pjob, pimcs);
 			break;
