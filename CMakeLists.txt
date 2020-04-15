@@ -7,7 +7,7 @@ endif()
 set(PBS_VERSION 20.0.0 CACHE STRING "PBS version")
 project(PBSPro VERSION ${PBS_VERSION} LANGUAGES C)
 
-# include(GNUInstallDirs)
+include(GNUInstallDirs)
 
 set(PBS_SERVER_HOME /var/spool/pbs CACHE STRING "PBS home directory")
 # FIXME: subst database_user

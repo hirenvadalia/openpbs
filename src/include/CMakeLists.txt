@@ -4,6 +4,7 @@ include(CheckSymbolExists)
 include(CheckCSourceCompiles)
 
 string(TOLOWER ${CMAKE_HOST_SYSTEM_NAME} PBS_MACH)
+set(PBS_MACH ${PBS_MACH} CACHE STRING "")
 
 CHECK_INCLUDE_FILE(sys/eventfd.h HAVE_SYS_EVENTFD_H)
 CHECK_INCLUDE_FILE(sys/ioctl.h HAVE_SYS_IOCTL_H)
