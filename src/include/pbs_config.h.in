@@ -41,16 +41,16 @@
 extern "C" {
 #endif
 
-#cmakedefine HAVE_SYS_EVENTFD_H
-#cmakedefine HAVE_SYS_IOCTL_H
-#cmakedefine H_ERRNO_DECLARED
-#cmakedefine HAVE_SOCKLEN_T
-#cmakedefine PBS_HAVE_EPOLL
-#cmakedefine PBS_HAVE_EPOLL_PWAIT
-#cmakedefine PBS_HAVE_PPOLL
-#cmakedefine SYSLOG
-#cmakedefine LIBICAL_API2
-#cmakedefine PBS_UNDOLR_ENABLED
+#cmakedefine01 HAVE_SYS_EVENTFD_H
+#cmakedefine01 HAVE_SYS_IOCTL_H
+#cmakedefine01 H_ERRNO_DECLARED
+#cmakedefine01 HAVE_SOCKLEN_T
+#cmakedefine01 PBS_HAVE_EPOLL
+#cmakedefine01 PBS_HAVE_EPOLL_PWAIT
+#cmakedefine01 PBS_HAVE_PPOLL
+#cmakedefine01 SYSLOG
+#cmakedefine01 LIBICAL_API2
+#cmakedefine01 PBS_UNDOLR_ENABLED
 
 #ifndef HAVE_SOCKLEN_T
 #define pbs_socklen_t int

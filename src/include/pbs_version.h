@@ -48,17 +48,10 @@ extern "C" {
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-
-
-#ifdef WIN32
-#define PBS_BUILD "mach=WIN32:security=:configure_args="
-#define PBS_VERSION "@PBS_WIN_VERSION@"
-#else
 #include <pbs_config.h>
+
 #ifndef PBS_BUILD
 #define PBS_BUILD "mach=N/A:security=N/A:configure_args=N/A"
-#endif
 #endif
 
 #define PRINT_VERSION_AND_EXIT(argc, argv) if (argc == 2 && strcasecmp(argv[1], "--version") == 0) { fprintf(stdout, "pbs_version = %s\n", PBS_VERSION); exit(0); }

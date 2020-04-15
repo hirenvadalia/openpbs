@@ -12,6 +12,7 @@ add_library(db STATIC
 target_include_directories(db PRIVATE
 	${CMAKE_CURRENT_SOURCE_DIR}
 	${CMAKE_SOURCE_DIR}/src/include
+	${CMAKE_BINARY_DIR}/src/include
 	${PostgreSQL_INCLUDE_DIRS})
 target_link_libraries(db PRIVATE ${PostgreSQL_LIBRARIES})
 

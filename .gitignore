@@ -216,7 +216,6 @@ src/unsupported/pbs_rmget
 src/unsupported/renew-test/renew-test
 
 # Generated source files
-src/include/pbs_version.h
 src/include/pbs_config.h
 src/lib/Libattr/queue_attr_def.c
 src/lib/Libattr/resc_def_all.c

@@ -52,6 +52,8 @@ add_library(attr STATIC
 	svr_attr_def.c
 	uLTostr.c
 )
-target_include_directories(attr PRIVATE ${CMAKE_SOURCE_DIR}/src/include)
+target_include_directories(attr PRIVATE
+	${CMAKE_SOURCE_DIR}/src/include
+	${CMAKE_BINARY_DIR}/src/include)
 
 add_library(pbs::lib::attr ALIAS attr)
