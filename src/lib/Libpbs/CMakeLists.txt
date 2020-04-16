@@ -18,7 +18,7 @@ gen_attrdef_file(resv_attr_def resv)
 gen_attrdef_file(sched_attr_def sched)
 gen_attrdef_file(svr_attr_def server)
 
-add_library(pbs SHARED
+set(sources
 	${CMAKE_SOURCE_DIR}/src/lib/Libattr/attr_fn_arst.c
 	${CMAKE_SOURCE_DIR}/src/lib/Libattr/attr_fn_b.c
 	${CMAKE_SOURCE_DIR}/src/lib/Libattr/attr_fn_c.c
@@ -245,12 +245,18 @@ add_library(pbs SHARED
 	ecl_resc_def_all.c
 	ecl_resv_attr_def.c
 )
-
+add_library(pbs SHARED ${sources})
 target_link_libraries(pbs PRIVATE crypto pthread)
 target_include_directories(pbs PRIVATE
 	${CMAKE_SOURCE_DIR}/src/include
 	${CMAKE_BINARY_DIR}/src/include)
-
-add_library(pbs::lib::pbs ALIAS pbs)
+add_library(pbs::lib::pbs_shared ALIAS pbs)
+add_library(pbs_static STATIC ${sources})
+target_link_libraries(pbs_static PRIVATE crypto pthread)
+target_include_directories(pbs_static PRIVATE
+	${CMAKE_SOURCE_DIR}/src/include
+	${CMAKE_BINARY_DIR}/src/include)
+set_target_properties(pbs_static PROPERTIES OUTPUT_NAME pbs)
+add_library(pbs::lib::pbs_static ALIAS pbs_static)
 
 configure_file(pbs.pc.in pbs.pc @ONLY)
