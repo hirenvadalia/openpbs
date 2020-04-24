@@ -41,6 +41,16 @@
 extern "C" {
 #endif
 
+#ifndef _ALL_SOURCE
+# define _ALL_SOURCE 1
+#endif
+#ifndef _GNU_SOURCE
+# define _GNU_SOURCE 1
+#endif
+#ifndef _POSIX_PTHREAD_SEMANTICS
+# define _POSIX_PTHREAD_SEMANTICS 1
+#endif
+
 #cmakedefine01 HAVE_SYS_EVENTFD_H
 #cmakedefine01 HAVE_SYS_IOCTL_H
 #cmakedefine01 H_ERRNO_DECLARED
@@ -70,6 +80,7 @@ extern "C" {
 #define MIN_STACK_LIMIT @MIN_STACK_LIMIT@
 #define SHELL_INVOKE @SHELL_INVOKE@
 #define PBS_COMPRESSION_ENABLED 1
+#define XAUTH_BINARY "@XAUTH_BINARY@"
 
 #ifdef __cplusplus
 }

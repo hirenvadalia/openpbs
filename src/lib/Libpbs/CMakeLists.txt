@@ -245,13 +245,18 @@ set(sources
 	ecl_resc_def_all.c
 	ecl_resv_attr_def.c
 )
-add_library(pbs SHARED ${sources})
+add_library(_pbsobj MODULE ${sources})
+target_link_libraries(_pbsobj PRIVATE crypto pthread)
+target_include_directories(_pbsobj PRIVATE
+	${CMAKE_SOURCE_DIR}/src/include
+	${CMAKE_BINARY_DIR}/src/include)
+add_library(pbs SHARED $<TARGET_OBJECTS:_pbsobj>)
 target_link_libraries(pbs PRIVATE crypto pthread)
 target_include_directories(pbs PRIVATE
 	${CMAKE_SOURCE_DIR}/src/include
 	${CMAKE_BINARY_DIR}/src/include)
 add_library(pbs::lib::pbs_shared ALIAS pbs)
-add_library(pbs_static STATIC ${sources})
+add_library(pbs_static STATIC $<TARGET_OBJECTS:_pbsobj>)
 target_link_libraries(pbs_static PRIVATE crypto pthread)
 target_include_directories(pbs_static PRIVATE
 	${CMAKE_SOURCE_DIR}/src/include
