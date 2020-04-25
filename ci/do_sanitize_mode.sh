@@ -7,8 +7,18 @@ yum clean all
 yum -y update
 yum -y install yum-utils epel-release rpmdevtools libasan llvm
 rpmdev-setuptree
-yum -y install python3-pip sudo which net-tools man-db time.x86_64
+yum -y install python3-pip sudo which net-tools man-db time.x86_64 cmake wget
 yum-builddep -y ./*.spec
+wget https://github.com/dvidelabs/flatcc/archive/master.tar.gz
+tar -xf master.tar.gz
+cd flatcc-master
+mkdir build
+cd build
+cmake -DFLATCC_TEST=OFF -DFLATCC_CXX_TEST=OFF -DBUILD_SHARED_LIBS=OFF ..
+make
+mkdir /opt/flatcc
+cp -rf ../bin ../lib ../include /opt/flatcc
+cd ${PBS_DIR}
 ./autogen.sh
 rm -rf target-sanitize
 mkdir -p target-sanitize

@@ -1,0 +1,556 @@
+namespace PBS.ifl;
+
+enum ProtType:byte { Batch, TaskMgr, RescMgr, InterMoM, InterSvr }
+enum batch_op:byte { SET, UNSET, INCR, DECR, EQ, NE, GE, GT, LE, LT, DFLT }
+
+table Header {
+	protType: ProtType = Batch;
+	version: short;
+	reqId: short;
+	user: string;
+}
+
+table Attribute {
+	name: string;
+	resc: string;
+	value: string;
+	op: batch_op;
+}
+
+table Qjob {
+	jobId: string;
+	destin: string;
+	attrs: [Attribute];
+}
+
+table JobFile {
+	seq: long;
+	type: short;
+	size: long;
+	jobId: string;
+	data: string;
+}
+
+// FIXME: rename this to Text
+table JobId {
+	jobId: string;
+}
+
+table Manage {
+	cmd: short;
+	objType: short;
+	objName: string;
+	attrs: [Attribute];
+}
+
+table Msg {
+	fileInd: short;
+	jobId: string;
+	text: string;
+}
+
+table Move {
+	jobId: string;
+	dest: string;
+}
+
+table Run {
+	jobId: string;
+	dest: string;
+	resch: long;
+}
+
+table Select {
+	selAttrs: [Attribute];
+	rtnAttrs: [Attribute];
+}
+
+table DmnCmd {
+	cmd: short;
+}
+
+table Signal {
+	jobId: string;
+	sigName: string;
+}
+
+table Stat {
+	jobIds: string;
+	attrs: [Attribute];
+}
+
+table Track {
+	hops: short;
+	jobId: string;
+	location: string;
+	state: byte;
+}
+
+table RescQuery {
+	handle: short;
+	queries: [string];
+}
+
+table Register {
+	owner: string;
+	parent: string;
+	child: string;
+	type: short;
+	op: short;
+	cost: long;
+}
+
+table FilePair {
+	local: string;
+	remote: string;
+	flag: short;
+}
+
+table CopyFile {
+	jobId: string;
+	owner: string;
+	user: string;
+	group: string;
+	flags: short;
+	pairs: [FilePair];
+}
+
+table Cred {
+	jobId: string;
+	user: string;
+	validity: long;
+	type: short;
+	size: short;
+	data: string;
+}
+
+table CopyFileCred {
+	files: CopyFile;
+	// Can we use Cred here?
+	type: short;
+	cred: string;
+}
+
+table UserMigrate {
+	tohost: string;
+}
+
+table SchedDefRep {
+	cmd: short;
+	id: string;
+	err: short;
+	text: string;
+}
+
+table Spawn {
+	jobId: string;
+	argv: [string];
+	envp: [string];
+}
+
+// FIXME: we can merge this with JobFile
+table CopyHook {
+	seq: short;
+	size: long;
+	filename: string;
+	data: string;
+}
+
+table RelNodes {
+	jobId: string;
+	nodes: string;
+}
+
+table PreemptJob {
+	jid: string;
+	order: string;
+}
+
+table Preempt {
+	infos: [PreemptJob];
+}
+
+table Auth {
+	authMethod: string;
+	encryptMethod: string;
+	encryptMode: ushort;
+	port: ushort;
+}
+
+union ReqBody {
+	Qjob, JobFile, JobId, Manage, Msg,
+	Move, Run, Select, DmnCmd, Signal,
+	Stat, Track, RescQuery, Register,
+	CopyFile, Cred, CopyFileCred,
+	UserMigrate, SchedDefRep, Spawn,
+	CopyHook, RelNodes, Preempt, Auth
+}
+
+table Req {
+	hdr: Header;
+	body: ReqBody;
+	extend: string;
+}
+
+table TextResp {
+	txt: string;
+}
+
+table SelectResp {
+	ids: [string];
+}
+
+table StatRespStat {
+	type: short;
+	name: string;
+	attrs: [Attribute];
+}
+
+table StatResp {
+	stats: [StatRespStat];
+}
+
+table RescQueryRespInfo {
+	avail: short;
+	alloc: short;
+	resvd: short;
+	down: short;
+}
+
+table RescQueryResp {
+	infos: [RescQueryRespInfo];
+}
+
+union RespBody {
+	TextResp, // jobid, text, location etc reponses
+	SelectResp, // select reponses
+	StatResp, // stat, cmdstat reponses
+	RescQueryResp, // resource query reponses
+	Preempt // preempt jobs reply
+}
+
+table Resp {
+	code: short;
+	auxCode: short;
+	choice: short;
+	body: RespBody;
+}
+
+table IMJoin {
+	nodeNum: short;
+	stdOut: short;
+	stdErr: short;
+	credType: short;
+	credLen: ushort;
+	cred: string;
+	attrs: [Attribute];
+}
+
+table IMSpawn {
+	pvnodeId: short;
+	tvnodeId: short;
+	taskId: ushort;
+	argv: [string];
+	envp: [string];
+}
+
+table IMTasks {
+	pvnodeId: short;
+	tvnodeId: short;
+}
+
+table IMSignal {
+	pvnodeId: short;
+	taskId: ushort;
+	sigNum: short;
+}
+
+table IMObit {
+	pvnodeId: short;
+	taskId: ushort;
+}
+
+table IMInfo {
+	pvnodeId: short;
+	taskId: ushort;
+	name: string;
+}
+
+table IMGResc {
+	pvnodeId: short;
+}
+
+table IMSResc {
+	node: string;
+	cput: long;
+	mem: long;
+	cpupercent: long;
+}
+
+table IMUpdate {
+	attrs: [Attribute];
+}
+
+table IMCred {
+	type: short;
+	cred: string;
+	validity: long;
+}
+
+union IMReq {
+	IMJoin, IMSpawn, IMTasks, IMSignal,
+	IMObit, IMInfo, IMGResc, IMSResc,
+	IMUpdate, IMCred
+}
+
+table IMRErr {
+	errcode: short;
+	errmsg: string;
+}
+
+table IMRKill {
+	cput: long;
+	mem: long;
+	cpupercent: long;
+	attrs: [Attribute];
+}
+
+table IMRSpawn {
+	taskId: ushort;
+}
+
+table IMRTasks {
+	taskIds: [ushort];
+}
+
+table IMRObit {
+	exitval: short;
+}
+
+table IMRInfo {
+	infos: [string]; // FIXME: not sure about this
+}
+
+table IMRResc {
+	info: string;
+}
+
+table IMRPoll {
+	exitval: short;
+	cput: long;
+	mem: long;
+	cpupercent: long;
+	attrs: [Attribute];
+}
+
+union IMReply {
+	IMRErr,
+	IMRKill, IMRSpawn, IMRTasks,
+	IMRObit, IMRInfo, IMRResc,
+	IMRPoll
+}
+
+table InterMoM {
+	jobId: string;
+	cookie: string;
+	cmd: short;
+	event: short;
+	fromTask: ushort;
+	req: IMReq;
+	reply: IMReply;
+}
+
+table ISNull {
+	retry: short;
+	highwater: short;
+}
+
+table VnodeAttr {
+	name: string;
+	value: string;
+	type: short;
+	flag: short;
+}
+
+table Vnode {
+	vnodeId: string;
+	attrs: [VnodeAttr];
+}
+
+table Vnodes {
+	modtime: long;
+	vnodes: [Vnode];
+}
+
+table ISUpdate {
+	state: short;
+	phyCpu: short;
+	availCpu: short;
+	phyMem: ulong;
+	arch: string;
+	version: string;
+	vnodes: Vnodes;
+}
+
+table RUsed {
+	jobId: string;
+	comment: string;
+	status: short;
+	hop: short;
+	attrs: [Attribute];
+}
+
+table ISRescUsed {
+	rescs: [RUsed];
+}
+
+table ISObit {
+	jobId: string;
+}
+
+table ISRestart {
+	port: short;
+}
+
+table ISIdle {
+	which: short;
+	jobId: string;
+}
+
+table JInfo {
+	jobId: string;
+	subState: short;
+	runVer: long;
+	execVnode: string;
+}
+
+table ISHello {
+	opts: short;
+	jobs: [JInfo];
+}
+
+table ISDiscard {
+	jobId: string;
+	runVer: long;
+}
+
+table Addr {
+	addr: ulong;
+	depth: ulong;
+}
+
+table ISAddrs {
+	addrs: [Addr];
+}
+
+table ISUpdateHook {
+	seq: ulong;
+	user: string;
+	vnodes: Vnodes;
+}
+
+table Action {
+	jobId: string;
+	seq: ulong;
+	runVer: short;
+	action: short;
+}
+
+table ISActions {
+	actions: [Action];
+}
+
+table ISHAck {
+	type: short;
+	seq: ulong;
+}
+
+table ISSchedRC {
+	user: string;
+}
+
+table HookChkSum {
+	hkChkSum: ulong;
+	pyChkSum: ulong;
+	cfChkSum: ulong;
+}
+
+table ISChkSums {
+	rdChkSum: ulong;
+	hChkSums: [HookChkSum];
+}
+
+union ISReq {
+	ISNull, ISUpdate, ISRescUsed,
+	ISObit, ISRestart, ISIdle,
+	ISHello, ISDiscard, ISAddrs,
+	ISUpdateHook, ISActions,
+	ISHAck, ISSchedRC, ISChkSums
+}
+
+table InterSvr {
+	cmd: short;
+	msgId: short;
+	req: ISReq;
+	breq: Req;
+	breply: Resp;
+}
+
+table RmReq {
+	hdr: Header;
+	data: [string];
+}
+
+table RmResp {
+	code: short;
+	data: [string];
+}
+
+table TmAttach {
+	user: string;
+	uid: short;
+	pid: short;
+}
+
+table TmSpawn {
+	where: short;
+	argv: [string];
+	envp: [string];
+}
+
+table TmSignal {
+	nid: short;
+	tid: short;
+	sig: short;
+}
+
+table TmObit {
+	nid: short;
+	tid: short;
+}
+
+table TmInfo {
+	nid: short;
+}
+
+table TmPublish {
+	name: string;
+	info: string;
+}
+
+table TmSubscribe {
+	nid: short;
+	tid: short;
+	name: string;
+}
+
+union TmBody { TmAttach, TmSpawn, TmSignal, TmObit, TmInfo, TmPublish, TmSubscribe }
+
+table TmReq {
+	hdr: Header;
+	jobId: string;
+	cookie: string;
+	event: short;
+	jobTid: short;
+	body: TmBody;
+}

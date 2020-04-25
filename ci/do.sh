@@ -31,7 +31,7 @@ if [ "x${IS_CI_BUILD}" != "x1" ] || [ "x${FIRST_TIME_BUILD}" == "x1" -a "x${IS_C
     yum -y install yum-utils epel-release rpmdevtools
     yum -y install python3-pip sudo which net-tools man-db time.x86_64 \
                     expat libedit postgresql-server postgresql-contrib python3 \
-                    sendmail sudo tcl tk libical libasan llvm git
+                    sendmail sudo tcl tk libical libasan llvm git wget cmake
     rpmdev-setuptree
     yum-builddep -y ${SPEC_FILE}
     yum -y install $(rpmspec --requires -q ${SPEC_FILE} | awk '{print $1}'| sort -u | grep -vE '^(/bin/)?(ba)?sh$')
@@ -50,7 +50,7 @@ if [ "x${IS_CI_BUILD}" != "x1" ] || [ "x${FIRST_TIME_BUILD}" == "x1" -a "x${IS_C
     zypper -n ar -f -G ${_base_link}/devel:/libraries:/c_c++/${_PRETTY_NAME}/devel:libraries:c_c++.repo
     zypper -n ref
     zypper -n update
-    zypper -n install rpmdevtools python3-pip sudo which net-tools man time.x86_64 git
+    zypper -n install rpmdevtools python3-pip sudo which net-tools man time.x86_64 git wget cmake
     rpmdev-setuptree
     zypper -n install --force-resolution $(rpmspec --buildrequires -q ${SPEC_FILE} | sort -u | grep -vE '^(/bin/)?(ba)?sh$')
     zypper -n install --force-resolution $(rpmspec --requires -q ${SPEC_FILE} | sort -u | grep -vE '^(/bin/)?(ba)?sh$')
@@ -64,7 +64,8 @@ if [ "x${IS_CI_BUILD}" != "x1" ] || [ "x${FIRST_TIME_BUILD}" == "x1" -a "x${IS_C
     apt-get install -y build-essential dpkg-dev autoconf libtool rpm alien libssl-dev \
                         libxt-dev libpq-dev libexpat1-dev libedit-dev libncurses5-dev \
                         libical-dev libhwloc-dev pkg-config tcl-dev tk-dev python3-dev \
-                        swig expat postgresql postgresql-contrib python3-pip sudo man-db git
+                        swig expat postgresql postgresql-contrib python3-pip sudo man-db \
+                        git wget cmake
     pip3 install --trusted-host pypi.org --trusted-host files.pythonhosted.org -r ${REQ_FILE}
   elif [ "x${ID}" == "xubuntu" ]; then
     if [ "x${DEBIAN_FRONTEND}" == "x" ]; then
@@ -75,13 +76,23 @@ if [ "x${IS_CI_BUILD}" != "x1" ] || [ "x${FIRST_TIME_BUILD}" == "x1" -a "x${IS_C
     apt-get install -y build-essential dpkg-dev autoconf libtool rpm alien libssl-dev \
                         libxt-dev libpq-dev libexpat1-dev libedit-dev libncurses5-dev \
                         libical-dev libhwloc-dev pkg-config tcl-dev tk-dev python3-dev \
-                        swig expat postgresql python3-pip sudo man-db git
+                        swig expat postgresql python3-pip sudo man-db git wget cmake
     pip3 install --trusted-host pypi.org --trusted-host files.pythonhosted.org -r ${REQ_FILE}
   else
     echo "Unknown platform..."
     exit 1
   fi
 fi
+
+wget https://github.com/dvidelabs/flatcc/archive/master.tar.gz
+tar -xf master.tar.gz
+cd flatcc-master
+mkdir build
+cd build
+cmake -DFLATCC_TEST=OFF -DFLATCC_CXX_TEST=OFF -DBUILD_SHARED_LIBS=OFF ..
+make
+mkdir /opt/flatcc
+cp -rf ../bin ../lib ../include /opt/flatcc
 
 if [ "x${FIRST_TIME_BUILD}" == "x1" -a "x${IS_CI_BUILD}" == "x1" ]; then
   echo "### First time build is complete ###"
@@ -92,6 +103,7 @@ if [ "x${ONLY_INSTALL_DEPS}" == "x1" ]; then
   exit 0
 fi
 
+cd ${PBS_DIR}
 _targetdirname=target-${ID}
 if [ "x${ONLY_INSTALL}" != "x1" -a "x${ONLY_REBUILD}" != "x1" -a "x${ONLY_TEST}" != "x1" ]; then
   rm -rf ${_targetdirname}
