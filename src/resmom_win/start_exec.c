@@ -89,7 +89,6 @@
 #include "job.h"
 #include "log.h"
 #include "tpp.h"
-#include "dis.h"
 #include "pbs_nodes.h"
 #include "mom_mach.h"
 #include "mom_func.h"
@@ -283,10 +282,10 @@ send_update_job(job *pjob, char *old_exec_vnode)
 /**
  * @brief
  *     Get the hash of encrypted password
- * 
+ *
  * @param[in] job - for which it will read cred
  * @param[out] token - output hash
- * 
+ *
  * @return  int
  * @retval  0 on success
  * @retval  1 on error

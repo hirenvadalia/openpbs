@@ -94,7 +94,6 @@
 #include "cmds.h"
 #include "libpbs.h"
 #include "net_connect.h"
-#include "dis.h"
 #include "port_forwarding.h"
 
 #ifdef LOG_BUF_SIZE

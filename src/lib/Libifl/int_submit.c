@@ -49,7 +49,6 @@
 #endif
 #include "portability.h"
 #include "libpbs.h"
-#include "dis.h"
 #include "tpp.h"
 #include "net_connect.h"
 

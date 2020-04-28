@@ -60,7 +60,6 @@
 #include "attribute.h"
 #include "credential.h"
 #include "batch_request.h"
-#include "dis.h"
 
 /**
  * @brief
@@ -83,7 +82,7 @@
  * @retval      error code      error
  *
  */
- 
+
 int
 decode_DIS_JobObit(int sock, struct batch_request *preq)
 {

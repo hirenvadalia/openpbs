@@ -60,7 +60,6 @@
 #include "attribute.h"
 #include "credential.h"
 #include "batch_request.h"
-#include "dis.h"
 
 /**
  * @brief Read the preempt multiple jobs request.
@@ -88,16 +87,15 @@ decode_DIS_PreemptJobs(int sock, struct batch_request *preq)
 	ppj = calloc(sizeof(struct preempt_job_info), count);
 	if (ppj == NULL)
 		return DIS_NOMALLOC;
-	
+
 	for (i = 0; i < count; i++) {
 		if ((rc = disrfst(sock, PBS_MAXSVRJOBID+1, ppj[i].job_id))) {
 			free(ppj);
 			return rc;
 		}
 	}
-	
+
 	preq->rq_ind.rq_preempt.ppj_list = ppj;
 
 	return rc;
 }
-

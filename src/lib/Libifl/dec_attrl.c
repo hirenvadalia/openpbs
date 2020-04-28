@@ -43,7 +43,6 @@
 
 #include <stdlib.h>
 #include "libpbs.h"
-#include "dis.h"
 #include "attribute.h"
 
 

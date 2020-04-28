@@ -45,7 +45,6 @@
 #include <string.h>
 #include <stdio.h>
 #include "libpbs.h"
-#include "dis.h"
 #include "pbs_ecl.h"
 
 

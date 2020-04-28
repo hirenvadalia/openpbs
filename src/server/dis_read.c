@@ -57,7 +57,6 @@
 #include <errno.h>
 #include <string.h>
 #include <stdio.h>
-#include "dis.h"
 #include "libpbs.h"
 #include "list_link.h"
 #include "server_limits.h"

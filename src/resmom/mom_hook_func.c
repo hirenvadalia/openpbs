@@ -82,7 +82,6 @@
 #include "pbs_reliable.h"
 #include "pbs_version.h"
 #include "tpp.h"
-#include "dis.h"
 #include <openssl/sha.h>
 
 

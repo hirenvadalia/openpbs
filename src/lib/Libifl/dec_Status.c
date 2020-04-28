@@ -48,7 +48,6 @@
 #include "attribute.h"
 #include "credential.h"
 #include "batch_request.h"
-#include "dis.h"
 
 /**
  * @brief
@@ -64,7 +63,7 @@
  *		elements of the rq_ind.rq_status union are updated:
  *		rq_id     - object id, a variable length string.
  *		rq_status - the linked list of attribute structures
- *		
+ *
  * @return int
  * @retval 0 - request read and decoded successfully.
  * @retval non-zero - DIS decode error.

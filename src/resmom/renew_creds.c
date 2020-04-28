@@ -69,7 +69,6 @@
 #include "pbs_error.h"
 
 #include "net_connect.h"
-#include "dis.h"
 #include "batch_request.h"
 #include "resource.h"
 

@@ -49,7 +49,6 @@
 #include "libsec.h"
 #endif
 #include "libpbs.h"
-#include "dis.h"
 #include "auth.h"
 
 volatile int reply_timedout = 0; /* for reply_send.c -- was alarm handler called? */
@@ -80,7 +79,7 @@ tcp_get_chan(int fd)
 	pbs_tcp_chan_t *chan = get_conn_chan(fd);
 	if (chan == NULL) {
 		if (errno != ENOTCONN) {
-			dis_setup_chan(fd, get_conn_chan);
+			transport_setup_chan(fd, get_conn_chan);
 			chan = get_conn_chan(fd);
 		}
 	}

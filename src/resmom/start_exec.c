@@ -78,7 +78,6 @@
 #include "job.h"
 #include "log.h"
 #include "tpp.h"
-#include "dis.h"
 #include "pbs_nodes.h"
 #include "mom_mach.h"
 #include "pbs_error.h"
@@ -6259,9 +6258,9 @@ start_exec(job *pjob)
 				default:
 					/* a value of '0' means explicit reject encountered. */
 					if (hook_rc != 0) {
-						/* 
+						/*
 						 * we've hit an internal error (malloc error, full disk, etc...), so
-						 * treat this now like a  hook error so hook fail_action will be 
+						 * treat this now like a  hook error so hook fail_action will be
 						 * consulted. Before, behavior of an internal error was to ignore it!
 						 */
 						hook_errcode = PBSE_HOOKERROR;

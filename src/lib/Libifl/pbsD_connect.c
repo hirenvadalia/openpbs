@@ -66,7 +66,6 @@
 #include <pbs_ifl.h>
 #include "libpbs.h"
 #include "net_connect.h"
-#include "dis.h"
 #include "libsec.h"
 #include "pbs_ecl.h"
 #include "pbs_internal.h"
@@ -582,7 +581,7 @@ __pbs_disconnect(int connect)
 
 	CS_close_socket(connect);
 	CLOSESOCKET(connect);
-	dis_destroy_chan(connect);
+	transport_destroy_chan(connect);
 
 	/* unlock the connection level lock */
 	if (pbs_client_thread_unlock_connection(connect) != 0)

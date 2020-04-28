@@ -67,14 +67,13 @@
 #include "attribute.h"
 #include "credential.h"
 #include "batch_request.h"
-#include "dis.h"
 
 /**
  * @brief
  *	-encode a Copy Files Dependency Batch Request
  *
  * @param[in] sock - socket descriptor
- * @param[in] preq - pointer to batch_request 
+ * @param[in] preq - pointer to batch_request
  *
  * @return	int
  * @retval	0	success

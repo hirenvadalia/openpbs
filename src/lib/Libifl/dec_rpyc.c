@@ -56,7 +56,6 @@
 #include <sys/types.h>
 #include <stdlib.h>
 #include "libpbs.h"
-#include "dis.h"
 
 /**
  * @brief-

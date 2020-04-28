@@ -53,7 +53,6 @@
 
 #include "pbs_error.h"
 #include "libpbs.h"
-#include "dis.h"
 
 /**
  * @brief

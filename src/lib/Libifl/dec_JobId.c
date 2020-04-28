@@ -60,7 +60,6 @@
 
 #include "pbs_error.h"
 #include "pbs_ifl.h"
-#include "dis.h"
 
 /**
  * @brief
@@ -87,4 +86,3 @@ decode_DIS_JobId(int sock, char *jobid)
 {
 	return (disrfst(sock, PBS_MAXSVRJOBID+1, jobid));
 }
-

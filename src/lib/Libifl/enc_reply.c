@@ -51,7 +51,6 @@
 #include "libpbs.h"
 #include "list_link.h"
 #include "attribute.h"
-#include "dis.h"
 #include "net_connect.h"
 
 int encode_DIS_svrattrl(int sock, svrattrl *psattl);

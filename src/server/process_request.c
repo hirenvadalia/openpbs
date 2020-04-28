@@ -104,7 +104,6 @@
 #include "batch_request.h"
 #include "log.h"
 #include "tpp.h"
-#include "dis.h"
 #include "pbs_nodes.h"
 #include "svrfunc.h"
 #include "pbs_sched.h"
@@ -304,6 +303,14 @@ process_request(int sfds)
 		return;
 	}
 
+#ifndef PBS_MOM
+	if (conn->cn_active != FromClientDIS) {
+		log_event(PBSEVENT_SYSTEM, PBS_EVENTCLASS_REQUEST, LOG_ERR, __func__, "request on invalid type of connection");
+		close_conn(sfds);
+		return;
+	}
+#endif
+
 	if ((request = alloc_br(0)) == NULL) {
 		log_event(PBSEVENT_SYSTEM, PBS_EVENTCLASS_REQUEST, LOG_ERR, __func__, "Unable to allocate request structure");
 		close_conn(sfds);
@@ -319,19 +326,7 @@ process_request(int sfds)
 	/*
 	 * Read in the request and decode it to the internal request structure.
 	 */
-#ifndef PBS_MOM
-	if (conn->cn_active == FromClientDIS) {
-		rc = dis_request_read(sfds, request);
-	} else {
-		log_event(PBSEVENT_SYSTEM, PBS_EVENTCLASS_REQUEST, LOG_ERR, __func__, "request on invalid type of connection");
-		close_conn(sfds);
-		free_br(request);
-		return;
-	}
-#else	/* PBS_MOM */
 	rc = dis_request_read(sfds, request);
-#endif	/* PBS_MOM */
-
 	if (rc == -1) { /* End of file */
 		close_client(sfds);
 		free_br(request);

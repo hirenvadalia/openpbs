@@ -99,47 +99,7 @@ libpbs_la_SOURCES = \
 	../Libcmds/prt_job_err.c \
 	../Libcmds/set_attr.c \
 	../Libcmds/set_resource.c \
-	../Libdis/dis_helpers.c \
-	../Libdis/dis.c \
-	../Libdis/dis_.h \
-	../Libdis/discui_.c \
-	../Libdis/discul_.c \
-	../Libdis/disi10d_.c \
-	../Libdis/disi10l_.c \
-	../Libdis/disiui_.c \
-	../Libdis/disp10d_.c \
-	../Libdis/disp10l_.c \
-	../Libdis/disrcs.c \
-	../Libdis/disrd.c \
-	../Libdis/disrf.c \
-	../Libdis/disrfcs.c \
-	../Libdis/disrfst.c \
-	../Libdis/disrl.c \
-	../Libdis/disrl_.c \
-	../Libdis/disrsc.c \
-	../Libdis/disrsi.c \
-	../Libdis/disrsi_.c \
-	../Libdis/disrsl.c \
-	../Libdis/disrsl_.c \
-	../Libdis/disrss.c \
-	../Libdis/disrst.c \
-	../Libdis/disruc.c \
-	../Libdis/disrui.c \
-	../Libdis/disrul.c \
-	../Libdis/disrus.c \
-	../Libdis/diswcs.c \
-	../Libdis/diswf.c \
-	../Libdis/diswl_.c \
-	../Libdis/diswsi.c \
-	../Libdis/diswsl.c \
-	../Libdis/diswui.c \
-	../Libdis/diswui_.c \
-	../Libdis/diswul.c \
-	../Libdis/ps_dis.c \
-	../Libdis/diswull.c \
-	../Libdis/disrull.c \
-	../Libdis/discull_.c \
-	../Libdis/disrsll_.c \
+	../Libwire/dis_helpers.c \
 	../Libecl/ecl_verify.c \
 	../Libecl/ecl_verify_datatypes.c \
 	../Libecl/ecl_verify_values.c \

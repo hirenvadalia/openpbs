@@ -141,7 +141,6 @@
 #include "cmds.h"
 #include "server.h"
 #include "pbs_sched.h"
-#include "dis.h"
 #include "acct.h"
 
 /* External functions */

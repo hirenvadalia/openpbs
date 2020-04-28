@@ -62,7 +62,6 @@
 #include <sys/types.h>
 #include <signal.h>
 #include "libpbs.h"
-#include "dis.h"
 #include "log.h"
 #include "pbs_error.h"
 #include "server_limits.h"

@@ -44,7 +44,6 @@
 #include <fcntl.h>
 #include "portability.h"
 #include "libpbs.h"
-#include "dis.h"
 #include "tpp.h"
 
 /**

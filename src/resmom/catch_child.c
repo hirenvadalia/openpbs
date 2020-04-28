@@ -58,7 +58,6 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include "dis.h"
 #include "libpbs.h"
 #include "list_link.h"
 #include "server_limits.h"
@@ -1098,7 +1097,7 @@ void
 update_ajob_status_using_cmd(job *pjob, int cmd, int use_rtn_list_ext)
 {
 	struct resc_used_update rused;
-		
+
 	/* pass user-client privilege to encode_resc() */
 
 	resc_access_perm = ATR_DFLAG_MGRD;

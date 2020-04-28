@@ -55,7 +55,6 @@
 #include "libpbs.h"
 #include "net_connect.h"
 #include "sched_cmds.h"
-#include "dis.h"
 #include "list_link.h"
 #include "attribute.h"
 #include "job.h"

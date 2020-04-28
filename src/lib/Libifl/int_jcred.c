@@ -51,7 +51,6 @@
 #include <stdio.h>
 #include <assert.h>
 #include "libpbs.h"
-#include "dis.h"
 #include "ticket.h"
 #include "net_connect.h"
 #include "tpp.h"

@@ -40,7 +40,6 @@
 
 #include "libpbs.h"
 #include "pbs_error.h"
-#include "dis.h"
 #include "pbs_share.h"
 
 /**
@@ -66,7 +65,6 @@ encode_DIS_PreemptJobs(int sock, char **preempt_jobs_list)
 	for (i = 0; i < count; i++)
 		if ((rc = diswst(sock, preempt_jobs_list[i])) != 0)
 			return rc;
-	
+
 	return rc;
 }
-

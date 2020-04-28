@@ -64,7 +64,6 @@
 #include "attribute.h"
 #include "credential.h"
 #include "batch_request.h"
-#include "dis.h"
 
 /**
  * @brief -

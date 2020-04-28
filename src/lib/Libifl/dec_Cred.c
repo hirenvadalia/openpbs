@@ -59,7 +59,6 @@
 #include "libpbs.h"
 #include "attribute.h"
 #include "batch_request.h"
-#include "dis.h"
 
 /**
  * @brief

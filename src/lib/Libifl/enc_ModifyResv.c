@@ -40,7 +40,6 @@
 
 #include "libpbs.h"
 #include "pbs_error.h"
-#include "dis.h"
 
 /**
  * @brief encode the Modify Reservation request for sending to the server.
@@ -65,4 +64,3 @@ encode_DIS_ModifyResv(int sock, char *resv_id, struct attropl *aoplp)
 
 	return (encode_DIS_attropl(sock, aoplp));
 }
-

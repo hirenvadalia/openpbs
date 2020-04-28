@@ -52,14 +52,13 @@
 
 #include "libpbs.h"
 #include "pbs_error.h"
-#include "dis.h"
 
 /**
  * @brief
  *	- encode a Message Job Batch Request
  *
  * @param[in] sock - socket descriptor
- * @param[in] jobid - job id 
+ * @param[in] jobid - job id
  * @param[in] fileopt - which file
  * @param[in] msg - msg to be encoded
  *

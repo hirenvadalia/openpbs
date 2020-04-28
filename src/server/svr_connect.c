@@ -78,7 +78,6 @@
 #include "attribute.h"
 #include "pbs_nodes.h"
 #include "svrfunc.h"
-#include "dis.h"
 #include "list_link.h"
 #include "attribute.h"
 #include "work_task.h"

@@ -46,7 +46,6 @@
 #include <string.h>
 #include <stdio.h>
 #include "libpbs.h"
-#include "dis.h"
 #include "net_connect.h"
 #include "tpp.h"
 

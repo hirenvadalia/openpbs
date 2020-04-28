@@ -51,7 +51,7 @@ extern "C" {
 #include "pbs_internal.h"
 #include "pbs_client_thread.h"
 #include "net_connect.h"
-#include "dis.h"
+#include "pbs_wire.h"
 
 /* Protocol types when connecting to another server (eg mom) */
 #define PROT_INVALID -1

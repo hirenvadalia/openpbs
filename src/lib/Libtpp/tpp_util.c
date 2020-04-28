@@ -68,7 +68,6 @@
 #include "avltree.h"
 #include "pbs_error.h"
 #include "tpp_internal.h"
-#include "dis.h"
 #ifdef PBS_COMPRESSION_ENABLED
 #include <zlib.h>
 #endif
@@ -128,7 +127,7 @@ tppdis_get_user_data(int fd)
 	if (data == NULL) {
 		if (errno != ENOTCONN) {
 			/* fd connected, but first time - so call setup */
-			dis_setup_chan(fd, (pbs_tcp_chan_t * (*)(int))&tpp_get_user_data);
+			transport_setup_chan(fd, (pbs_tcp_chan_t * (*)(int))&tpp_get_user_data);
 			/* get the buffer again*/
 			data = tpp_get_user_data(fd);
 		}

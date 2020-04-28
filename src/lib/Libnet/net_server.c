@@ -900,7 +900,7 @@ close_conn(int sd)
 		return;
 
 	if (svr_conn[idx]->cn_active != ChildPipe) {
-		dis_destroy_chan(sd);
+		transport_destroy_chan(sd);
 	}
 
 	if (svr_conn[idx]->cn_active != ChildPipe) {

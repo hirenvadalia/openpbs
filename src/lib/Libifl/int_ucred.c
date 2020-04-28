@@ -53,7 +53,6 @@
 #include <stdio.h>
 #include <assert.h>
 #include "libpbs.h"
-#include "dis.h"
 #include "ticket.h"
 #include "pbs_ifl.h"
 #include "pbs_ecl.h"
@@ -121,5 +120,3 @@ PBSD_ucred(int c, char *user, int type, char *buf, int len)
 
 	return rc;
 }
-
-

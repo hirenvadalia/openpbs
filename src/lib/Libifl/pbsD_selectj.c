@@ -53,7 +53,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "libpbs.h"
-#include "dis.h"
 #include "pbs_ecl.h"
 
 

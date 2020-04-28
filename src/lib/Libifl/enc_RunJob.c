@@ -52,7 +52,6 @@
 
 #include "libpbs.h"
 #include "pbs_error.h"
-#include "dis.h"
 
 /*
  * encode_DIS_Run - used to encode the basic information for the

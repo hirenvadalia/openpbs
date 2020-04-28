@@ -14,7 +14,6 @@
 #include <sys/stat.h>
 #include <netinet/in.h>
 #include "libpbs.h"
-#include "dis.h"
 #include "server_limits.h"
 #include "net_connect.h"
 #include "credential.h"

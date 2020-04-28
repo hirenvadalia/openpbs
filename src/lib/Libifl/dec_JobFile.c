@@ -60,7 +60,6 @@
 #include "attribute.h"
 #include "credential.h"
 #include "batch_request.h"
-#include "dis.h"
 
 /**
  * @brief -
@@ -69,7 +68,7 @@
  * @param[in] sock - socket descriptor
  * @param[out] preq - pointer to batch_request structure
  *
- * 
+ *
  * @par Data items are:
  *			u int -	block sequence number\n
  *		 	u int -  file type (stdout, stderr, ...)\n

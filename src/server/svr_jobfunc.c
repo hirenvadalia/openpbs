@@ -129,7 +129,6 @@
 #include "pbs_nodes.h"
 #include "svrfunc.h"
 #include "sched_cmds.h"
-#include "dis.h"
 #include "libsec.h"
 #include "pbs_license.h"
 #include "pbs_reliable.h"
@@ -1576,7 +1575,7 @@ check_block_wt(struct work_task *ptask)
 	sprintf(log_buffer, "%s: Write successful to client %s for job %s ", __func__,
 	blockj->client, blockj->jobid);
 	log_event(PBSEVENT_DEBUG, PBS_EVENTCLASS_JOB, LOG_NOTICE, blockj->jobid, log_buffer);
-	dis_destroy_chan(blockj->fd);
+	transport_destroy_chan(blockj->fd);
 	CS_close_socket(blockj->fd);
 	goto end;
 
@@ -1590,7 +1589,7 @@ retry:
 	}
 err:
 	DIS_tcp_funcs();
-	dis_destroy_chan(blockj->fd);
+	transport_destroy_chan(blockj->fd);
 	if (ret != DIS_SUCCESS) {
 		sprintf(log_buffer, "DIS error while replying to client %s for job %s",
 		blockj->client, blockj->jobid);
@@ -4602,7 +4601,7 @@ start_end_dur_wall(void *pobj, int objtype)
 		else if (!(prsc = add_resource_entry(pattr, rscdef)))
 			return (-1);
 	} else {
-		if (presv->ri_alter_flags & RESV_DURATION_MODIFIED) 
+		if (presv->ri_alter_flags & RESV_DURATION_MODIFIED)
 			swcode += 4;
 		if (presv->ri_alter_flags & RESV_END_TIME_MODIFIED)
 			swcode += 2; /*calcualte start time*/

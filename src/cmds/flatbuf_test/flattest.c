@@ -4,7 +4,6 @@
 #include <string.h>
 #include <stdio.h>
 #include <sys/time.h>
-#include "dis.h"
 #include "libpbs.h"
 #include "list_link.h"
 #include "server_limits.h"

@@ -57,7 +57,6 @@
 #include <stdlib.h>
 #include "libpbs.h"
 #include "list_link.h"
-#include "dis.h"
 
 /**
  * @brief

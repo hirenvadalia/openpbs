@@ -1,4 +1,4 @@
-namespace PBS.ifl;
+namespace pbs.fb;
 
 enum ProtType:byte { Batch, TaskMgr, RescMgr, InterMoM, InterSvr }
 enum batch_op:byte { SET, UNSET, INCR, DECR, EQ, NE, GE, GT, LE, LT, DFLT }

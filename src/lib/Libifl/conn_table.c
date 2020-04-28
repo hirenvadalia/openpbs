@@ -159,7 +159,7 @@ _destroy_connection(int fd)
 		pthread_mutex_destroy(&(connection[fd]->ch_mutex));
 		/*
 		 * DON'T free connection[i]->ch_chan
-		 * it should be done by dis_destroy_chan
+		 * it should be done by transport_destroy_chan
 		 */
 		free(connection[fd]);
 		allocated_connection--;

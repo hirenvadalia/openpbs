@@ -60,12 +60,11 @@
 #include "attribute.h"
 #include "credential.h"
 #include "batch_request.h"
-#include "dis.h"
 
 /**
  * @brief
  *	decode a Job Credential batch request
- *	
+ *
  * @param[in] sock - socket descriptor
  * @param[out] preq - pointer to batch_request structure
  *

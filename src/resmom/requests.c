@@ -60,7 +60,6 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <time.h>
-#include "dis.h"
 #include "libpbs.h"
 #include "pbs_error.h"
 #include "server_limits.h"

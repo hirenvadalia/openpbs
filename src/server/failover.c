@@ -83,7 +83,6 @@
 #include "log.h"
 #include "pbs_nodes.h"
 #include "svrfunc.h"
-#include "dis.h"
 #include "libsec.h"
 #include "pbs_db.h"
 

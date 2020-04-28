@@ -46,6 +46,7 @@ extern "C" {
 #include "pbs_ifl.h"
 #include "libutil.h"
 #include "auth.h"
+#include "pbs_wire.h"
 
 /*
  *

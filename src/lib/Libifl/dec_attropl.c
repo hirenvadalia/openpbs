@@ -41,7 +41,6 @@
 
 #include <stdlib.h>
 #include "libpbs.h"
-#include "dis.h"
 
 /**
  * @file	dec_attropl.c

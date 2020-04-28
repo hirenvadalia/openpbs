@@ -120,7 +120,6 @@
 #include "acct.h"
 #include "sched_cmds.h"
 #include "tpp.h"
-#include "dis.h"
 #include "libsec.h"
 #include "pbs_version.h"
 #include "pbs_license.h"

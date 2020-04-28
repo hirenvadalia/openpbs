@@ -49,7 +49,6 @@
 #include "server_limits.h"
 #include "batch_request.h"
 #include "pbs_error.h"
-#include "dis.h"
 
 
 /**

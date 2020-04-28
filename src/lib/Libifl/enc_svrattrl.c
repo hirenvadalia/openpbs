@@ -67,7 +67,6 @@
 #include "libpbs.h"
 #include "list_link.h"
 #include "attribute.h"
-#include "dis.h"
 
 /**
  * @brief

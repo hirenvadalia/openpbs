@@ -95,7 +95,6 @@
 #include "avltree.h"
 #include "libpbs.h"
 #include "tpp_internal.h"
-#include "dis.h"
 #include "auth.h"
 
 /*
@@ -1625,7 +1624,7 @@ tpp_shutdown()
 	for (i = 0; i < max_strms; i++) {
 		if (strmarray[i].slot_state == TPP_SLOT_BUSY) {
 			sd = strmarray[i].strm->sd;
-			dis_destroy_chan(sd);
+			transport_destroy_chan(sd);
 			free_stream_resources(strmarray[i].strm);
 			free_stream(sd);
 		}
@@ -1950,7 +1949,7 @@ tpp_close(int sd)
 	tpp_unlock(&strmarray_lock);
 
 	DIS_tpp_funcs();
-	dis_destroy_chan(strm->sd);
+	transport_destroy_chan(strm->sd);
 
 	if (strm->t_state != TPP_TRNS_STATE_OPEN || send_spl_packet(strm, TPP_CLOSE_STRM) != 0)
 		queue_strm_close(strm);
@@ -2376,7 +2375,7 @@ tpp_mcast_close(int mtfd)
 		return -1;
 	}
 	DIS_tpp_funcs();
-	dis_destroy_chan(strm->sd);
+	transport_destroy_chan(strm->sd);
 
 	free_stream_resources(strm);
 	free_stream(mtfd);

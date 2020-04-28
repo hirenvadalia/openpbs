@@ -51,7 +51,6 @@
 
 #include "libpbs.h"
 #include "pbs_error.h"
-#include "dis.h"
 
 /**
  * @brief
@@ -70,7 +69,7 @@
  * @retval      0 for success
  * @retval      non-zero otherwise
  */
-	
+
 int
 encode_DIS_JobCred(int sock, int type, char *cred, int len)
 {

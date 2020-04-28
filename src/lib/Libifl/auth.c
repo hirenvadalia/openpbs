@@ -46,7 +46,6 @@
 #else
 #include "win.h"
 #endif
-#include "dis.h"
 #include "pbs_ifl.h"
 #include "libpbs.h"
 #include "libsec.h"
