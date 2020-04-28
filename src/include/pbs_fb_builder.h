@@ -176,7 +176,7 @@ __flatbuffers_build_table(flatbuffers_, Pbs_Fb_Preempt, 1)
 static const flatbuffers_voffset_t __Pbs_Fb_Auth_required[] = { 0 };
 typedef flatbuffers_ref_t Pbs_Fb_Auth_ref_t;
 static Pbs_Fb_Auth_ref_t Pbs_Fb_Auth_clone(flatbuffers_builder_t *B, Pbs_Fb_Auth_table_t t);
-__flatbuffers_build_table(flatbuffers_, Pbs_Fb_Auth, 4)
+__flatbuffers_build_table(flatbuffers_, Pbs_Fb_Auth, 3)
 
 static const flatbuffers_voffset_t __Pbs_Fb_Req_required[] = { 0 };
 typedef flatbuffers_ref_t Pbs_Fb_Req_ref_t;
@@ -616,8 +616,8 @@ __flatbuffers_build_table_prolog(flatbuffers_, Pbs_Fb_PreemptJob, Pbs_Fb_Preempt
 static inline Pbs_Fb_Preempt_ref_t Pbs_Fb_Preempt_create(flatbuffers_builder_t *B __Pbs_Fb_Preempt_formal_args);
 __flatbuffers_build_table_prolog(flatbuffers_, Pbs_Fb_Preempt, Pbs_Fb_Preempt_file_identifier, Pbs_Fb_Preempt_type_identifier)
 
-#define __Pbs_Fb_Auth_formal_args , flatbuffers_string_ref_t v0, flatbuffers_string_ref_t v1, uint16_t v2, uint16_t v3
-#define __Pbs_Fb_Auth_call_args , v0, v1, v2, v3
+#define __Pbs_Fb_Auth_formal_args , flatbuffers_string_ref_t v0, flatbuffers_string_ref_t v1, uint16_t v2
+#define __Pbs_Fb_Auth_call_args , v0, v1, v2
 static inline Pbs_Fb_Auth_ref_t Pbs_Fb_Auth_create(flatbuffers_builder_t *B __Pbs_Fb_Auth_formal_args);
 __flatbuffers_build_table_prolog(flatbuffers_, Pbs_Fb_Auth, Pbs_Fb_Auth_file_identifier, Pbs_Fb_Auth_type_identifier)
 
@@ -1926,16 +1926,14 @@ static Pbs_Fb_Preempt_ref_t Pbs_Fb_Preempt_clone(flatbuffers_builder_t *B, Pbs_F
 
 __flatbuffers_build_string_field(0, flatbuffers_, Pbs_Fb_Auth_authMethod, Pbs_Fb_Auth)
 __flatbuffers_build_string_field(1, flatbuffers_, Pbs_Fb_Auth_encryptMethod, Pbs_Fb_Auth)
-__flatbuffers_build_scalar_field(2, flatbuffers_, Pbs_Fb_Auth_encryptMode, flatbuffers_uint16, uint16_t, 2, 2, UINT16_C(0), Pbs_Fb_Auth)
-__flatbuffers_build_scalar_field(3, flatbuffers_, Pbs_Fb_Auth_port, flatbuffers_uint16, uint16_t, 2, 2, UINT16_C(0), Pbs_Fb_Auth)
+__flatbuffers_build_scalar_field(2, flatbuffers_, Pbs_Fb_Auth_port, flatbuffers_uint16, uint16_t, 2, 2, UINT16_C(0), Pbs_Fb_Auth)
 
 static inline Pbs_Fb_Auth_ref_t Pbs_Fb_Auth_create(flatbuffers_builder_t *B __Pbs_Fb_Auth_formal_args)
 {
     if (Pbs_Fb_Auth_start(B)
         || Pbs_Fb_Auth_authMethod_add(B, v0)
         || Pbs_Fb_Auth_encryptMethod_add(B, v1)
-        || Pbs_Fb_Auth_encryptMode_add(B, v2)
-        || Pbs_Fb_Auth_port_add(B, v3)) {
+        || Pbs_Fb_Auth_port_add(B, v2)) {
         return 0;
     }
     return Pbs_Fb_Auth_end(B);
@@ -1947,7 +1945,6 @@ static Pbs_Fb_Auth_ref_t Pbs_Fb_Auth_clone(flatbuffers_builder_t *B, Pbs_Fb_Auth
     if (Pbs_Fb_Auth_start(B)
         || Pbs_Fb_Auth_authMethod_pick(B, t)
         || Pbs_Fb_Auth_encryptMethod_pick(B, t)
-        || Pbs_Fb_Auth_encryptMode_pick(B, t)
         || Pbs_Fb_Auth_port_pick(B, t)) {
         return 0;
     }

@@ -1177,34 +1177,6 @@ arrayfree(char **array)
 
 /**
  * @brief
- *		Read a release nodes from job request off the wire.
- *
- * @param[in]	sock	- socket where you reads the request.
- * @param[in]	preq	- the batch_request structure containing the request details.
- *
- * @return int
- *
- * @retval	0	- if successful
- * @retval	!= 0	- if not successful (an error encountered along the way)
- */
-int
-decode_DIS_RelnodesJob(int sock, struct batch_request *preq)
-{
-	int rc;
-
-	preq->rq_ind.rq_relnodes.rq_node_list = NULL;
-
-	rc = disrfst(sock, PBS_MAXSVRJOBID+1, preq->rq_ind.rq_relnodes.rq_jid);
-	if (rc)
-		return rc;
-
-	preq->rq_ind.rq_relnodes.rq_node_list = disrst(sock, &rc);
-	return rc;
-}
-
-
-/**
- * @brief
  * 		Free space allocated to a batch_request structure
  *		including any sub-structures
  *

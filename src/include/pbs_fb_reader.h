@@ -1561,8 +1561,7 @@ __flatbuffers_table_as_root(Pbs_Fb_Auth)
 
 __flatbuffers_define_string_field(0, Pbs_Fb_Auth, authMethod, 0)
 __flatbuffers_define_string_field(1, Pbs_Fb_Auth, encryptMethod, 0)
-__flatbuffers_define_scalar_field(2, Pbs_Fb_Auth, encryptMode, flatbuffers_uint16, uint16_t, UINT16_C(0))
-__flatbuffers_define_scalar_field(3, Pbs_Fb_Auth, port, flatbuffers_uint16, uint16_t, UINT16_C(0))
+__flatbuffers_define_scalar_field(2, Pbs_Fb_Auth, port, flatbuffers_uint16, uint16_t, UINT16_C(0))
 typedef uint8_t Pbs_Fb_ReqBody_union_type_t;
 __flatbuffers_define_integer_type(Pbs_Fb_ReqBody, Pbs_Fb_ReqBody_union_type_t, 8)
 __flatbuffers_define_union(flatbuffers_, Pbs_Fb_ReqBody)

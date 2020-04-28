@@ -169,7 +169,6 @@ table Preempt {
 table Auth {
 	authMethod: string;
 	encryptMethod: string;
-	encryptMode: ushort;
 	port: ushort;
 }
 

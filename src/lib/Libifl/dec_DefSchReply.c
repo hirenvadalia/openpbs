@@ -40,7 +40,7 @@
 
 /**
  * @brief
- * 	decode Run Job batch request
+ * 	decode Deffered sched reply batch request
  *
  * @param[in] buf - encoded request
  * @param[in] request - pointer to request structure
@@ -51,12 +51,16 @@
  *
  */
 int
-wire_decode_run(void *buf, breq *request)
+wire_decode_defschreply(void *buf, breq *request)
 {
-	ns(Run_table_t) B = (ns(Run_table_t)) ns(Req_body((ns(Req_table_t))buf));
+	ns(SchedDefRep_table_t) B = (ns(SchedDefRep_table_t)) ns(Req_body((ns(Req_table_t))buf));
 
-	request->rq_ind.rq_run.rq_resch = (unsigned long) ns(Run_resch(B));
-	COPYSTR_B(request->rq_ind.rq_run.rq_jid, ns(Run_jobId(B)));
-	COPYSTR_S(request->rq_ind.rq_run.rq_destin, ns(Run_dest(B)));
+	request->rq_ind.rq_defrpy.rq_cmd = (int) ns(SchedDefRep_cmd(B));
+	request->rq_ind.rq_defrpy.rq_err = (int) ns(SchedDefRep_err(B));
+	COPYSTR_S(request->rq_ind.rq_defrpy.rq_id, ns(SchedDefRep_id(B)));
+	request->rq_ind.rq_defrpy.rq_txt = NULL;
+	if (SchedDefRep_text_is_present(B))
+		COPYSTR_S(request->rq_ind.rq_defrpy.rq_txt, ns(SchedDefResp_text(B)));
 
+	return PBSE_NONE;
 }

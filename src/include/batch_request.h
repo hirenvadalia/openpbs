@@ -367,20 +367,16 @@ extern void req_cred(struct batch_request *);
 #endif
 
 /* PBS Batch Request Decode/Encode routines */
-extern int decode_DIS_Authenticate(int, struct batch_request *);
 extern int decode_DIS_CopyFiles(int, struct batch_request *);
 extern int decode_DIS_CopyFiles_Cred(int, struct batch_request *);
 extern int decode_DIS_CopyHookFile(int, struct batch_request *);
 extern int decode_DIS_DelHookFile(int, struct batch_request *);
 extern int decode_DIS_JobObit(int, struct batch_request *);
-extern int decode_DIS_MoveJob(int, struct batch_request *);
 extern int decode_DIS_ModifyResv(int, struct batch_request *);
 extern int decode_DIS_Register(int, struct batch_request *);
-extern int decode_DIS_RelnodesJob(int, struct batch_request *);
 extern int decode_DIS_ReqExtend(int, struct batch_request *);
 extern int decode_DIS_Rescl(int, struct batch_request *);
 extern int decode_DIS_Rescq(int, struct batch_request *);
-extern int decode_DIS_Run(int, struct batch_request *);
 extern int decode_DIS_TrackJob(int, struct batch_request *);
 extern int decode_DIS_replySvr(int, struct batch_reply *);
 extern int decode_DIS_Cred(int, struct batch_request *);

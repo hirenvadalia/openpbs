@@ -40,7 +40,7 @@
 
 /**
  * @brief
- * 	decode Run Job batch request
+ * 	decode Select Job batch request
  *
  * @param[in] buf - encoded request
  * @param[in] request - pointer to request structure
@@ -51,12 +51,16 @@
  *
  */
 int
-wire_decode_run(void *buf, breq *request)
+wire_decode_selectjob(void *buf, breq *request)
 {
-	ns(Run_table_t) B = (ns(Run_table_t)) ns(Req_body((ns(Req_table_t))buf));
+	int rc = PBSE_NONE;
+	ns(Select_table_t) B = (ns(Select_table_t)) ns(Req_body((ns(Req_table_t))buf));
 
-	request->rq_ind.rq_run.rq_resch = (unsigned long) ns(Run_resch(B));
-	COPYSTR_B(request->rq_ind.rq_run.rq_jid, ns(Run_jobId(B)));
-	COPYSTR_S(request->rq_ind.rq_run.rq_destin, ns(Run_dest(B)));
+	CLEAR_HEAD(request->rq_ind.rq_select.rq_selattr);
+	CLEAR_HEAD(request->rq_ind.rq_select.rq_rtnattr);
+	rc = wire_decode_svrattrl(ns(Select_selAttrs(B)), &(request->rq_ind.rq_select.rq_selattr));
+	if (rc == PBSE_NONE && ns(Select_rtnAttrs_is_present(B)))
+		rc = wire_decode_svrattrl(ns(Select_rtnAttrs(B)), &(request->rq_ind.rq_select.rq_rtnattr));
 
+	return rc;
 }

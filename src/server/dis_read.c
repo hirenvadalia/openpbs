@@ -532,12 +532,12 @@ wire_request_read(void *buf, breq *request)
 			break;
 
 		case PBS_BATCH_Authenticate:
-			rc = decode_DIS_Authenticate(sfds, request);
+			rc = wire_decode_authenticate(buf, request);
 			break;
 
 #ifndef PBS_MOM
 		case PBS_BATCH_RelnodesJob:
-			rc = decode_DIS_RelnodesJob(sfds, request);
+			rc = wire_decode_relnodesjob(buf, request);
 			break;
 
 		case PBS_BATCH_LocateJob:
@@ -551,37 +551,23 @@ wire_request_read(void *buf, breq *request)
 
 		case PBS_BATCH_MoveJob:
 		case PBS_BATCH_OrderJob:
-			rc = decode_DIS_MoveJob(sfds, request);
+			rc = wire_decode_movejob(buf, request);
 			break;
 
 		case PBS_BATCH_RunJob:
 		case PBS_BATCH_AsyrunJob:
 		case PBS_BATCH_StageIn:
 		case PBS_BATCH_ConfirmResv:
-			rc = decode_DIS_Run(sfds, request);
+			rc = wire_decode_run(buf, request);
 			break;
 
 		case PBS_BATCH_DefSchReply:
-			request->rq_ind.rq_defrpy.rq_cmd = disrsi(sfds, &rc);
-			if (rc) break;
-			request->rq_ind.rq_defrpy.rq_id = disrst(sfds, &rc);
-			if (rc) break;
-			request->rq_ind.rq_defrpy.rq_err = disrsi(sfds, &rc);
-			if (rc) break;
-			i = disrsi(sfds, &rc);
-			if (rc) break;
-			if (i)
-				request->rq_ind.rq_defrpy.rq_txt = disrst(sfds, &rc);
+			rc = wire_decode_defschreply(buf, request);
 			break;
 
 		case PBS_BATCH_SelectJobs:
 		case PBS_BATCH_SelStat:
-			CLEAR_HEAD(request->rq_ind.rq_select.rq_selattr);
-			CLEAR_HEAD(request->rq_ind.rq_select.rq_rtnattr);
-			rc = wire_decode_svrattrl(sfds,
-				&request->rq_ind.rq_select.rq_selattr);
-			rc = wire_decode_svrattrl(sfds,
-				&request->rq_ind.rq_select.rq_rtnattr);
+			rc = wire_decode_selectjob(buf, request);
 			break;
 
 		case PBS_BATCH_StatusNode:

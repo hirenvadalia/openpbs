@@ -969,8 +969,7 @@ static int Pbs_Fb_Auth_verify_table(flatcc_table_verifier_descriptor_t *td)
     int ret;
     if ((ret = flatcc_verify_string_field(td, 0, 0) /* authMethod */)) return ret;
     if ((ret = flatcc_verify_string_field(td, 1, 0) /* encryptMethod */)) return ret;
-    if ((ret = flatcc_verify_field(td, 2, 2, 2) /* encryptMode */)) return ret;
-    if ((ret = flatcc_verify_field(td, 3, 2, 2) /* port */)) return ret;
+    if ((ret = flatcc_verify_field(td, 2, 2, 2) /* port */)) return ret;
     return flatcc_verify_ok;
 }
 

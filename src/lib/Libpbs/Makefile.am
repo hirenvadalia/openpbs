@@ -109,6 +109,8 @@ libpbs_la_SOURCES = \
 	../Libifl/auth.c \
 	../Libifl/conn_table.c \
 	../Libifl/dec_Authen.c \
+	../Libifl/dec_RelNodes.c \
+	../Libifl/dec_DefSchReply.c \
 	../Libifl/dec_CopyHookFile.c \
 	../Libifl/dec_DelHookFile.c \
 	../Libifl/dec_JobCred.c \
@@ -127,6 +129,7 @@ libpbs_la_SOURCES = \
 	../Libifl/dec_Shut.c \
 	../Libifl/dec_Sig.c \
 	../Libifl/dec_Status.c \
+	../Libifl/dec_Select.c \
 	../Libifl/dec_PySpawn.c \
 	../Libifl/dec_Track.c \
 	../Libifl/dec_attrl.c \

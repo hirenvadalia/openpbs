@@ -122,6 +122,12 @@ extern int wire_decode_shutdown(void *, breq *);
 extern int wire_decode_signaljob(void *, breq *);
 extern int wire_decode_status(void *, breq *);
 extern int wire_decode_pyspawn(void *, breq *);
+extern int wire_decode_authenticate(void *, breq *);
+extern int wire_decode_relnodesjob(void *, breq *);
+extern int wire_decode_movejob(void *, breq *);
+extern int wire_decode_run(void *, breq *);
+extern int wire_decode_defschreply(void *, breq *);
+extern int wire_decode_selectjob(void *, breq *);
 
 #ifdef	__cplusplus
 }
