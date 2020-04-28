@@ -1247,8 +1247,8 @@ receive_job_update(int stream, job *pjob)
 	attribute_def		*pdef;
 
 	CLEAR_HEAD(lhead);
-	if (decode_DIS_svrattrl(stream, &lhead) != DIS_SUCCESS) {
-		log_err(-1, __func__, "decode_DIS_svrattrl failed");
+	if (wire_decode_svrattrl(stream, &lhead) != DIS_SUCCESS) {
+		log_err(-1, __func__, "wire_decode_svrattrl failed");
 		return (-1);
 	}
 	for (psatl = (svrattrl *)GET_NEXT(lhead);
@@ -2880,8 +2880,8 @@ recv_resc_used_from_sister(int stream, char *jobid, int nodeidx)
 	pdef = &job_attr_def[(int)JOB_ATR_resc_used];
 
 	CLEAR_HEAD(lhead);
-	if (decode_DIS_svrattrl(stream, &lhead) != DIS_SUCCESS) {
-		sprintf(log_buffer, "decode_DIS_svrattrl failed");
+	if (wire_decode_svrattrl(stream, &lhead) != DIS_SUCCESS) {
+		sprintf(log_buffer, "wire_decode_svrattrl failed");
 		return (-1);
 	}
 	if  ((pjob->ji_resources[nodeidx].nr_used.at_flags & ATR_VFLAG_SET) != 0) {
@@ -3146,8 +3146,8 @@ im_request(int stream, int version)
 
 			pjob->ji_numnodes = hnodenum;
 			CLEAR_HEAD(lhead);
-			if (decode_DIS_svrattrl(stream, &lhead) != DIS_SUCCESS) {
-				sprintf(log_buffer, "decode_DIS_svrattrl failed");
+			if (wire_decode_svrattrl(stream, &lhead) != DIS_SUCCESS) {
+				sprintf(log_buffer, "wire_decode_svrattrl failed");
 				goto err;
 			}
 			/*
@@ -3253,7 +3253,7 @@ im_request(int stream, int version)
 			/* np is set from job_nodes_inner */
 
 
-			/* 
+			/*
 			 * NULL value passed to hook_input.vnl
 			 * means to assign vnode list using pjob->ji_host[].
 			 */
@@ -3276,9 +3276,9 @@ im_request(int stream, int version)
 				default:
 					/* a value of '0' means explicit reject encountered. */
 					if (hook_rc != 0) {
-						/* 
-						 * we've hit an internal error (malloc error, full disk, etc...), so 
-						 * treat this now like a  hook error so hook fail_action will be 
+						/*
+						 * we've hit an internal error (malloc error, full disk, etc...), so
+						 * treat this now like a  hook error so hook fail_action will be
 						 * consulted. Before, behavior of an internal error was to ignore it!
 						 */
 						hook_errcode = PBSE_HOOKERROR;
@@ -4331,7 +4331,7 @@ join_err:
 			log_event(PBSEVENT_JOB, PBS_EVENTCLASS_JOB, LOG_DEBUG,
 				jobid, "RESTART received");
 
-			/* 
+			/*
 			 * NULL value passed to hook_input.vnl means to assign
 			 * vnode list using pjob->ji_host[].
 			 */
@@ -4341,7 +4341,7 @@ join_err:
 			hook_output.reject_errcode = &hook_errcode;
 			hook_output.last_phook = &last_phook;
 			hook_output.fail_action = &hook_fail_action;
-			
+
 			hook_rc=mom_process_hooks(HOOK_EVENT_EXECJOB_BEGIN,
 					PBS_MOM_SERVICE_NAME, mom_host,
 					&hook_input, &hook_output,
@@ -4361,7 +4361,7 @@ join_err:
 				mom_deljob(pjob);
 				break;
 			}
-			
+
 			errcode = local_restart(pjob, NULL);
 
 			if (errcode != PBSE_NONE) {	/* error, send reply */

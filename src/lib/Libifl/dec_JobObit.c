@@ -96,6 +96,6 @@ decode_DIS_JobObit(int sock, struct batch_request *preq)
 
 	/* decode list of svrattrl (if any) */
 
-	rc = decode_DIS_svrattrl(sock, &preq->rq_ind.rq_jobobit.rq_attr);
+	rc = wire_decode_svrattrl(sock, &preq->rq_ind.rq_jobobit.rq_attr);
 	return rc;
 }

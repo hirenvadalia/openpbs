@@ -40,7 +40,7 @@
 /**
  * @file	dec_JobCred.c
  * @brief
- * decode_DIS_JobCred() - decode a Job Credential batch request
+ * decode_DIS_Cred() - decode a Job Credential batch request
  *
  *	The batch_request structure must already exist (allocated by the
  *	caller. It is assumed that the header fields (protocol type,

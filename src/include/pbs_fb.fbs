@@ -1,4 +1,4 @@
-namespace pbs.fb;
+namespace Pbs.Fb;
 
 enum ProtType:byte { Batch, TaskMgr, RescMgr, InterMoM, InterSvr }
 enum batch_op:byte { SET, UNSET, INCR, DECR, EQ, NE, GE, GT, LE, LT, DFLT }
@@ -131,10 +131,6 @@ table CopyFileCred {
 	cred: string;
 }
 
-table UserMigrate {
-	tohost: string;
-}
-
 table SchedDefRep {
 	cmd: short;
 	id: string;
@@ -182,8 +178,8 @@ union ReqBody {
 	Move, Run, Select, DmnCmd, Signal,
 	Stat, Track, RescQuery, Register,
 	CopyFile, Cred, CopyFileCred,
-	UserMigrate, SchedDefRep, Spawn,
-	CopyHook, RelNodes, Preempt, Auth
+	SchedDefRep, Spawn, CopyHook,
+	RelNodes, Preempt, Auth
 }
 
 table Req {

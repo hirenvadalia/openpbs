@@ -46,7 +46,7 @@
  *	decode_DIS_replySvr_inner
  *	decode_DIS_replySvr
  *	decode_DIS_replySvrTPP
- *	dis_request_read
+ *	wire_request_read
  *	DIS_reply_read
  */
 
@@ -92,7 +92,7 @@ extern char	*msg_nosupport;
  *		The batch request structure pointed to by preq must already exist.
  *
  * @see
- * dis_request_read
+ * wire_request_read
  *
  * @param[in] sock - socket of connection from Mom
  * @param[in] preq - pointer to the batch request structure to be filled in
@@ -176,7 +176,7 @@ decode_DIS_CopyFiles(int sock, struct batch_request *preq)
  *		The batch request structure pointed to by preq must already exist.
  *
  * @see
- * 		dis_request_read
+ * 		wire_request_read
  *
  * @param[in] sock - socket of connection from Mom
  * @param[in] preq - pointer to the batch request structure to be filled in
@@ -353,7 +353,7 @@ decode_DIS_replySvr_inner(int sock, struct batch_reply *reply)
 				}
 				append_link(&reply->brp_un.brp_status,
 					&pstsvr->brp_stlink, pstsvr);
-				rc = decode_DIS_svrattrl(sock, &pstsvr->brp_attr);
+				rc = wire_decode_svrattrl(sock, &pstsvr->brp_attr);
 			}
 			break;
 
@@ -443,86 +443,62 @@ decode_DIS_replySvrTPP(int sock, struct batch_reply *reply)
 
 /**
  * @brief
- * 	Read in an DIS encoded request from the network
- * 	and decodes it:
- *	Read and decode the request into the request structures
+ * 	Read encoded request from the given buffer and decodes it
+ * 	into the given request structure
  *
- * @see
- * 	process_request and read_fo_request
- *
- * @param[in] sfds	- the socket descriptor
- * @param[in,out] request - will contain the decoded request
+ * @param[in] buf - buffer which holds encoded request
+ * @param[in] request - pointer to request structure
  *
  * @return int
- * @retval 0 	if request read ok, batch_request pointed to by request is updated.
- * @retval -1 	if EOF (no request but no error)
- * @retval >0 	if errors ( a PBSE_ number)
+ * @retval 0  success
+ * @retval -1 on EOF (no request but no error)
+ * @retval >0 failure (a PBSE_ number)
  */
-
 int
-dis_request_read(int sfds, struct batch_request *request)
+wire_request_read(void *buf, breq *request)
 {
-#ifndef	PBS_MOM
-	int	 i;
-#endif	/* PBS_MOM */
-	int	 proto_type;
-	int	 proto_ver;
-	int	 rc; 	/* return code */
-
-	if (request->prot == PROT_TCP)
-		DIS_tcp_funcs();	/* setup for DIS over tcp */
+	int proto_type;
+	int proto_ver;
+	int rc;
 
 	/* Decode the Request Header, that will tell the request type */
-
-	rc = decode_DIS_ReqHdr(sfds, request, &proto_type, &proto_ver);
-
-	if (rc != 0) {
-		if (rc == DIS_EOF)
-			return EOF;
-		(void)sprintf(log_buffer,
-			"Req Header bad, errno %d, dis error %d",
-			errno, rc);
-		log_event(PBSEVENT_DEBUG, PBS_EVENTCLASS_REQUEST, LOG_DEBUG,
-			"?", log_buffer);
-
-		return PBSE_DISPROTO;
+	rc = wire_decode_reqhdr(buf, request, &proto_type, &proto_ver);
+	if (rc != PBSE_NONE || proto_type != ns(ProtType_Batch) || proto_ver > PBS_BATCH_PROT_VER) {
+		log_eventf(PBSEVENT_DEBUG, PBS_EVENTCLASS_REQUEST, LOG_DEBUG, __func__,
+				"Req Header bad, errno %d, wire error %d", errno, rc);
+		return PBSE_PROTOCOL;
 	}
 
-	if (proto_ver > PBS_BATCH_PROT_VER)
-		return PBSE_DISPROTO;
-
 	/* Decode the Request Body based on the type */
-
 	switch (request->rq_type) {
 		case PBS_BATCH_Connect:
 			break;
 
 		case PBS_BATCH_Disconnect:
-			return (-1);		/* set EOF return */
+			return (-1);
 
 		case PBS_BATCH_QueueJob:
 		case PBS_BATCH_SubmitResv:
-			CLEAR_HEAD(request->rq_ind.rq_queuejob.rq_attr);
-			rc = decode_DIS_QueueJob(sfds, request);
+			rc = wire_decode_queuejob(buf, request);
 			break;
 
 		case PBS_BATCH_JobCred:
-			rc = decode_DIS_JobCred(sfds, request);
+			rc = wire_decode_jobcred(buf, request);
 			break;
 
 		case PBS_BATCH_UserCred:
-			rc = decode_DIS_UserCred(sfds, request);
+			rc = wire_decode_usercred(buf, request);
 			break;
 
 		case PBS_BATCH_jobscript:
 		case PBS_BATCH_MvJobFile:
-			rc = decode_DIS_JobFile(sfds, request);
+			rc = wire_decode_jobfile(buf, request);
 			break;
 
 		case PBS_BATCH_RdytoCommit:
 		case PBS_BATCH_Commit:
 		case PBS_BATCH_Rerun:
-			rc = decode_DIS_JobId(sfds, request->rq_ind.rq_commit);
+			rc = wire_decode_jobid(buf, request);
 			break;
 
 		case PBS_BATCH_DeleteJob:
@@ -531,28 +507,28 @@ dis_request_read(int sfds, struct batch_request *request)
 		case PBS_BATCH_HoldJob:
 		case PBS_BATCH_ModifyJob:
 		case PBS_BATCH_ModifyJob_Async:
-			rc = decode_DIS_Manage(sfds, request);
+			rc = wire_decode_manage(buf, request);
 			break;
 
 		case PBS_BATCH_MessJob:
-			rc = decode_DIS_MessageJob(sfds, request);
+			rc = wire_decode_messagejob(buf, request);
 			break;
 
 		case PBS_BATCH_Shutdown:
 		case PBS_BATCH_FailOver:
-			rc = decode_DIS_ShutDown(sfds, request);
+			rc = wire_decode_shutdown(buf, request);
 			break;
 
 		case PBS_BATCH_SignalJob:
-			rc = decode_DIS_SignalJob(sfds, request);
+			rc = wire_decode_signaljob(buf, request);
 			break;
 
 		case PBS_BATCH_StatusJob:
-			rc = decode_DIS_Status(sfds, request);
+			rc = wire_decode_status(buf, request);
 			break;
 
 		case PBS_BATCH_PySpawn:
-			rc = decode_DIS_PySpawn(sfds, request);
+			rc = wire_decode_pyspawn(buf, request);
 			break;
 
 		case PBS_BATCH_Authenticate:
@@ -565,12 +541,12 @@ dis_request_read(int sfds, struct batch_request *request)
 			break;
 
 		case PBS_BATCH_LocateJob:
-			rc = decode_DIS_JobId(sfds, request->rq_ind.rq_locate);
+			rc = wire_decode_jobid(buf, request);
 			break;
 
 		case PBS_BATCH_Manager:
 		case PBS_BATCH_ReleaseJob:
-			rc = decode_DIS_Manage(sfds, request);
+			rc = wire_decode_manage(buf, request);
 			break;
 
 		case PBS_BATCH_MoveJob:
@@ -602,9 +578,9 @@ dis_request_read(int sfds, struct batch_request *request)
 		case PBS_BATCH_SelStat:
 			CLEAR_HEAD(request->rq_ind.rq_select.rq_selattr);
 			CLEAR_HEAD(request->rq_ind.rq_select.rq_rtnattr);
-			rc = decode_DIS_svrattrl(sfds,
+			rc = wire_decode_svrattrl(sfds,
 				&request->rq_ind.rq_select.rq_selattr);
-			rc = decode_DIS_svrattrl(sfds,
+			rc = wire_decode_svrattrl(sfds,
 				&request->rq_ind.rq_select.rq_rtnattr);
 			break;
 
@@ -615,7 +591,7 @@ dis_request_read(int sfds, struct batch_request *request)
 		case PBS_BATCH_StatusSched:
 		case PBS_BATCH_StatusRsc:
 		case PBS_BATCH_StatusHook:
-			rc = decode_DIS_Status(sfds, request);
+			rc = wire_decode_status(buf, request);
 			break;
 
 		case PBS_BATCH_TrackJob:
@@ -674,22 +650,18 @@ dis_request_read(int sfds, struct batch_request *request)
 			break;
 	}
 
-	if (rc == 0) {	/* Decode the Request Extension, if present */
+	if (rc == PBSE_NONE) {
+		/* Decode the Request Extension, if present */
 		rc = decode_DIS_ReqExtend(sfds, request);
-		if (rc != 0) {
-			(void)sprintf(log_buffer,
-				"Request type: %d Req Extension bad, dis error %d", request->rq_type, rc);
-			log_event(PBSEVENT_DEBUG, PBS_EVENTCLASS_REQUEST,
-				LOG_DEBUG, "?", log_buffer);
-			rc = PBSE_DISPROTO;
+		if (rc != PBSE_NONE) {
+			log_eventf(PBSEVENT_DEBUG, PBS_EVENTCLASS_REQUEST, LOG_DEBUG, __func__,
+					"Request type: %d Req Extension bad, error %d", request->rq_type, rc);
+			rc = PBSE_PROTOCOL;
 		}
 	} else if (rc != PBSE_UNKREQ) {
-		(void)sprintf(log_buffer,
-			"Req Body bad, dis error %d, type %d",
-			rc, request->rq_type);
-		log_event(PBSEVENT_DEBUG, PBS_EVENTCLASS_REQUEST,
-			LOG_DEBUG, "?", log_buffer);
-		rc = PBSE_DISPROTO;
+		log_eventf(PBSEVENT_DEBUG, PBS_EVENTCLASS_REQUEST, LOG_DEBUG, __func__,
+				"Req Body bad, type %d", request->rq_type);
+		rc = PBSE_PROTOCOL;
 	}
 
 	return (rc);

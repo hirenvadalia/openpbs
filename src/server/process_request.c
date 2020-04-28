@@ -62,8 +62,6 @@
  *	close_quejob()
  *	free_rescrq()
  *	arrayfree()
- *	read_carray()
- *	decode_DIS_PySpawn()
  *	free_br()
  *	freebr_manage()
  *	freebr_cpyfile()
@@ -285,18 +283,17 @@ req_authenticate(conn_t *conn, struct batch_request *request)
 void
 process_request(int sfds)
 {
-	int		      rc;
-	struct batch_request *request;
-	conn_t		     *conn;
+	int rc;
+	breq *request;
+	conn_t *conn;
+	void *buf = NULL;
+	size_t len = 0;
 #ifndef PBS_MOM
-	int		     access_by_krb;
+	int access_by_krb;
 #endif
 
-
 	time_now = time(NULL);
-
 	conn = get_conn(sfds);
-
 	if (!conn) {
 		log_event(PBSEVENT_SYSTEM, PBS_EVENTCLASS_REQUEST, LOG_ERR, __func__, "did not find socket in connection table");
 		CLOSESOCKET(sfds);
@@ -310,7 +307,6 @@ process_request(int sfds)
 		return;
 	}
 #endif
-
 	if ((request = alloc_br(0)) == NULL) {
 		log_event(PBSEVENT_SYSTEM, PBS_EVENTCLASS_REQUEST, LOG_ERR, __func__, "Unable to allocate request structure");
 		close_conn(sfds);
@@ -324,9 +320,12 @@ process_request(int sfds)
 	}
 
 	/*
-	 * Read in the request and decode it to the internal request structure.
+	 * Read in the request from network
+	 * and decode it to the internal request structure.
 	 */
-	rc = dis_request_read(sfds, request);
+	// FIXME: get pkt here and verify it
+	rc = wire_request_read(buf, request);
+	// FIXME: free buffer here if needed
 	if (rc == -1) { /* End of file */
 		close_client(sfds);
 		free_br(request);
@@ -1062,15 +1061,15 @@ close_client(int sfds)
  * @retval	NULL	- error
  */
 
-struct batch_request *alloc_br(int type)
+breq *alloc_br(int type)
 {
-	struct batch_request *req;
+	breq *req;
 
-	req= (struct batch_request *)malloc(sizeof(struct batch_request));
+	req= (breq *)malloc(sizeof(breq));
 	if (req== NULL)
 		log_err(errno, "alloc_br", msg_err_malloc);
 	else {
-		memset((void *)req, (int)0, sizeof(struct batch_request));
+		memset((void *)req, (int)0, sizeof(breq));
 		req->rq_type = type;
 		CLEAR_LINK(req->rq_link);
 		req->rq_conn = -1;		/* indicate not connected */
@@ -1174,100 +1173,6 @@ arrayfree(char **array)
 	for (i = 0; array[i]; i++)
 		free(array[i]);
 	free(array);
-}
-
-/**
- * @brief
- *		Read a bunch of strings into a NULL terminated array.
- *		The strings are regular null terminated char arrays
- *		and the string array is NULL terminated.
- *
- *		Pass in array location to hold the allocated array
- *		and return an error value if there is a problem.  If
- *		an error does occur, arrloc is not changed.
- *
- * @param[in]	stream	- socket where you reads the request.
- * @param[out]	arrloc	- NULL terminated array where strings are stored.
- *
- * @return	error code
- */
-static int
-read_carray(int stream, char ***arrloc)
-{
-	int	i, num, ret;
-	char	*cp, **carr;
-
-	if (arrloc == NULL)
-		return PBSE_INTERNAL;
-
-	num = 4;	/* keep track of the number of array slots */
-	carr = (char **)calloc(sizeof(char **), num);
-	if (carr == NULL)
-		return PBSE_SYSTEM;
-
-	for (i=0;; i++) {
-		cp = disrst(stream, &ret);
-		if ((cp == NULL) || (ret != DIS_SUCCESS)) {
-			arrayfree(carr);
-			if (cp != NULL)
-				free(cp);
-			return PBSE_SYSTEM;
-		}
-		if (*cp == '\0') {
-			free(cp);
-			break;
-		}
-		if (i == num-1) {
-			char	**hold;
-
-			hold = (char **)realloc(carr,
-				num * 2 * sizeof(char **));
-			if (hold == NULL) {
-				arrayfree(carr);
-				free(cp);
-				return PBSE_SYSTEM;
-			}
-			carr = hold;
-
-			/* zero the last half of the now doubled carr */
-			memset(&carr[num], 0, num * sizeof(char **));
-			num *= 2;
-		}
-		carr[i] = cp;
-	}
-	carr[i] = NULL;
-	*arrloc = carr;
-	return ret;
-}
-
-/**
- * @brief
- *		Read a python spawn request off the wire.
- *		Each of the argv and envp arrays is sent by writing a counted
- *		string followed by a zero length string ("").
- *
- * @param[in]	sock	- socket where you reads the request.
- * @param[in]	preq	- the batch_request structure to free up.
- */
-int
-decode_DIS_PySpawn(int sock, struct batch_request *preq)
-{
-	int	rc;
-
-	rc = disrfst(sock, sizeof(preq->rq_ind.rq_py_spawn.rq_jid),
-		preq->rq_ind.rq_py_spawn.rq_jid);
-	if (rc)
-		return rc;
-
-	rc = read_carray(sock, &preq->rq_ind.rq_py_spawn.rq_argv);
-	if (rc)
-		return rc;
-
-	rc = read_carray(sock, &preq->rq_ind.rq_py_spawn.rq_envp);
-	if (rc)
-		return rc;
-
-	return rc;
 }
 
 /**

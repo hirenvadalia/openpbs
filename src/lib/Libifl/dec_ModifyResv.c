@@ -82,5 +82,5 @@ decode_DIS_ModifyResv(int sock, struct batch_request *preq)
 	rc = disrfst(sock, PBS_MAXSVRJOBID+1, preq->rq_ind.rq_modify.rq_objname);
 	if (rc)
 		return rc;
-	return (decode_DIS_svrattrl(sock, &preq->rq_ind.rq_modify.rq_attr));
+	return (wire_decode_svrattrl(sock, &preq->rq_ind.rq_modify.rq_attr));
 }

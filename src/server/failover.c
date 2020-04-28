@@ -546,7 +546,7 @@ read_fo_request(int conn)
 		return;
 	}
 	request->rq_conn = conn;
-	rc = dis_request_read(conn, request);
+	rc = wire_request_read(conn, request);
 	DBPRT(("Failover: received request (rc=%d) secondary state %d\n", rc, Secondary_state))
 	if (rc == -1) {
 		/*

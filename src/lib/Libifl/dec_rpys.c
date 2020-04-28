@@ -174,7 +174,7 @@ decode_DIS_replySvr(int sock, struct batch_reply *reply)
 				}
 				append_link(&reply->brp_un.brp_status,
 					&pstsvr->brp_stlink, pstsvr);
-				rc = decode_DIS_svrattrl(sock, &pstsvr->brp_attr);
+				rc = wire_decode_svrattrl(sock, &pstsvr->brp_attr);
 			}
 			break;
 

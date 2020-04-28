@@ -127,6 +127,7 @@ libpbs_la_SOURCES = \
 	../Libifl/dec_Shut.c \
 	../Libifl/dec_Sig.c \
 	../Libifl/dec_Status.c \
+	../Libifl/dec_PySpawn.c \
 	../Libifl/dec_Track.c \
 	../Libifl/dec_attrl.c \
 	../Libifl/dec_attropl.c \

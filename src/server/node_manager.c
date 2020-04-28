@@ -2236,7 +2236,7 @@ decode_stat_update(int stream, struct resc_used_update *prused)
 		return rc;
 
 	CLEAR_HEAD(prused->ru_attr);
-	rc = decode_DIS_svrattrl(stream, &prused->ru_attr);
+	rc = wire_decode_svrattrl(stream, &prused->ru_attr);
 	if (rc) {
 		free_attrlist(&prused->ru_attr);
 	}

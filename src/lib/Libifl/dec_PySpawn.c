@@ -40,27 +40,44 @@
 
 /**
  * @brief
- * 	Decode the request header gields common to all requests
+ * 	decode python spawn batch request
  *
- * @param[in] buf - buffer which holds encoded request header
+ * @param[in] buf - encoded request
  * @param[in] request - pointer to request structure
- * @param[out] proto_type - protocol type
- * @param[out] proto_ver - protocol version
  *
  * @return int
- * @retval 0  success
- * @retval >0 failure (a PBSE_ number)
+ * @retval PBS_NONE  - success
+ * @retval !PBS_NONE - failure
  *
  */
 int
-wire_decode_reqhdr(void *buf, breq *request, int *proto_type, int *proto_ver)
+wire_decode_pyspawn(void *buf, breq *request)
 {
-	ns(Header_table_t) hdr = ns(Req_hdr((ns(Req_table_t))buf));
+	int i;
+	size_t len;
+	flatbuffers_string_vec_t strs;
+	ns(Spawn_table_t) B = (ns(Spawn_table_t)) ns(Req_body((ns(Req_table_t))buf));
 
-	*proto_type = (int)ns(Header_protType(hdr));
-	*proto_ver = (int)ns(Header_version(hdr));
-	request->rq_type = (int)ns(Header_reqId(hdr));
-	COPYSTR_B(request->rq_user, ns(Header_user(hdr)));
+	COPYSTR_B(request->rq_ind.rq_py_spawn.rq_jid, ns(Spawn_jobId(B)));
 
-	return PBSE_NONE;
+	request->rq_ind.rq_py_spawn.rq_argv = NULL;
+	request->rq_ind.rq_py_spawn.rq_envp = NULL;
+
+	strs = ns(Spawn_argv(B));
+	len = flatbuffers_string_vec_len(strs);
+	request->rq_ind.rq_py_spawn.rq_argv = (char **)calloc(sizeof(char **), len + 1);
+	if (request->rq_ind.rq_py_spawn.rq_argv == NULL)
+		return PBSE_SYSTEM;
+	for (i = 0; i < len; i++) {
+		COPYSTR_S(request->rq_ind.rq_py_spawn.rq_argv[i], flatbuffers_string_vec_at(strs, i));
+	}
+
+	strs = ns(Spawn_envp(B));
+	len = flatbuffers_string_vec_len(strs);
+	request->rq_ind.rq_py_spawn.rq_envp = (char **)calloc(sizeof(char **), len + 1);
+	if (request->rq_ind.rq_py_spawn.rq_envp == NULL)
+		return PBSE_SYSTEM;
+	for (i = 0; i < len; i++) {
+		COPYSTR_S(request->rq_ind.rq_py_spawn.rq_envp[i], flatbuffers_string_vec_at(strs, i));
+	}
 }
