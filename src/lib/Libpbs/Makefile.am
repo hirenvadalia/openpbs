@@ -133,7 +133,6 @@ libpbs_la_SOURCES = \
 	../Libifl/dec_Select.c \
 	../Libifl/dec_PySpawn.c \
 	../Libifl/dec_Track.c \
-	../Libifl/dec_attrl.c \
 	../Libifl/dec_attropl.c \
 	../Libifl/dec_reply.c \
 	../Libifl/dec_svrattrl.c \

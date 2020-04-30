@@ -109,6 +109,7 @@ int (*pfn_transport_send)(int, void *, int);
 
 
 extern int wire_decode_svrattrl(void *, pbs_list_head *);
+extern int wire_decode_attropl(void *, struct attropl **)
 
 extern int wire_decode_batch_request(void *, breq *);
 extern int wire_decode_batch_req_hdr(void *, breq *, int *, int *);

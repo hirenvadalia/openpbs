@@ -177,7 +177,7 @@ wire_decode_batch_reply_status_cmd(void *buf, breply *reply)
 		pstcmd->brp_stlink = NULL;
 		pstcmd->brp_objtype = ns(StatRespStat_type(stat));
 		COPYSTR_B(pstcmd->brp_objname, ns(StatRespStat_name(stat)));
-		rc = wire_decode_attrl((void *)ns(StatRespStat_attrs(stat)), &(pstcmd->brp_attrl));
+		rc = wire_decode_attropl((void *)ns(StatRespStat_attrs(stat)), &(pstcmd->brp_attrl));
 		if (rc != PBSE_NONE)
 			return rc;
 		*pstcx = pstcmd;
