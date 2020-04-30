@@ -367,19 +367,8 @@ extern void req_cred(struct batch_request *);
 #endif
 
 /* PBS Batch Request Decode/Encode routines */
-extern int decode_DIS_CopyFiles(int, struct batch_request *);
-extern int decode_DIS_CopyFiles_Cred(int, struct batch_request *);
-extern int decode_DIS_CopyHookFile(int, struct batch_request *);
-extern int decode_DIS_DelHookFile(int, struct batch_request *);
-extern int decode_DIS_JobObit(int, struct batch_request *);
-extern int decode_DIS_ModifyResv(int, struct batch_request *);
-extern int decode_DIS_Register(int, struct batch_request *);
-extern int decode_DIS_ReqExtend(int, struct batch_request *);
-extern int decode_DIS_Rescl(int, struct batch_request *);
-extern int decode_DIS_Rescq(int, struct batch_request *);
-extern int decode_DIS_TrackJob(int, struct batch_request *);
 extern int decode_DIS_replySvr(int, struct batch_reply *);
-extern int decode_DIS_Cred(int, struct batch_request *);
+
 extern int encode_DIS_failover(int, struct batch_request *);
 extern int encode_DIS_CopyFiles(int, struct batch_request *);
 extern int encode_DIS_CopyFiles_Cred(int, struct batch_request *);
@@ -391,7 +380,6 @@ extern int encode_DIS_replyTPP(int, char *, struct batch_reply *);
 extern int encode_DIS_svrattrl(int, svrattrl *);
 extern int encode_DIS_Cred(int, char *, char *, int, char *, size_t, long);
 extern int dis_reply_read(int, struct batch_reply *, int);
-extern int decode_DIS_PreemptJobs(int, struct batch_request *);
 
 #ifdef __cplusplus
 }

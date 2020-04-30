@@ -53,7 +53,7 @@
 int
 wire_decode_jobcred(void *buf, breq *request)
 {
-	ns(Cred_table_t) B = (ns(Cred_table_t)) ns(Req_body((ns(Req_table_t))buf));
+	ns(Cred_table_t) B = (ns(Cred_table_t))buf;
 
 	request->rq_ind.rq_jobcred.rq_type = (int) ns(Cred_type(B));
 	request->rq_ind.rq_jobcred.rq_size = (int) ns(Cred_size(B));

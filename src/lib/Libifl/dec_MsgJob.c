@@ -53,7 +53,7 @@
 int
 wire_decode_messagejob(void *buf, breq *request)
 {
-	ns(Msg_table_t) B = (ns(Msg_table_t)) ns(Req_body((ns(Req_table_t))buf));
+	ns(Msg_table_t) B = (ns(Msg_table_t))buf;
 
 	request->rq_ind.rq_message.rq_file = (int) ns(Msg_FileInd(B));
 	COPYSTR_B(request->rq_ind.rq_message.rq_jid, ns(Msg_jobId(B)));

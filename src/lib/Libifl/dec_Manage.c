@@ -53,9 +53,10 @@
 int
 wire_decode_manage(void *buf, breq *request)
 {
-	ns(Manage_table_t) B = (ns(Manage_table_t)) ns(Req_body((ns(Req_table_t))buf));
+	ns(Manage_table_t) B = (ns(Manage_table_t))buf;
 
-	request->rq_ind.rq_manager.rq_cmd = (int) ns(Manage_cmd(B));
+	if (ns(Manage_cmd_is_present(B)))
+		request->rq_ind.rq_manager.rq_cmd = (int) ns(Manage_cmd(B));
 	request->rq_ind.rq_manager.rq_objtype = (int) ns(Manage_objType(B));
 	COPYSTR_B(request->rq_ind.rq_manager.rq_objname, ns(Manage_objName(B)));
 	CLEAR_HEAD(request->rq_ind.rq_manager.rq_attr);

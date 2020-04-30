@@ -56,7 +56,7 @@ wire_decode_pyspawn(void *buf, breq *request)
 	int i;
 	size_t len;
 	flatbuffers_string_vec_t strs;
-	ns(Spawn_table_t) B = (ns(Spawn_table_t)) ns(Req_body((ns(Req_table_t))buf));
+	ns(Spawn_table_t) B = (ns(Spawn_table_t))buf;
 
 	COPYSTR_B(request->rq_ind.rq_py_spawn.rq_jid, ns(Spawn_jobId(B)));
 

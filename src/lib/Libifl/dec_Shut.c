@@ -53,7 +53,7 @@
 int
 wire_decode_shutdown(void *buf, breq *request)
 {
-	ns(DmnCmd_table_t) B = (ns(DmnCmd_table_t)) ns(Req_body((ns(Req_table_t))buf));
+	ns(DmnCmd_table_t) B = (ns(DmnCmd_table_t))buf;
 
 	request->rq_ind.rq_shutdown = (int) ns(DmnCmd_cmd(B));
 

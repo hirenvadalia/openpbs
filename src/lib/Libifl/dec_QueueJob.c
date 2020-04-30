@@ -53,7 +53,7 @@
 int
 wire_decode_queuejob(void *buf, breq *request)
 {
-	ns(Qjob_table_t) B = (ns(Qjob_table_t)) ns(Req_body((ns(Req_table_t))buf));
+	ns(Qjob_table_t) B = (ns(Qjob_table_t))buf;
 
 	COPYSTR_B(request->rq_ind.rq_queuejob.rq_jid, ns(Qjob_jobId(B)));
 	COPYSTR_B(request->rq_ind.rq_queuejob.rq_destin, ns(Qjob_destin(B)));

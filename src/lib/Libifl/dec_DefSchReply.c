@@ -53,7 +53,7 @@
 int
 wire_decode_defschreply(void *buf, breq *request)
 {
-	ns(SchedDefRep_table_t) B = (ns(SchedDefRep_table_t)) ns(Req_body((ns(Req_table_t))buf));
+	ns(SchedDefRep_table_t) B = (ns(SchedDefRep_table_t))buf;
 
 	request->rq_ind.rq_defrpy.rq_cmd = (int) ns(SchedDefRep_cmd(B));
 	request->rq_ind.rq_defrpy.rq_err = (int) ns(SchedDefRep_err(B));

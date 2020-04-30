@@ -54,7 +54,7 @@ int
 wire_decode_selectjob(void *buf, breq *request)
 {
 	int rc = PBSE_NONE;
-	ns(Select_table_t) B = (ns(Select_table_t)) ns(Req_body((ns(Req_table_t))buf));
+	ns(Select_table_t) B = (ns(Select_table_t))buf;
 
 	CLEAR_HEAD(request->rq_ind.rq_select.rq_selattr);
 	CLEAR_HEAD(request->rq_ind.rq_select.rq_rtnattr);

@@ -53,7 +53,7 @@
 int
 wire_decode_relnodesjob(void *buf, breq *request)
 {
-	ns(RelNodes_table_t) B = (ns(RelNodes_table_t)) ns(Req_body((ns(Req_table_t))buf));
+	ns(RelNodes_table_t) B = (ns(RelNodes_table_t))buf;
 
 	COPYSTR_B(request->rq_ind.rq_relnodes.rq_jid, ns(RelNodes_jobId(B)));
 	COPYSTR_S(request->rq_ind.rq_relnodes.rq_node_list, ns(RelNodes_nodes(B)));

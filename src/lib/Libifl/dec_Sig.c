@@ -53,7 +53,7 @@
 int
 wire_decode_signaljob(void *buf, breq *request)
 {
-	ns(Signal_table_t) B = (ns(Signal_table_t)) ns(Req_body((ns(Req_table_t))buf));
+	ns(Signal_table_t) B = (ns(Signal_table_t))buf;
 
 	COPYSTR_B(request->rq_ind.rq_signal.rq_jid, ns(Signal_jobId(B)));
 	COPYSTR_B(request->rq_ind.rq_signal.rq_signame, ns(Signal_sigName(B)));

@@ -53,7 +53,7 @@
 int
 wire_decode_run(void *buf, breq *request)
 {
-	ns(Run_table_t) B = (ns(Run_table_t)) ns(Req_body((ns(Req_table_t))buf));
+	ns(Run_table_t) B = (ns(Run_table_t))buf;
 
 	request->rq_ind.rq_run.rq_resch = (unsigned long) ns(Run_resch(B));
 	COPYSTR_B(request->rq_ind.rq_run.rq_jid, ns(Run_jobId(B)));

@@ -53,7 +53,7 @@
 int
 wire_decode_movejob(void *buf, breq *request)
 {
-	ns(Move_table_t) B = (ns(Move_table_t)) ns(Req_body((ns(Req_table_t))buf));
+	ns(Move_table_t) B = (ns(Move_table_t))buf;
 
 	COPYSTR_B(request->rq_ind.rq_move.rq_jid, ns(Move_jobId(B)));
 	COPYSTR_B(request->rq_ind.rq_move.rq_destin, ns(Move_dest(B)));

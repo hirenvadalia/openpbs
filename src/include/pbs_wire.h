@@ -110,6 +110,7 @@ int (*pfn_transport_send)(int, void *, int);
 extern int wire_request_read(void *, breq *);
 
 extern int wire_decode_reqhdr(void *, breq *, int *, int *);
+extern int wire_decode_reqextend(void *, breq *);
 extern int wire_decode_svrattrl(void *, pbs_list_head *);
 extern int wire_decode_queuejob(void *, breq *);
 extern int wire_decode_jobcred(void *, breq *);
@@ -128,6 +129,15 @@ extern int wire_decode_movejob(void *, breq *);
 extern int wire_decode_run(void *, breq *);
 extern int wire_decode_defschreply(void *, breq *);
 extern int wire_decode_selectjob(void *, breq *);
+extern int wire_decode_trackjob(void *, breq *);
+extern int wire_decode_rescq(void *, breq *);
+extern int wire_decode_register(void *, breq *);
+extern int wire_decode_preemptjobs(void *, breq *);
+extern int wire_decode_copyhookfile(void *, breq *);
+extern int wire_decode_delhookfile(void *, breq *);
+extern int wire_decode_copyfiles(void *, breq *);
+extern int wire_decode_copyfiles_cred(void *, breq *);
+extern int wire_decode_cred(void *, breq *);
 
 #ifdef	__cplusplus
 }

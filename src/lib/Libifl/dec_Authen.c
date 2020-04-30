@@ -53,7 +53,7 @@
 int
 wire_decode_authenticate(void *buf, breq *request)
 {
-	ns(Auth_table_t) B = (ns(Auth_table_t)) ns(Req_body((ns(Req_table_t))buf));
+	ns(Auth_table_t) B = (ns(Auth_table_t))buf;
 
 	request->rq_ind.rq_auth.rq_port = (unsigned int) ns(Auth_port(B));
 	COPYSTR_B(request->rq_ind.rq_auth.rq_auth_method, ns(Auth_authMethod(B)));

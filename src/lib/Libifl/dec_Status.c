@@ -53,7 +53,7 @@
 int
 wire_decode_status(void *buf, breq *request)
 {
-	ns(Stat_table_t) B = (ns(Stat_table_t)) ns(Req_body((ns(Req_table_t))buf));
+	ns(Stat_table_t) B = (ns(Stat_table_t))buf;
 
 	COPYSTR_S(request->rq_ind.rq_status.rq_id, ns(Stat_jobIds(B)));
 	return wire_decode_svrattrl(ns(Stat_attrs(B)), &(request->rq_ind.rq_status.rq_attr));

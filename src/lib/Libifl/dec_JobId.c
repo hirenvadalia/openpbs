@@ -53,7 +53,7 @@
 int
 wire_decode_jobid(void *buf, breq *request)
 {
-	ns(JobId_table_t) B = (ns(JobId_table_t)) ns(Req_body((ns(Req_table_t))buf));
+	ns(JobId_table_t) B = (ns(JobId_table_t))buf;
 
 	COPYSTR_B(request->rq_ind.rq_commit, ns(JobId_jobId(B)));
 	return PBSE_NONE;

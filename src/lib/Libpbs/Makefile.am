@@ -113,6 +113,7 @@ libpbs_la_SOURCES = \
 	../Libifl/dec_DefSchReply.c \
 	../Libifl/dec_CopyHookFile.c \
 	../Libifl/dec_DelHookFile.c \
+	../Libifl/dec_CopyFiles.c \
 	../Libifl/dec_JobCred.c \
 	../Libifl/dec_JobFile.c \
 	../Libifl/dec_JobId.c \
@@ -136,7 +137,6 @@ libpbs_la_SOURCES = \
 	../Libifl/dec_attropl.c \
 	../Libifl/dec_rpyc.c \
 	../Libifl/dec_svrattrl.c \
-	../Libifl/dec_ModifyResv.c \
 	../Libifl/dec_PreemptJobs.c \
 	../Libifl/enc_CopyHookFile.c \
 	../Libifl/enc_CpyFil.c \

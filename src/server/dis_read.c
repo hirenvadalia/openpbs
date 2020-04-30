@@ -41,8 +41,6 @@
  *
  *	Included public functions are:
  *
- *	decode_DIS_CopyFiles
- *	decode_DIS_CopyFiles_Cred
  *	decode_DIS_replySvr_inner
  *	decode_DIS_replySvr
  *	decode_DIS_replySvrTPP
@@ -71,181 +69,6 @@
 /* External Global Data */
 
 extern char	*msg_nosupport;
-
-
-/*	Data items are:	string		job id			(may be null)
- *			string		job owner		(may be null)
- *			string		execution user name
- *			string		execution group name	(may be null)
- *			unsigned int	direction & sandbox flag
- *			unsigned int	count of file pairs in set
- *			set of		file pairs:
- *				unsigned int	flag
- *				string		local path name
- *				string		remote path name (may be null)
- */
-/**
- * @brief
- * 		decode_DIS_CopyFiles() - decode a Copy Files Dependency Batch Request
- *
- *		This request is used by the server ONLY.
- *		The batch request structure pointed to by preq must already exist.
- *
- * @see
- * wire_request_read
- *
- * @param[in] sock - socket of connection from Mom
- * @param[in] preq - pointer to the batch request structure to be filled in
- *
- * @return int
- * @retval 0 - success
- * @retval non-zero - decode failure error from a DIS routine
- */
-int
-decode_DIS_CopyFiles(int sock, struct batch_request *preq)
-{
-	int   pair_ct;
-	struct rq_cpyfile *pcf;
-	struct rqfpair    *ppair;
-	int   rc;
-
-	pcf = &preq->rq_ind.rq_cpyfile;
-	CLEAR_HEAD(pcf->rq_pair);
-	if ((rc = disrfst(sock, PBS_MAXSVRJOBID, pcf->rq_jobid)) != 0)
-		return rc;
-	if ((rc = disrfst(sock, PBS_MAXUSER, pcf->rq_owner)) != 0)
-		return rc;
-	if ((rc = disrfst(sock, PBS_MAXUSER, pcf->rq_user))  != 0)
-		return rc;
-	if ((rc = disrfst(sock, PBS_MAXGRPN, pcf->rq_group)) != 0)
-		return rc;
-	pcf->rq_dir = disrui(sock, &rc);
-	if (rc) return rc;
-
-	pair_ct = disrui(sock, &rc);
-	if (rc) return rc;
-
-	while (pair_ct--) {
-
-		ppair = (struct rqfpair *)malloc(sizeof(struct rqfpair));
-		if (ppair == NULL)
-			return DIS_NOMALLOC;
-		CLEAR_LINK(ppair->fp_link);
-		ppair->fp_local = 0;
-		ppair->fp_rmt   = 0;
-
-		ppair->fp_flag = disrui(sock, &rc);
-		if (rc) {
-			(void)free(ppair);
-			return rc;
-		}
-		ppair->fp_local = disrst(sock, &rc);
-		if (rc) {
-			(void)free(ppair);
-			return rc;
-		}
-		ppair->fp_rmt = disrst(sock, &rc);
-		if (rc) {
-			(void)free(ppair->fp_local);
-			(void)free(ppair);
-			return rc;
-		}
-		append_link(&pcf->rq_pair, &ppair->fp_link, ppair);
-	}
-	return 0;
-}
- /*	Data items are:	string		job id			(may be null)
- *			string		job owner		(may be null)
- *			string		execution user name
- *			string		execution group name	(may be null)
- *			unsigned int	direction & sandbox flag
- *			unsigned int	count of file pairs in set
- *			set of		file pairs:
- *				unsigned int	flag
- *				string		local path name
- *				string		remote path name (may be null)
- *			unsigned int	credential length (bytes)
- *			byte string	credential
- */
-/**
- * @brief
- * 		decode_DIS_CopyFiles_Cred() - decode a Copy Files with Credential
- *				 Dependency Batch Request
- *
- *		This request is used by the server ONLY.
- *		The batch request structure pointed to by preq must already exist.
- *
- * @see
- * 		wire_request_read
- *
- * @param[in] sock - socket of connection from Mom
- * @param[in] preq - pointer to the batch request structure to be filled in
- *
- * @return int
- * @retval 0 - success
- * @retval non-zero - decode failure error from a DIS routine
- */
-int
-decode_DIS_CopyFiles_Cred(int sock, struct batch_request *preq)
-{
-	int			pair_ct;
-	struct rq_cpyfile_cred	*pcfc;
-	struct rqfpair		*ppair;
-	int			rc;
-
-	pcfc = &preq->rq_ind.rq_cpyfile_cred;
-	CLEAR_HEAD(pcfc->rq_copyfile.rq_pair);
-	if ((rc = disrfst(sock, PBS_MAXSVRJOBID, pcfc->rq_copyfile.rq_jobid))
-		!= 0)
-		return rc;
-	if ((rc = disrfst(sock, PBS_MAXUSER, pcfc->rq_copyfile.rq_owner)) != 0)
-		return rc;
-	if ((rc = disrfst(sock, PBS_MAXUSER, pcfc->rq_copyfile.rq_user))  != 0)
-		return rc;
-	if ((rc = disrfst(sock, PBS_MAXGRPN, pcfc->rq_copyfile.rq_group)) != 0)
-		return rc;
-	pcfc->rq_copyfile.rq_dir = disrui(sock, &rc);
-	if (rc) return rc;
-
-	pair_ct = disrui(sock, &rc);
-	if (rc) return rc;
-
-	while (pair_ct--) {
-
-		ppair = (struct rqfpair *)malloc(sizeof(struct rqfpair));
-		if (ppair == NULL)
-			return DIS_NOMALLOC;
-		CLEAR_LINK(ppair->fp_link);
-		ppair->fp_local = 0;
-		ppair->fp_rmt   = 0;
-
-		ppair->fp_flag = disrui(sock, &rc);
-		if (rc) {
-			(void)free(ppair);
-			return rc;
-		}
-		ppair->fp_local = disrst(sock, &rc);
-		if (rc) {
-			(void)free(ppair);
-			return rc;
-		}
-		ppair->fp_rmt = disrst(sock, &rc);
-		if (rc) {
-			(void)free(ppair->fp_local);
-			(void)free(ppair);
-			return rc;
-		}
-		append_link(&pcfc->rq_copyfile.rq_pair,
-			&ppair->fp_link, ppair);
-	}
-
-	pcfc->rq_credtype = disrui(sock, &rc);
-	if (rc) return rc;
-	pcfc->rq_pcred = disrcs(sock, &pcfc->rq_credlen, &rc);
-	if (rc) return rc;
-
-	return 0;
-}
 
 /**
  * @brief
@@ -457,9 +280,10 @@ decode_DIS_replySvrTPP(int sock, struct batch_reply *reply)
 int
 wire_request_read(void *buf, breq *request)
 {
-	int proto_type;
-	int proto_ver;
-	int rc;
+	int proto_type = 0;
+	int proto_ver = 0;
+	int rc = PBSE_NONE;
+	void *body = NULL;
 
 	/* Decode the Request Header, that will tell the request type */
 	rc = wire_decode_reqhdr(buf, request, &proto_type, &proto_ver);
@@ -468,6 +292,8 @@ wire_request_read(void *buf, breq *request)
 				"Req Header bad, errno %d, wire error %d", errno, rc);
 		return PBSE_PROTOCOL;
 	}
+
+	body = (void *)ns(Req_body((ns(Req_table_t))buf));
 
 	/* Decode the Request Body based on the type */
 	switch (request->rq_type) {
@@ -479,26 +305,26 @@ wire_request_read(void *buf, breq *request)
 
 		case PBS_BATCH_QueueJob:
 		case PBS_BATCH_SubmitResv:
-			rc = wire_decode_queuejob(buf, request);
+			rc = wire_decode_queuejob(body, request);
 			break;
 
 		case PBS_BATCH_JobCred:
-			rc = wire_decode_jobcred(buf, request);
+			rc = wire_decode_jobcred(body, request);
 			break;
 
 		case PBS_BATCH_UserCred:
-			rc = wire_decode_usercred(buf, request);
+			rc = wire_decode_usercred(body, request);
 			break;
 
 		case PBS_BATCH_jobscript:
 		case PBS_BATCH_MvJobFile:
-			rc = wire_decode_jobfile(buf, request);
+			rc = wire_decode_jobfile(body, request);
 			break;
 
 		case PBS_BATCH_RdytoCommit:
 		case PBS_BATCH_Commit:
 		case PBS_BATCH_Rerun:
-			rc = wire_decode_jobid(buf, request);
+			rc = wire_decode_jobid(body, request);
 			break;
 
 		case PBS_BATCH_DeleteJob:
@@ -507,67 +333,68 @@ wire_request_read(void *buf, breq *request)
 		case PBS_BATCH_HoldJob:
 		case PBS_BATCH_ModifyJob:
 		case PBS_BATCH_ModifyJob_Async:
-			rc = wire_decode_manage(buf, request);
+			rc = wire_decode_manage(body, request);
 			break;
 
 		case PBS_BATCH_MessJob:
-			rc = wire_decode_messagejob(buf, request);
+			rc = wire_decode_messagejob(body, request);
 			break;
 
 		case PBS_BATCH_Shutdown:
 		case PBS_BATCH_FailOver:
-			rc = wire_decode_shutdown(buf, request);
+			rc = wire_decode_shutdown(body, request);
 			break;
 
 		case PBS_BATCH_SignalJob:
-			rc = wire_decode_signaljob(buf, request);
+			rc = wire_decode_signaljob(body, request);
 			break;
 
 		case PBS_BATCH_StatusJob:
-			rc = wire_decode_status(buf, request);
+			rc = wire_decode_status(body, request);
 			break;
 
 		case PBS_BATCH_PySpawn:
-			rc = wire_decode_pyspawn(buf, request);
+			rc = wire_decode_pyspawn(body, request);
 			break;
 
 		case PBS_BATCH_Authenticate:
-			rc = wire_decode_authenticate(buf, request);
+			rc = wire_decode_authenticate(body, request);
 			break;
 
 #ifndef PBS_MOM
 		case PBS_BATCH_RelnodesJob:
-			rc = wire_decode_relnodesjob(buf, request);
+			rc = wire_decode_relnodesjob(body, request);
 			break;
 
 		case PBS_BATCH_LocateJob:
-			rc = wire_decode_jobid(buf, request);
+			rc = wire_decode_jobid(body, request);
 			break;
 
 		case PBS_BATCH_Manager:
 		case PBS_BATCH_ReleaseJob:
-			rc = wire_decode_manage(buf, request);
+		case PBS_BATCH_ModifyResv:
+			rc = wire_decode_manage(body, request);
 			break;
 
 		case PBS_BATCH_MoveJob:
 		case PBS_BATCH_OrderJob:
-			rc = wire_decode_movejob(buf, request);
+			rc = wire_decode_movejob(body, request);
 			break;
 
 		case PBS_BATCH_RunJob:
 		case PBS_BATCH_AsyrunJob:
 		case PBS_BATCH_StageIn:
 		case PBS_BATCH_ConfirmResv:
-			rc = wire_decode_run(buf, request);
+			rc = wire_decode_run(body, request);
 			break;
 
 		case PBS_BATCH_DefSchReply:
-			rc = wire_decode_defschreply(buf, request);
+			rc = wire_decode_defschreply(body, request);
 			break;
 
 		case PBS_BATCH_SelectJobs:
 		case PBS_BATCH_SelStat:
-			rc = wire_decode_selectjob(buf, request);
+			rc = wire_decode_selectjob(body, request);
 			break;
 
 		case PBS_BATCH_StatusNode:
@@ -577,68 +404,63 @@ wire_request_read(void *buf, breq *request)
 		case PBS_BATCH_StatusSched:
 		case PBS_BATCH_StatusRsc:
 		case PBS_BATCH_StatusHook:
-			rc = wire_decode_status(buf, request);
+			rc = wire_decode_status(body, request);
 			break;
 
 		case PBS_BATCH_TrackJob:
-			rc = decode_DIS_TrackJob(sfds, request);
+			rc = wire_decode_trackjob(body, request);
 			break;
 
 		case PBS_BATCH_Rescq:
 		case PBS_BATCH_ReserveResc:
 		case PBS_BATCH_ReleaseResc:
-			rc = decode_DIS_Rescl(sfds, request);
+			rc = wire_decode_rescq(body, request);
 			break;
 
 		case PBS_BATCH_RegistDep:
-			rc = decode_DIS_Register(sfds, request);
-			break;
-
-		case PBS_BATCH_ModifyResv:
-			decode_DIS_ModifyResv(sfds, request);
+			rc = wire_decode_register(body, request);
 			break;
 
 		case PBS_BATCH_PreemptJobs:
-			decode_DIS_PreemptJobs(sfds, request);
+			rc = wire_decode_preemptjobs(body, request);
 			break;
 
 #else	/* yes PBS_MOM */
 
 		case PBS_BATCH_CopyHookFile:
-			rc = decode_DIS_CopyHookFile(sfds, request);
+			rc = wire_decode_copyhookfile(body, request);
 			break;
 
 		case PBS_BATCH_DelHookFile:
-			rc = decode_DIS_DelHookFile(sfds, request);
+			rc = wire_decode_delhookfile(body, request);
 			break;
 
 		case PBS_BATCH_CopyFiles:
 		case PBS_BATCH_DelFiles:
-			rc = decode_DIS_CopyFiles(sfds, request);
+			rc = wire_decode_copyfiles(body, request);
 			break;
 
 		case PBS_BATCH_CopyFiles_Cred:
 		case PBS_BATCH_DelFiles_Cred:
-			rc = decode_DIS_CopyFiles_Cred(sfds, request);
+			rc = wire_decode_copyfiles_cred(body, request);
 			break;
+
 		case PBS_BATCH_Cred:
-			rc = decode_DIS_Cred(sfds, request);
+			rc = wire_decode_cred(body, request);
 			break;
 
 #endif	/* PBS_MOM */
 
 		default:
-			sprintf(log_buffer, "%s: %d from %s", msg_nosupport,
-				request->rq_type, request->rq_user);
-			log_event(PBSEVENT_DEBUG, PBS_EVENTCLASS_REQUEST, LOG_DEBUG,
-				"?", log_buffer);
+			log_eventf(PBSEVENT_DEBUG, PBS_EVENTCLASS_REQUEST, LOG_DEBUG, __func__,
+					"%s: %d from %s", msg_nosupport, request->rq_type, request->rq_user);
 			rc = PBSE_UNKREQ;
 			break;
 	}
 
 	if (rc == PBSE_NONE) {
 		/* Decode the Request Extension, if present */
-		rc = decode_DIS_ReqExtend(sfds, request);
+		rc = wire_decode_reqextend(buf, request);
 		if (rc != PBSE_NONE) {
 			log_eventf(PBSEVENT_DEBUG, PBS_EVENTCLASS_REQUEST, LOG_DEBUG, __func__,
 					"Request type: %d Req Extension bad, error %d", request->rq_type, rc);

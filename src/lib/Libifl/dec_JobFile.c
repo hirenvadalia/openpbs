@@ -53,7 +53,7 @@
 int
 wire_decode_jobfile(void *buf, breq *request)
 {
-	ns(JobFile_table_t) B = (ns(JobFile_table_t)) ns(Req_body((ns(Req_table_t))buf));
+	ns(JobFile_table_t) B = (ns(JobFile_table_t))buf;
 
 	request->rq_ind.rq_jobfile.rq_sequence = (int) ns(JobFile_seq(B));
 	request->rq_ind.rq_jobfile.rq_type = (int) ns(JobFile_type(B));
