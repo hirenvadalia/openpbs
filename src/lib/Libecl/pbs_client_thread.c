@@ -59,18 +59,6 @@
 
 /**
  * @brief
- *	initializes the dis static tables for future use
- *
- * @par Functionality:
- *	Initializes the dis static tables for future use\n
- *	This is called only once from @see __init_thread_data via
- *	the pthread_once mechanism
- */
-extern void dis_init_tables(void);
-extern long dis_buffsize; /* defn of DIS_BUFSZ in dis headers */
-
-/**
- * @brief
  *	Function to free the node pool structure
  *
  * @par Functionality:
@@ -272,12 +260,6 @@ __pbs_client_thread_init_thread_context_single_threaded(void)
 	/* initialize any elements of the single_threaded_context */
 	memset(ptr, 0, sizeof(struct pbs_client_thread_context));
 
-	ptr->th_dis_buffer = calloc(1, dis_buffsize); /* defined in tcp_dis.c */
-	if (ptr->th_dis_buffer == NULL) {
-		pbs_errno = PBSE_SYSTEM;
-		return -1;
-	}
-
 	/* set any default values for the TLS vars */
 	ptr->th_pbs_tcp_timeout = PBS_DIS_TCP_TIMEOUT_SHORT;
 	ptr->th_pbs_tcp_interrupt = 0;
@@ -292,8 +274,6 @@ __pbs_client_thread_init_thread_context_single_threaded(void)
 		return -1;
 	}
 	strcpy(ptr->th_pbs_current_user, pw->pw_name);
-
-	dis_init_tables();
 
 	single_threaded_init_done = 1;
 	ptr->th_pbs_mode = 1; /* single threaded */
@@ -366,7 +346,7 @@ pbs_client_thread_set_single_threaded_mode(void)
  *	This is the function called by pthread_once mechanism exactly once in
  *	the process lifetime from "__pbs_client_thread_init_thread_context".
  *
- * @see __pbs_client_thread_init_thread_context\n __post_init_thread_data
+ * @see __pbs_client_thread_init_thread_context\n
  *
  * @return	void
  *
@@ -440,46 +420,15 @@ __init_thread_data(void)
 
 /**
  * @brief
- *	Post initialization routine
- *
- * @par Functionality:
- *	1. Initializes the dis tables, by calling the function dis_init_tables.
- *	This is the function called by pthread_once mechanism exactly once in
- *	the process lifetime from "__pbs_client_thread_init_thread_context".
- *
- * @see __pbs_client_thread_init_thread_context\n __init_thread_data
- *
- * @note
- *	Called at the end of the __pbs_client_thread_init_thread_context.
- *      The reason is that the functionality depends on TLS data area set by
- *      __pbs_thead_init_context.
- *
- *
- * @return	void
- *
- * @par Reentrancy:
- *	MT unsafe - must be called via pthread_once()
- */
-static void
-__post_init_thread_data(void)
-{
-	dis_init_tables();
-}
-
-/**
- * @brief
  *	Initialize the thread context
  *
  * @par Functionality:
  *      1. Calls __init_thread_data via pthread_once to init mutexes/TLS key \n
  *      2. If TLS data is not already created, then create it \n
- *      3. Finally calls __post_init_thread_data function via pthread_once
- *         to ensure that the dis tables are initialized only once in the
- *         process lifetime. \n
  *	All external API calls should call this function first before calling
  *	any other pbs_client_thread_ functions.
  *
- * @see __init_thread_data\n __post_init_thread_data
+ * @see __init_thread_data\n
  *
  * @return	int
  *
@@ -528,14 +477,6 @@ __pbs_client_thread_init_thread_context(void)
 	ptr->th_pbs_tcp_interrupt = 0;
 	ptr->th_pbs_tcp_errno = 0;
 
-	/* initialize any elements of the ptr */
-	ptr->th_dis_buffer = calloc(1, dis_buffsize); /* defined in tcp_dis.c */
-	if (ptr->th_dis_buffer == NULL) {
-		free_ptr = 1;
-		ret = PBSE_SYSTEM;
-		goto err;
-	}
-
 	/*
 	 * synchronize this part, since the getuid, getpwuid functions are not
 	 * thread-safe
@@ -577,11 +518,6 @@ __pbs_client_thread_init_thread_context(void)
 		goto err;
 	}
 
-	if (pthread_once(&post_init_key_once, __post_init_thread_data) != 0) {
-		ret = PBSE_SYSTEM;
-		goto err;
-	}
-
 	return 0;
 
 err:
@@ -598,7 +534,6 @@ err:
 	 */
 	pbs_client_thread_set_single_threaded_mode();
 	if (free_ptr) {
-		free(ptr->th_dis_buffer);
 		free(ptr);
 	}
 	pbs_errno = ret; /* set the errno so that client can access it */
@@ -675,17 +610,13 @@ static void
 __pbs_client_thread_destroy_thread_data(void *p)
 {
 	struct pbs_client_thread_connect_context *th_conn, *temp;
-	struct pbs_client_thread_context *ptr =
-		(struct pbs_client_thread_context *) p;
+	struct pbs_client_thread_context *ptr = (struct pbs_client_thread_context *) p;
 
 	if (ptr) {
 		free_errlist(ptr->th_errlist);
 
 		if (ptr->th_cred_info)
 			free(ptr->th_cred_info);
-
-		if (ptr->th_dis_buffer)
-			free(ptr->th_dis_buffer);
 
 		free_node_pool(ptr->th_node_pool);
 
@@ -1167,34 +1098,6 @@ __pbs_client_thread_unlock_conf(void)
 		return pbs_errno;
 	}
 	return 0;
-}
-
-/**
- * @brief
- *	Returns the address of dis_buffer used in dis communication.
- *
- * @par Functionality:
- *	This function returns the address of the per thread dis_buffer location
- *	from the TLS by calling @see __pbs_client_thread_get_context_data
- *
- * @retval	Address of the dis_buffer from TLS (success)
- *
- * @par Side-effects:
- *	None
- *
- * @par Reentrancy:
- *	Reentrant
- */
-char *
-__dis_buffer_location(void)
-{
-	/*
-	 * returns real thread context or data from a global structure
-	 * called local_thread_context
-	 */
-	struct pbs_client_thread_context *p =
-		pbs_client_thread_get_context_data();
-	return (p->th_dis_buffer);
 }
 
 
