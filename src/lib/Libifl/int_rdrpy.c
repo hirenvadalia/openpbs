@@ -86,12 +86,11 @@ PBSD_rdrpy_sock(int sock, int *rc)
 	if (pbs_tcp_timeout < PBS_DIS_TCP_TIMEOUT_LONG)
 		pbs_tcp_timeout = PBS_DIS_TCP_TIMEOUT_LONG;
 
-	if ((*rc = decode_DIS_replyCmd(sock, reply)) != 0) {
+	if ((*rc = wire_decode_batch_reply(sock, reply, FALSE)) != PBSE_NONE) {
 		(void)free(reply);
 		pbs_errno = PBSE_PROTOCOL;
 		return NULL;
 	}
-	dis_reset_buf(sock, DIS_READ_BUF);
 	pbs_tcp_timeout = old_timeout;
 
 	pbs_errno = reply->brp_code;

@@ -65,6 +65,7 @@ extern "C" {
 
 #define PBSE_	15000
 
+#define PBSE_EOF        -1		/* EOF error */
 #define PBSE_NONE       0		/* no error */
 #define PBSE_UNKJOBID	15001		/* Unknown Job Identifier */
 #define PBSE_NOATTR	15002		/* Undefined Attribute */

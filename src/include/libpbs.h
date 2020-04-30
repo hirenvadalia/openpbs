@@ -58,8 +58,6 @@ extern "C" {
 #define PROT_TCP 0 /* For TCP based connection */
 #define PROT_TPP 1 /* For TPP based connection */
 
-#define PBS_BATCH_PROT_TYPE 2
-#define PBS_BATCH_PROT_VER  1
 #define SCRIPT_CHUNK_Z (65536)
 #ifndef TRUE
 #define TRUE  1
@@ -170,7 +168,6 @@ extern preempt_job_info *PBSD_preempt_jobs(int, char **);
 extern struct batch_status *PBSD_status_get(int);
 extern char * PBSD_queuejob(int, char *, char *, struct attropl *, char *, int, char **);
 extern int decode_DIS_attrl(int, struct attrl **);
-extern int decode_DIS_replyCmd(int, struct batch_reply *);
 extern int encode_DIS_JobCred(int, int, char *, int);
 extern int encode_DIS_UserCred(int, char *, int, char *, int);
 extern int encode_DIS_JobFile(int, int, char *, int, char *, int);
@@ -197,7 +194,6 @@ extern int encode_DIS_CopyHookFile(int, int, char *, int, char *);
 extern int encode_DIS_DelHookFile(int, char *);
 extern int encode_DIS_PreemptJobs(int, char **);
 extern char *PBSD_submit_resv(int, char *, struct attropl *, char *);
-extern int DIS_reply_read(int, struct batch_reply *, int);
 extern void pbs_authors(void);
 extern int tcp_pre_process(conn_t *);
 extern char *PBSD_modify_resv(int, char *, struct attropl *, char *);

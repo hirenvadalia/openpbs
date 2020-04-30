@@ -624,11 +624,11 @@ read_reg_reply(int sock)
 	fo_reply.brp_choice = BATCH_REPLY_CHOICE_NULL;
 	fo_reply.brp_un.brp_txt.brp_txtlen = 0;
 	fo_reply.brp_un.brp_txt.brp_str    = 0;
-	rc = DIS_reply_read(sock, &fo_reply, 0);
+	rc = wire_decode_batch_reply(sock, &fo_reply, TRUE);
 
-	if ((rc != 0) || (fo_reply.brp_code != 0)) {
+	if ((rc != PBSE_NONE) || (fo_reply.brp_code != 0)) {
 		DBPRT(("Failover: received invalid reply: non-zero code or EOF\n"))
-		if ((rc == DIS_EOD) && (Secondary_state == SECONDARY_STATE_regsent)) {
+		if ((rc == PBSE_EOF) && (Secondary_state == SECONDARY_STATE_regsent)) {
 			/* EOD/EOF on read of reply to register message,  */
 			/* go ahead and take over as primary must be down */
 			/* as we had successfully connected		  */

@@ -47,6 +47,9 @@ extern "C" {
 
 #define PBS_SIGNAMESZ 16
 
+#define PBS_BATCH_PROT_TYPE 2
+#define PBS_BATCH_PROT_VER  1
+
 #define BATCH_REPLY_CHOICE_NULL		1	/* no reply choice, just code */
 #define BATCH_REPLY_CHOICE_Queue	2	/* Job ID, see brp_jid */
 #define BATCH_REPLY_CHOICE_RdytoCom	3	/* select, see brp_jid */
@@ -519,9 +522,7 @@ extern void req_cred(struct batch_request *);
 #endif
 #endif
 
-/* PBS Batch Request Decode/Encode routines */
-extern int decode_DIS_replySvr(int, struct batch_reply *);
-
+/* PBS Batch Request Encode routines */
 extern int encode_DIS_failover(int, struct batch_request *);
 extern int encode_DIS_CopyFiles(int, struct batch_request *);
 extern int encode_DIS_CopyFiles_Cred(int, struct batch_request *);
@@ -532,7 +533,6 @@ extern int encode_DIS_reply(int, struct batch_reply *);
 extern int encode_DIS_replyTPP(int, char *, struct batch_reply *);
 extern int encode_DIS_svrattrl(int, svrattrl *);
 extern int encode_DIS_Cred(int, char *, char *, int, char *, size_t, long);
-extern int dis_reply_read(int, struct batch_reply *, int);
 
 #ifdef __cplusplus
 }

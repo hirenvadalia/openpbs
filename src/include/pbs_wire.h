@@ -111,7 +111,6 @@ int (*pfn_transport_send)(int, void *, int);
 extern int wire_decode_svrattrl(void *, pbs_list_head *);
 
 extern int wire_decode_batch_request(void *, breq *);
-
 extern int wire_decode_batch_req_hdr(void *, breq *, int *, int *);
 extern int wire_decode_batch_req_extend(void *, breq *);
 extern int wire_decode_batch_req_queuejob(void *, breq *);
@@ -140,6 +139,8 @@ extern int wire_decode_batch_req_delhookfile(void *, breq *);
 extern int wire_decode_batch_req_copyfiles(void *, breq *);
 extern int wire_decode_batch_req_copyfiles_cred(void *, breq *);
 extern int wire_decode_batch_req_cred(void *, breq *);
+
+extern int wire_decode_batch_reply(void *, breply *, int);
 
 #ifdef	__cplusplus
 }

@@ -545,7 +545,7 @@ return_file(job *pjob, enum job_file which, int sock)
 
 		dis_flush(sock);
 
-		if ((DIS_reply_read(sock, &prq->rq_reply, 0) != 0) ||
+		if ((wire_decode_batch_reply(sock, &prq->rq_reply, TRUE) != PBSE_NONE) ||
 			(prq->rq_reply.brp_code != 0)) {
 			rc = -1;
 			break;

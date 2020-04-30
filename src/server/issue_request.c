@@ -780,7 +780,7 @@ process_Dreply(int sock)
 
 	pbs_tcp_timeout = PBS_DIS_TCP_TIMEOUT_LONG;
 
-	if ((rc = DIS_reply_read(sock, &request->rq_reply, 0)) != 0) {
+	if ((rc = wire_decode_batch_reply(sock, &request->rq_reply, TRUE)) != PBSE_NONE) {
 		close_conn(sock);
 		request->rq_reply.brp_code = rc;
 		request->rq_reply.brp_choice = BATCH_REPLY_CHOICE_NULL;
@@ -876,7 +876,7 @@ process_DreplyTPP(int handle)
 				}
 
 				/* read and decode the reply */
-				if ((rc = DIS_reply_read(handle, reply, 1)) != 0) {
+				if ((rc = wire_decode_batch_reply(handle, reply, TRUE)) != PBSE_NONE) {
 					reply->brp_code = rc;
 					reply->brp_choice = BATCH_REPLY_CHOICE_NULL;
 					ptask->wt_aux = PBSE_NORELYMOM;

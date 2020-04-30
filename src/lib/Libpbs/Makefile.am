@@ -135,7 +135,7 @@ libpbs_la_SOURCES = \
 	../Libifl/dec_Track.c \
 	../Libifl/dec_attrl.c \
 	../Libifl/dec_attropl.c \
-	../Libifl/dec_rpyc.c \
+	../Libifl/dec_reply.c \
 	../Libifl/dec_svrattrl.c \
 	../Libifl/dec_PreemptJobs.c \
 	../Libifl/enc_CopyHookFile.c \
