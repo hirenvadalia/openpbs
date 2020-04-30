@@ -51,7 +51,7 @@
  *
  */
 int
-wire_decode_run(void *buf, breq *request)
+wire_decode_batch_run(void *buf, breq *request)
 {
 	ns(Run_table_t) B = (ns(Run_table_t))buf;
 

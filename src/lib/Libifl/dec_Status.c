@@ -51,7 +51,7 @@
  *
  */
 int
-wire_decode_status(void *buf, breq *request)
+wire_decode_batch_status(void *buf, breq *request)
 {
 	ns(Stat_table_t) B = (ns(Stat_table_t))buf;
 

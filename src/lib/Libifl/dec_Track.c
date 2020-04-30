@@ -51,7 +51,7 @@
  *
  */
 int
-wire_decode_trackjob(void *buf, breq *request)
+wire_decode_batch_trackjob(void *buf, breq *request)
 {
 	ns(Track_table_t) B = (ns(Track_table_t))buf;
 

@@ -466,7 +466,7 @@ process_IS_CMD(int stream)
 	request->prot = PROT_TPP;
 	request->tppcmd_msgid = msgid;
 
-	rc = wire_request_read(stream, request);
+	rc = wire_decode_batch_request(stream, request);
 	if (rc != 0) {
 		close(stream);
 		free_br(request);

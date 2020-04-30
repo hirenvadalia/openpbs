@@ -51,7 +51,7 @@
  *
  */
 int
-wire_decode_relnodesjob(void *buf, breq *request)
+wire_decode_batch_relnodesjob(void *buf, breq *request)
 {
 	ns(RelNodes_table_t) B = (ns(RelNodes_table_t))buf;
 

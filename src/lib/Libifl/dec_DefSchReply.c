@@ -51,7 +51,7 @@
  *
  */
 int
-wire_decode_defschreply(void *buf, breq *request)
+wire_decode_batch_defschreply(void *buf, breq *request)
 {
 	ns(SchedDefRep_table_t) B = (ns(SchedDefRep_table_t))buf;
 

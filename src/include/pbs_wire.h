@@ -107,37 +107,39 @@ int (*pfn_transport_send)(int, void *, int);
 #define transport_get_chan(x) (*pfn_transport_get_chan)(x)
 #define transport_set_chan(x, y) (*pfn_transport_set_chan)(x, y)
 
-extern int wire_request_read(void *, breq *);
 
-extern int wire_decode_reqhdr(void *, breq *, int *, int *);
-extern int wire_decode_reqextend(void *, breq *);
 extern int wire_decode_svrattrl(void *, pbs_list_head *);
-extern int wire_decode_queuejob(void *, breq *);
-extern int wire_decode_jobcred(void *, breq *);
-extern int wire_decode_usercred(void *, breq *);
-extern int wire_decode_jobfile(void *, breq *);
-extern int wire_decode_jobid(void *, breq *);
-extern int wire_decode_manage(void *, breq *);
-extern int wire_decode_messagejob(void *, breq *);
-extern int wire_decode_shutdown(void *, breq *);
-extern int wire_decode_signaljob(void *, breq *);
-extern int wire_decode_status(void *, breq *);
-extern int wire_decode_pyspawn(void *, breq *);
-extern int wire_decode_authenticate(void *, breq *);
-extern int wire_decode_relnodesjob(void *, breq *);
-extern int wire_decode_movejob(void *, breq *);
-extern int wire_decode_run(void *, breq *);
-extern int wire_decode_defschreply(void *, breq *);
-extern int wire_decode_selectjob(void *, breq *);
-extern int wire_decode_trackjob(void *, breq *);
-extern int wire_decode_rescq(void *, breq *);
-extern int wire_decode_register(void *, breq *);
-extern int wire_decode_preemptjobs(void *, breq *);
-extern int wire_decode_copyhookfile(void *, breq *);
-extern int wire_decode_delhookfile(void *, breq *);
-extern int wire_decode_copyfiles(void *, breq *);
-extern int wire_decode_copyfiles_cred(void *, breq *);
-extern int wire_decode_cred(void *, breq *);
+
+extern int wire_decode_batch_request(void *, breq *);
+
+extern int wire_decode_batch_reqhdr(void *, breq *, int *, int *);
+extern int wire_decode_batch_reqextend(void *, breq *);
+extern int wire_decode_batch_queuejob(void *, breq *);
+extern int wire_decode_batch_jobcred(void *, breq *);
+extern int wire_decode_batch_usercred(void *, breq *);
+extern int wire_decode_batch_jobfile(void *, breq *);
+extern int wire_decode_batch_jobid(void *, breq *);
+extern int wire_decode_batch_manage(void *, breq *);
+extern int wire_decode_batch_messagejob(void *, breq *);
+extern int wire_decode_batch_shutdown(void *, breq *);
+extern int wire_decode_batch_signaljob(void *, breq *);
+extern int wire_decode_batch_status(void *, breq *);
+extern int wire_decode_batch_pyspawn(void *, breq *);
+extern int wire_decode_batch_authenticate(void *, breq *);
+extern int wire_decode_batch_relnodesjob(void *, breq *);
+extern int wire_decode_batch_movejob(void *, breq *);
+extern int wire_decode_batch_run(void *, breq *);
+extern int wire_decode_batch_defschreply(void *, breq *);
+extern int wire_decode_batch_selectjob(void *, breq *);
+extern int wire_decode_batch_trackjob(void *, breq *);
+extern int wire_decode_batch_rescq(void *, breq *);
+extern int wire_decode_batch_register(void *, breq *);
+extern int wire_decode_batch_preemptjobs(void *, breq *);
+extern int wire_decode_batch_copyhookfile(void *, breq *);
+extern int wire_decode_batch_delhookfile(void *, breq *);
+extern int wire_decode_batch_copyfiles(void *, breq *);
+extern int wire_decode_batch_copyfiles_cred(void *, breq *);
+extern int wire_decode_batch_cred(void *, breq *);
 
 #ifdef	__cplusplus
 }

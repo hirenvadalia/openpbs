@@ -51,7 +51,7 @@
  *
  */
 int
-wire_decode_selectjob(void *buf, breq *request)
+wire_decode_batch_selectjob(void *buf, breq *request)
 {
 	int rc = PBSE_NONE;
 	ns(Select_table_t) B = (ns(Select_table_t))buf;

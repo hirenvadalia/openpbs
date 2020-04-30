@@ -51,7 +51,7 @@
  *
  */
 int
-wire_decode_preemptjobs(void *buf, breq *request)
+wire_decode_batch_preemptjobs(void *buf, breq *request)
 {
 	int i = 0;
 	ns(Preempt_table_t) B = (ns(Preempt_table_t))buf;

@@ -51,7 +51,7 @@
  *
  */
 int
-wire_decode_register(void *buf, breq *request)
+wire_decode_batch_register(void *buf, breq *request)
 {
 	ns(Register_table_t) B = (ns(Register_table_t))buf;
 

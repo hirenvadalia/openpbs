@@ -51,7 +51,7 @@
  *
  */
 int
-wire_decode_copyhookfile(void *buf, breq *request)
+wire_decode_batch_copyhookfile(void *buf, breq *request)
 {
 	ns(CopyHook_table_t) B = (ns(CopyHook_table_t))buf;
 

@@ -53,7 +53,7 @@
  *
  */
 int
-wire_decode_reqhdr(void *buf, breq *request, int *proto_type, int *proto_ver)
+wire_decode_batch_reqhdr(void *buf, breq *request, int *proto_type, int *proto_ver)
 {
 	ns(Header_table_t) hdr = ns(Req_hdr((ns(Req_table_t))buf));
 

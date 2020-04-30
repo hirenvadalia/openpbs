@@ -53,7 +53,7 @@
  * @retval !PBS_NONE - failure
  */
 static int
-__wire_decode_copyfiles_helper(ns(CopyFile_table_t) B, struct rq_cpyfile *pcf)
+__wire_decode_batch_copyfiles_helper(ns(CopyFile_table_t) B, struct rq_cpyfile *pcf)
 {
 	int pair_ct = 0;
 	struct rqfpair *ppair = NULL;
@@ -114,11 +114,11 @@ __wire_decode_copyfiles_helper(ns(CopyFile_table_t) B, struct rq_cpyfile *pcf)
  *
  */
 int
-wire_decode_copyfiles(void *buf, breq *request)
+wire_decode_batch_copyfiles(void *buf, breq *request)
 {
 	ns(CopyHook_table_t) B = (ns(CopyHook_table_t))buf;
 
-	return __wire_decode_copyfiles_helper(B, &(request->rq_ind.rq_cpyfile));
+	return __wire_decode_batch_copyfiles_helper(B, &(request->rq_ind.rq_cpyfile));
 }
 
 /**
@@ -134,7 +134,7 @@ wire_decode_copyfiles(void *buf, breq *request)
  *
  */
 int
-wire_decode_copyfiles_cred(void *buf, breq *request)
+wire_decode_batch_copyfiles_cred(void *buf, breq *request)
 {
 	flatbuffers_string_t cred;
 	ns(CopyFileCred_table_t) B = (ns(CopyFileCred_table_t))buf;
@@ -143,5 +143,5 @@ wire_decode_copyfiles_cred(void *buf, breq *request)
 	cred = ns(CopyFileCred_cred(B));
 	request->rq_ind.rq_cpyfile_cred.rq_credlen = flatbuffers_string_len(cred);
 	COPYSTR_M(request->rq_ind.rq_cpyfile_cred.rq_pcred, cred, request->rq_ind.rq_cpyfile_cred.rq_credlen);
-	return __wire_decode_copyfiles_helper(ns(CopyFileCred_files(B)), &(request->rq_ind.rq_cpyfile_cred.rq_copyfile));
+	return __wire_decode_batch_copyfiles_helper(ns(CopyFileCred_files(B)), &(request->rq_ind.rq_cpyfile_cred.rq_copyfile));
 }

@@ -324,7 +324,7 @@ process_request(int sfds)
 	 * and decode it to the internal request structure.
 	 */
 	// FIXME: get pkt here and verify it
-	rc = wire_request_read(buf, request);
+	rc = wire_decode_batch_request(buf, request);
 	// FIXME: free buffer here if needed
 	if (rc == -1) { /* End of file */
 		close_client(sfds);

@@ -51,7 +51,7 @@
  *
  */
 int
-wire_decode_manage(void *buf, breq *request)
+wire_decode_batch_manage(void *buf, breq *request)
 {
 	ns(Manage_table_t) B = (ns(Manage_table_t))buf;
 

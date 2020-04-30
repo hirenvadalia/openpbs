@@ -51,7 +51,7 @@
  *
  */
 int
-wire_decode_rescq(void *buf, breq *request)
+wire_decode_batch_rescq(void *buf, breq *request)
 {
 	ns(RescQuery_table_t) B = (ns(RescQuery_table_t))buf;
 	int i = 0;
