@@ -51,7 +51,7 @@
  *
  */
 int
-wire_decode_batch_pyspawn(void *buf, breq *request)
+wire_decode_batch_req_pyspawn(void *buf, breq *request)
 {
 	int i;
 	size_t len;

@@ -51,7 +51,7 @@
  *
  */
 int
-wire_decode_batch_authenticate(void *buf, breq *request)
+wire_decode_batch_req_authenticate(void *buf, breq *request)
 {
 	ns(Auth_table_t) B = (ns(Auth_table_t))buf;
 

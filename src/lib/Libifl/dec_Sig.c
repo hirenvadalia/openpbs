@@ -51,7 +51,7 @@
  *
  */
 int
-wire_decode_batch_signaljob(void *buf, breq *request)
+wire_decode_batch_req_signaljob(void *buf, breq *request)
 {
 	ns(Signal_table_t) B = (ns(Signal_table_t))buf;
 

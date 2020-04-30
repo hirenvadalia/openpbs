@@ -51,7 +51,7 @@
  *
  */
 int
-wire_decode_batch_queuejob(void *buf, breq *request)
+wire_decode_batch_req_queuejob(void *buf, breq *request)
 {
 	ns(Qjob_table_t) B = (ns(Qjob_table_t))buf;
 

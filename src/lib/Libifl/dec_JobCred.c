@@ -51,7 +51,7 @@
  *
  */
 int
-wire_decode_batch_jobcred(void *buf, breq *request)
+wire_decode_batch_req_jobcred(void *buf, breq *request)
 {
 	ns(Cred_table_t) B = (ns(Cred_table_t))buf;
 

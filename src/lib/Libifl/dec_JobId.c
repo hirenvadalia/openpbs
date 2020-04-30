@@ -51,7 +51,7 @@
  *
  */
 int
-wire_decode_batch_jobid(void *buf, breq *request)
+wire_decode_batch_req_jobid(void *buf, breq *request)
 {
 	ns(JobId_table_t) B = (ns(JobId_table_t))buf;
 

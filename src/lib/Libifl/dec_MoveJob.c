@@ -51,7 +51,7 @@
  *
  */
 int
-wire_decode_batch_movejob(void *buf, breq *request)
+wire_decode_batch_req_movejob(void *buf, breq *request)
 {
 	ns(Move_table_t) B = (ns(Move_table_t))buf;
 

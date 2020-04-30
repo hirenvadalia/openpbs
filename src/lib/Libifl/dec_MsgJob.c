@@ -51,7 +51,7 @@
  *
  */
 int
-wire_decode_batch_messagejob(void *buf, breq *request)
+wire_decode_batch_req_messagejob(void *buf, breq *request)
 {
 	ns(Msg_table_t) B = (ns(Msg_table_t))buf;
 

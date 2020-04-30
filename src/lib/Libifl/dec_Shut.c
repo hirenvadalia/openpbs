@@ -51,7 +51,7 @@
  *
  */
 int
-wire_decode_batch_shutdown(void *buf, breq *request)
+wire_decode_batch_req_shutdown(void *buf, breq *request)
 {
 	ns(DmnCmd_table_t) B = (ns(DmnCmd_table_t))buf;
 

@@ -286,7 +286,7 @@ wire_decode_batch_request(void *buf, breq *request)
 	void *body = NULL;
 
 	/* Decode the Request Header, that will tell the request type */
-	rc = wire_decode_batch_reqhdr(buf, request, &proto_type, &proto_ver);
+	rc = wire_decode_batch_req_hdr(buf, request, &proto_type, &proto_ver);
 	if (rc != PBSE_NONE || proto_type != ns(ProtType_Batch) || proto_ver > PBS_BATCH_PROT_VER) {
 		log_eventf(PBSEVENT_DEBUG, PBS_EVENTCLASS_REQUEST, LOG_DEBUG, __func__,
 				"Req Header bad, errno %d, wire error %d", errno, rc);
@@ -305,26 +305,26 @@ wire_decode_batch_request(void *buf, breq *request)
 
 		case PBS_BATCH_QueueJob:
 		case PBS_BATCH_SubmitResv:
-			rc = wire_decode_batch_queuejob(body, request);
+			rc = wire_decode_batch_req_queuejob(body, request);
 			break;
 
 		case PBS_BATCH_JobCred:
-			rc = wire_decode_batch_jobcred(body, request);
+			rc = wire_decode_batch_req_jobcred(body, request);
 			break;
 
 		case PBS_BATCH_UserCred:
-			rc = wire_decode_batch_usercred(body, request);
+			rc = wire_decode_batch_req_usercred(body, request);
 			break;
 
 		case PBS_BATCH_jobscript:
 		case PBS_BATCH_MvJobFile:
-			rc = wire_decode_batch_jobfile(body, request);
+			rc = wire_decode_batch_req_jobfile(body, request);
 			break;
 
 		case PBS_BATCH_RdytoCommit:
 		case PBS_BATCH_Commit:
 		case PBS_BATCH_Rerun:
-			rc = wire_decode_batch_jobid(body, request);
+			rc = wire_decode_batch_req_jobid(body, request);
 			break;
 
 		case PBS_BATCH_DeleteJob:
@@ -333,68 +333,68 @@ wire_decode_batch_request(void *buf, breq *request)
 		case PBS_BATCH_HoldJob:
 		case PBS_BATCH_ModifyJob:
 		case PBS_BATCH_ModifyJob_Async:
-			rc = wire_decode_batch_manage(body, request);
+			rc = wire_decode_batch_req_manage(body, request);
 			break;
 
 		case PBS_BATCH_MessJob:
-			rc = wire_decode_batch_messagejob(body, request);
+			rc = wire_decode_batch_req_messagejob(body, request);
 			break;
 
 		case PBS_BATCH_Shutdown:
 		case PBS_BATCH_FailOver:
-			rc = wire_decode_batch_shutdown(body, request);
+			rc = wire_decode_batch_req_shutdown(body, request);
 			break;
 
 		case PBS_BATCH_SignalJob:
-			rc = wire_decode_batch_signaljob(body, request);
+			rc = wire_decode_batch_req_signaljob(body, request);
 			break;
 
 		case PBS_BATCH_StatusJob:
-			rc = wire_decode_batch_status(body, request);
+			rc = wire_decode_batch_req_status(body, request);
 			break;
 
 		case PBS_BATCH_PySpawn:
-			rc = wire_decode_batch_pyspawn(body, request);
+			rc = wire_decode_batch_req_pyspawn(body, request);
 			break;
 
 		case PBS_BATCH_Authenticate:
-			rc = wire_decode_batch_authenticate(body, request);
+			rc = wire_decode_batch_req_authenticate(body, request);
 			break;
 
 #ifndef PBS_MOM
 		case PBS_BATCH_RelnodesJob:
-			rc = wire_decode_batch_relnodesjob(body, request);
+			rc = wire_decode_batch_req_relnodesjob(body, request);
 			break;
 
 		case PBS_BATCH_LocateJob:
-			rc = wire_decode_batch_jobid(body, request);
+			rc = wire_decode_batch_req_jobid(body, request);
 			break;
 
 		case PBS_BATCH_Manager:
 		case PBS_BATCH_ReleaseJob:
 		case PBS_BATCH_ModifyResv:
-			rc = wire_decode_batch_manage(body, request);
+			rc = wire_decode_batch_req_manage(body, request);
 			break;
 
 		case PBS_BATCH_MoveJob:
 		case PBS_BATCH_OrderJob:
-			rc = wire_decode_batch_movejob(body, request);
+			rc = wire_decode_batch_req_movejob(body, request);
 			break;
 
 		case PBS_BATCH_RunJob:
 		case PBS_BATCH_AsyrunJob:
 		case PBS_BATCH_StageIn:
 		case PBS_BATCH_ConfirmResv:
-			rc = wire_decode_batch_run(body, request);
+			rc = wire_decode_batch_req_run(body, request);
 			break;
 
 		case PBS_BATCH_DefSchReply:
-			rc = wire_decode_batch_defschreply(body, request);
+			rc = wire_decode_batch_req_defschreply(body, request);
 			break;
 
 		case PBS_BATCH_SelectJobs:
 		case PBS_BATCH_SelStat:
-			rc = wire_decode_batch_selectjob(body, request);
+			rc = wire_decode_batch_req_selectjob(body, request);
 			break;
 
 		case PBS_BATCH_StatusNode:
@@ -404,49 +404,49 @@ wire_decode_batch_request(void *buf, breq *request)
 		case PBS_BATCH_StatusSched:
 		case PBS_BATCH_StatusRsc:
 		case PBS_BATCH_StatusHook:
-			rc = wire_decode_batch_status(body, request);
+			rc = wire_decode_batch_req_status(body, request);
 			break;
 
 		case PBS_BATCH_TrackJob:
-			rc = wire_decode_batch_trackjob(body, request);
+			rc = wire_decode_batch_req_trackjob(body, request);
 			break;
 
 		case PBS_BATCH_Rescq:
 		case PBS_BATCH_ReserveResc:
 		case PBS_BATCH_ReleaseResc:
-			rc = wire_decode_batch_rescq(body, request);
+			rc = wire_decode_batch_req_rescq(body, request);
 			break;
 
 		case PBS_BATCH_RegistDep:
-			rc = wire_decode_batch_register(body, request);
+			rc = wire_decode_batch_req_register(body, request);
 			break;
 
 		case PBS_BATCH_PreemptJobs:
-			rc = wire_decode_batch_preemptjobs(body, request);
+			rc = wire_decode_batch_req_preemptjobs(body, request);
 			break;
 
 #else	/* yes PBS_MOM */
 
 		case PBS_BATCH_CopyHookFile:
-			rc = wire_decode_batch_copyhookfile(body, request);
+			rc = wire_decode_batch_req_copyhookfile(body, request);
 			break;
 
 		case PBS_BATCH_DelHookFile:
-			rc = wire_decode_batch_delhookfile(body, request);
+			rc = wire_decode_batch_req_delhookfile(body, request);
 			break;
 
 		case PBS_BATCH_CopyFiles:
 		case PBS_BATCH_DelFiles:
-			rc = wire_decode_batch_copyfiles(body, request);
+			rc = wire_decode_batch_req_copyfiles(body, request);
 			break;
 
 		case PBS_BATCH_CopyFiles_Cred:
 		case PBS_BATCH_DelFiles_Cred:
-			rc = wire_decode_batch_copyfiles_cred(body, request);
+			rc = wire_decode_batch_req_copyfiles_cred(body, request);
 			break;
 
 		case PBS_BATCH_Cred:
-			rc = wire_decode_batch_cred(body, request);
+			rc = wire_decode_batch_req_cred(body, request);
 			break;
 
 #endif	/* PBS_MOM */
@@ -460,7 +460,7 @@ wire_decode_batch_request(void *buf, breq *request)
 
 	if (rc == PBSE_NONE) {
 		/* Decode the Request Extension, if present */
-		rc = wire_decode_batch_reqextend(buf, request);
+		rc = wire_decode_batch_req_extend(buf, request);
 		if (rc != PBSE_NONE) {
 			log_eventf(PBSEVENT_DEBUG, PBS_EVENTCLASS_REQUEST, LOG_DEBUG, __func__,
 					"Request type: %d Req Extension bad, error %d", request->rq_type, rc);

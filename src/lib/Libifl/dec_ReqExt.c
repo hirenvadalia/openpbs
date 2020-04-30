@@ -51,7 +51,7 @@
  *
  */
 int
-wire_decode_batch_reqextend(void *buf, breq *request)
+wire_decode_batch_req_extend(void *buf, breq *request)
 {
 	ns(Req_table_t) req = ns(Req_hdr((ns(Req_table_t))buf));
 

@@ -51,7 +51,7 @@
  *
  */
 int
-wire_decode_batch_cred(void *buf, breq *request)
+wire_decode_batch_req_cred(void *buf, breq *request)
 {
 	ns(Cred_table_t) B = (ns(Cred_table_t))buf;
 
