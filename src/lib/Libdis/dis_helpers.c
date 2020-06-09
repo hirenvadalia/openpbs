@@ -49,6 +49,9 @@
 #include "pbs_internal.h"
 #include "auth.h"
 
+#define PKT_MAGIC "PKT1.0"
+#define PKT_MAGIC_SZ sizeof(PKT_MAGIC)
+
 static pbs_dis_buf_t * dis_get_readbuf(int);
 static pbs_dis_buf_t * dis_get_writebuf(int);
 static int __transport_read(int fd);
@@ -266,7 +269,7 @@ create_pkt(int type, void *data, size_t len, void **pkt, size_t *pkt_len)
 	int ndlen = 0;
 	void *_pkt = NULL;
 	char *pos = NULL;
-	size_t pktlen = 1 + sizeof(int) + len;
+	size_t pktlen = PKT_MAGIC_SZ + 1 + sizeof(int) + len;
 
 	*pkt = NULL;
 	*pkt_len = 0;
@@ -275,6 +278,8 @@ create_pkt(int type, void *data, size_t len, void **pkt, size_t *pkt_len)
 	if (_pkt == NULL)
 		return -1;
 	pos = (char *)_pkt;
+	memcpy(pos, PKT_MAGIC, PKT_MAGIC_SZ);
+	pos += PKT_MAGIC_SZ;
 	*pos++ = (char)type;
 	ndlen = htonl(len);
 	memcpy(pos, &ndlen, sizeof(int));
@@ -311,6 +316,14 @@ parse_pkt(void *pkt, size_t pkt_len, int *type, void **data_out, size_t *len_out
 {
 	char *pos = (char *)pkt;
 
+	if (strncmp(pos, PKT_MAGIC, PKT_MAGIC_SZ)) {
+		*type = 0;
+		*data_out = NULL;
+		*len_out = 0;
+		return -1;
+	} else {
+		pos += PKT_MAGIC_SZ;
+	}
 	*type = *((unsigned char *)pos);
 	pos++;
 	*len_out = ntohl(*((int *)pos));
@@ -435,10 +448,15 @@ transport_recv_pkt(int fd, int *type, void **data_out, size_t *len_out)
 	int ndlen = 0;
 	size_t data_in_sz = 0;
 	void *data_in = NULL;
+	char pkt_magic[PKT_MAGIC_SZ];
 
 	*type = 0;
 	*data_out = NULL;
 	*len_out = 0;
+
+	i = transport_recv(fd, (void *)&pkt_magic, PKT_MAGIC_SZ);
+	if (i != PKT_MAGIC_SZ || strncmp(pkt_magic, PKT_MAGIC, PKT_MAGIC_SZ))
+		return -1;
 
 	i = transport_recv(fd, (void *)type, 1);
 	if (i != 1)
