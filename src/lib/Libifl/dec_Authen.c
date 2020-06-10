@@ -62,17 +62,6 @@
 #include "batch_request.h"
 #include "dis.h"
 
-int
-decode_DIS_old_authreq(int sock, struct batch_request *preq)
-{
-	int rc;
-
-	strcpy(preq->rq_ind.rq_auth.rq_auth_method, AUTH_RESVPORT_NAME);
-	preq->rq_ind.rq_auth.rq_encrypt_method[0] = '\0';
-	preq->rq_ind.rq_auth.rq_port = disrui(sock, &rc);
-	return rc;
-}
-
 /**
  * @brief
  *      Decode PBS batch request to authenticate based on external (non-resv-port) mechanisms.

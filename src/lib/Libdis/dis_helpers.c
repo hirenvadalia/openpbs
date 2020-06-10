@@ -49,8 +49,9 @@
 #include "pbs_internal.h"
 #include "auth.h"
 
-#define PKT_MAGIC "PKT1.0"
+#define PKT_MAGIC "PKTV1"
 #define PKT_MAGIC_SZ sizeof(PKT_MAGIC)
+#define DIS_HDR_FSTCHR '+'
 
 static pbs_dis_buf_t * dis_get_readbuf(int);
 static pbs_dis_buf_t * dis_get_writebuf(int);
@@ -369,7 +370,7 @@ parse_pkt(void *pkt, size_t pkt_len, int *type, void **data_out, size_t *len_out
 {
 	char *pos = (char *)pkt;
 
-	if (strncmp(pos, PKT_MAGIC, PKT_MAGIC_SZ)) {
+	if (strncmp(pos, PKT_MAGIC, PKT_MAGIC_SZ) != 0) {
 		*type = 0;
 		*data_out = NULL;
 		*len_out = 0;
@@ -508,10 +509,12 @@ transport_recv_pkt(int fd, int *type, void **data_out, size_t *len_out)
 	*len_out = 0;
 
 	i = transport_recv(fd, (void *)&pkt_magic, PKT_MAGIC_SZ);
-	if (i != PKT_MAGIC_SZ)
-		return -1;
-	if (strncmp(pkt_magic, PKT_MAGIC, PKT_MAGIC_SZ) && pkt_magic[0] == '+') {
-		*type = 0;
+	if (strncmp(pkt_magic, PKT_MAGIC, PKT_MAGIC_SZ) != 0 && pkt_magic[0] == DIS_HDR_FSTCHR) {
+		/*
+		 * Mark this fd as old client as it doesn't have
+		 * pkt magic and first received char in data is
+		 * DIS header's first char (aka DIS_HRD_FSTCHR)
+		 */
 		transport_chan_set_old_client(fd);
 		data_in = (void *)strdup(pkt_magic);
 		if (data_in == NULL) {
@@ -796,7 +799,7 @@ disr_skip(int fd, size_t ct)
  *	Update the various buffer pointers.
  *
  * @param[in] fd - socket descriptor
- * @param[in] need - needed bytes (used only for old client)
+ * @param[in] need - needed bytes (used only for connection from old client)
  *
  * @return	int
  *
@@ -823,6 +826,19 @@ __transport_read(int fd, int need)
 	if (tp == NULL)
 		return -1;
 	dis_pack_buf(tp);
+	/*
+	 * if connection is from old client then read only 'need' bytes
+	 * as we don't know how much data is available for read
+	 *
+	 * But in other case, we will have pkt which has length of
+	 * data and we need to read full pkt as
+	 * pkt can be encrypted, and we can't decrypt it util we
+	 * have full pkt received, so use transport_recv_pkt,
+	 * which will read full pkt, decrypt it, and give 'len'
+	 * (aka decrypted data length) so we can alloc required
+	 * space in DIS buffer and pass it in
+	 * memcpy while moving data to DIS buffer
+	 */
 	if (transport_chan_is_old_client(fd)) {
 		dis_resize_buf(tp, need, 0);
 		i = transport_recv(fd, &(tp->tdis_thebuf[tp->tdis_eod]), need);

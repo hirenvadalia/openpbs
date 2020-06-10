@@ -109,27 +109,15 @@ tcp_recv(int fd, void *data, int len)
 	int torecv = len;
 	char *pb = (char *)data;
 	int amt = 0;
-#ifdef WIN32
 	fd_set readset;
 	struct timeval timeout;
-#else
-	struct pollfd pollfds[1];
-	int timeout;
-#endif
 
-#ifdef WIN32
-	timeout.tv_sec = (long) pbs_tcp_timeout;
+	timeout.tv_sec = (time_t) pbs_tcp_timeout;
 	timeout.tv_usec = 0;
-	FD_ZERO(&readset);
-	FD_SET((unsigned int)fd, &readset);
-#else
-	timeout = pbs_tcp_timeout;
-	pollfds[0].fd = fd;
-	pollfds[0].events = POLLIN;
-	pollfds[0].revents = 0;
-#endif
 
 	while (torecv > 0) {
+		FD_ZERO(&readset);
+		FD_SET((unsigned int)fd, &readset);
 
 		/*
 		 * we don't want to be locked out by an attack on the port to
@@ -137,11 +125,7 @@ tcp_recv(int fd, void *data, int len)
 		 * deliver promptly
 		 */
 		do {
-#ifdef WIN32
-			i = select(FD_SETSIZE, &readset, NULL, NULL, &timeout);
-#else
-			i = poll(pollfds, 1, timeout * 1000);
-#endif
+			i = select(1, &readset, NULL, NULL, &timeout);
 			if (pbs_tcp_interrupt)
 				break;
 		}
