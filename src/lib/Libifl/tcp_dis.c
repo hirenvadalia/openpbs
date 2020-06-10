@@ -125,7 +125,7 @@ tcp_recv(int fd, void *data, int len)
 		 * deliver promptly
 		 */
 		do {
-			i = select(1, &readset, NULL, NULL, &timeout);
+			i = select(FD_SETSIZE, &readset, NULL, NULL, &timeout);
 			if (pbs_tcp_interrupt)
 				break;
 		}

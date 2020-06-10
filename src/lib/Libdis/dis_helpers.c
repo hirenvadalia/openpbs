@@ -508,21 +508,25 @@ transport_recv_pkt(int fd, int *type, void **data_out, size_t *len_out)
 	*data_out = NULL;
 	*len_out = 0;
 
-	i = transport_recv(fd, (void *)&pkt_magic, PKT_MAGIC_SZ);
-	if (strncmp(pkt_magic, PKT_MAGIC, PKT_MAGIC_SZ) != 0 && pkt_magic[0] == DIS_HDR_FSTCHR) {
-		/*
-		 * Mark this fd as old client as it doesn't have
-		 * pkt magic and first received char in data is
-		 * DIS header's first char (aka DIS_HRD_FSTCHR)
-		 */
-		transport_chan_set_old_client(fd);
-		data_in = (void *)strdup(pkt_magic);
-		if (data_in == NULL) {
-			return -1;
+	transport_recv(fd, (void *)&pkt_magic, PKT_MAGIC_SZ);
+	if (strncmp(pkt_magic, PKT_MAGIC, PKT_MAGIC_SZ) != 0) {
+		if (pkt_magic[0] == DIS_HDR_FSTCHR) {
+			/*
+			* Mark this fd as old client as it doesn't have
+			* pkt magic and first received char in data is
+			* DIS header's first char (aka DIS_HRD_FSTCHR)
+			*/
+			transport_chan_set_old_client(fd);
+			data_in = (void *)strdup(pkt_magic);
+			if (data_in == NULL) {
+				return -1;
+			}
+			*data_out = data_in;
+			*len_out = strlen(pkt_magic);
+			return *len_out;
 		}
-		*data_out = data_in;
-		*len_out = strlen(pkt_magic);
-		return *len_out;
+		/* Not an old client and no pkt magic match, reject data/connection */
+		return -1;
 	}
 
 	i = transport_recv(fd, (void *)type, 1);
