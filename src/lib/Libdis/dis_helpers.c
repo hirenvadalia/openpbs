@@ -54,10 +54,63 @@
 
 static pbs_dis_buf_t * dis_get_readbuf(int);
 static pbs_dis_buf_t * dis_get_writebuf(int);
-static int __transport_read(int fd);
+static int __transport_read(int, int);
 static void dis_pack_buf(pbs_dis_buf_t *);
 static int dis_resize_buf(pbs_dis_buf_t *, size_t, size_t);
 static int transport_chan_is_encrypted(int);
+static void transport_chan_set_old_client(int);
+static int transport_chan_is_old_client(int);
+
+/**
+ * @brief
+ * 	set tcp chan assosiated with given fd as old client
+ *
+ * @param[in] fd - file descriptor
+ *
+ * @return void
+ *
+ * @par Side Effects:
+ *	By setting chan as old client, transport will fall back to
+ *	send/recv data in old non-pkt format during dis_getc, dis_gets
+ *	and dis_flush
+ *
+ * @par MT-safe: Yes
+ *
+ */
+static void
+transport_chan_set_old_client(int fd)
+{
+	pbs_tcp_chan_t *chan = transport_get_chan(fd);
+	if (chan == NULL)
+		return;
+	chan->is_old_client = 1;
+}
+
+/**
+ * @brief
+ * 	get old client status of tcp chan assosiated with given fd
+ *
+ * @param[in] fd - file descriptor
+ *
+ * @return int
+ *
+ * @retval -1 - error
+ * @retval !-1 - status
+ *
+ * @par Side Effects:
+ *	None
+ *
+ * @par MT-safe: Yes
+ *
+ */
+static int
+transport_chan_is_old_client(int fd)
+{
+	pbs_tcp_chan_t *chan = transport_get_chan(fd);
+	if (chan == NULL)
+		return -1;
+	return chan->is_old_client;
+}
 
 /**
  * @brief
@@ -455,8 +508,19 @@ transport_recv_pkt(int fd, int *type, void **data_out, size_t *len_out)
 	*len_out = 0;
 
 	i = transport_recv(fd, (void *)&pkt_magic, PKT_MAGIC_SZ);
-	if (i != PKT_MAGIC_SZ || strncmp(pkt_magic, PKT_MAGIC, PKT_MAGIC_SZ))
+	if (i != PKT_MAGIC_SZ)
 		return -1;
+	if (strncmp(pkt_magic, PKT_MAGIC, PKT_MAGIC_SZ) && pkt_magic[0] == '+') {
+		*type = 0;
+		transport_chan_set_old_client(fd);
+		data_in = (void *)strdup(pkt_magic);
+		if (data_in == NULL) {
+			return -1;
+		}
+		*data_out = data_in;
+		*len_out = strlen(pkt_magic);
+		return *len_out;
+	}
 
 	i = transport_recv(fd, (void *)type, 1);
 	if (i != 1)
@@ -732,6 +796,7 @@ disr_skip(int fd, size_t ct)
  *	Update the various buffer pointers.
  *
  * @param[in] fd - socket descriptor
+ * @param[in] need - needed bytes (used only for old client)
  *
  * @return	int
  *
@@ -747,7 +812,7 @@ disr_skip(int fd, size_t ct)
  *
  */
 static int
-__transport_read(int fd)
+__transport_read(int fd, int need)
 {
 	int i;
 	void *data = NULL;
@@ -758,6 +823,14 @@ __transport_read(int fd)
 	if (tp == NULL)
 		return -1;
 	dis_pack_buf(tp);
+	if (transport_chan_is_old_client(fd)) {
+		dis_resize_buf(tp, need, 0);
+		i = transport_recv(fd, &(tp->tdis_thebuf[tp->tdis_eod]), need);
+		if (i <= 0)
+			return i;
+		tp->tdis_eod += i;
+		return i;
+	}
 	i = transport_recv_pkt(fd, &type, &data, &len);
 	if (i <= 0)
 		return i;
@@ -796,7 +869,7 @@ dis_getc(int fd)
 		return -1;
 	if (tp->tdis_lead >= tp->tdis_eod) {
 		/* not enought data, try to get more */
-		x = __transport_read(fd);
+		x = __transport_read(fd, 1);
 		if (x <= 0)
 			return ((x == -2) ? -2 : -1);	/* Error or EOF */
 	}
@@ -836,7 +909,7 @@ dis_gets(int fd, char *str, size_t ct)
 	}
 	while (tp->tdis_eod - tp->tdis_lead < ct) {
 		/* not enought data, try to get more */
-		x = __transport_read(fd);
+		x = __transport_read(fd, ct);
 		if (x <= 0)
 			return x;	/* Error or EOF */
 	}
@@ -975,9 +1048,15 @@ dis_flush(int fd)
 		return -1;
 	if (tp->tdis_trail == 0)
 		return 0;
-	/* DIS doesn't have pkt type, pass 0 always for type in transport_send_pkt */
-	if (transport_send_pkt(fd, 0, (void *)tp->tdis_thebuf, tp->tdis_trail) <= 0)
-		return -1;
+	if (transport_chan_is_old_client(fd)) {
+		if (transport_send(fd, (void *)tp->tdis_thebuf, tp->tdis_trail) <= 0)
+			return -1;
+
+	} else {
+		/* DIS doesn't have pkt type, pass 0 always for type in transport_send_pkt */
+		if (transport_send_pkt(fd, 0, (void *)tp->tdis_thebuf, tp->tdis_trail) <= 0)
+			return -1;
+	}
 	tp->tdis_eod = tp->tdis_lead;
 	dis_pack_buf(tp);
 	return 0;

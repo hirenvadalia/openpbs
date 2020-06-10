@@ -367,6 +367,7 @@ extern void req_cred(struct batch_request *);
 #endif
 
 /* PBS Batch Request Decode/Encode routines */
+extern int decode_DIS_old_authreq(int, struct batch_request *);
 extern int decode_DIS_Authenticate(int, struct batch_request *);
 extern int decode_DIS_CopyFiles(int, struct batch_request *);
 extern int decode_DIS_CopyFiles_Cred(int, struct batch_request *);

@@ -563,6 +563,12 @@ dis_request_read(int sfds, struct batch_request *request)
 			break;
 
 #ifndef PBS_MOM
+		case PBS_BATCH_AuthenResvPort:
+			/* This is just for backward compatibility, see PBS_BATCH_Authenticate */
+			rc = decode_DIS_old_authreq(sfds, request);
+			request->rq_type = PBS_BATCH_Authenticate;
+			break;
+
 		case PBS_BATCH_RelnodesJob:
 			rc = decode_DIS_RelnodesJob(sfds, request);
 			break;
