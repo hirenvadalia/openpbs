@@ -125,6 +125,8 @@
 
 #ifndef PBS_MOM
 #include "avltree.h"
+#else
+#include "mom_server.h"
 #endif
 
 #include "svrfunc.h"
@@ -140,7 +142,6 @@
 extern int time_now;
 
 /* External functions */
-
 #ifdef WIN32
 extern int read_cred(job *pjob, char **cred, size_t *len);
 #endif
@@ -859,6 +860,10 @@ job_purge(job *pjob)
 	}
 #endif
 #ifdef	PBS_MOM
+	if (pjob->ji_pending_ruu != NULL) {
+		ruu *x = (ruu *)(pjob->ji_pending_ruu);
+		FREE_RUU(x);
+	}
 	delete_link(&pjob->ji_jobque);
 	delete_link(&pjob->ji_alljobs);
 	delete_link(&pjob->ji_unlicjobs);

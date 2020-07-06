@@ -2387,17 +2387,10 @@ get_hook_results(char *input_file, int *accept_flag, int *reject_flag,
 					/* working on a new list of job data */
 					if (pjob2_prev != NULL) {
 						if (*reject_deletejob) {
-							/* deletejob takes */
-							/* precedence */
-							new_job_action_req(pjob2,
-							phook?phook->user:\
-							   HOOK_PBSADMIN,
-								JOB_ACT_REQ_DELETE);
+							/* deletejob takes precedence */
+							new_job_action_req(pjob2, phook ? phook->user: HOOK_PBSADMIN, JOB_ACT_REQ_DELETE);
 						} else if (*reject_rerunjob) {
-							new_job_action_req(pjob2,
-							phook?phook->user:\
-								HOOK_PBSADMIN,
-								JOB_ACT_REQ_REQUEUE);
+							new_job_action_req(pjob2, phook ? phook->user: HOOK_PBSADMIN, JOB_ACT_REQ_REQUEUE);
 						}
 						/* already sent the action */
 						found_rerunjob_action = 0;
@@ -2810,11 +2803,9 @@ get_hook_results(char *input_file, int *accept_flag, int *reject_flag,
 	if (found_joblist && (found_rerunjob_action || found_deletejob_action)) {
 		if ((reject_deletejob != NULL) && (*reject_deletejob)) {
 			/* deletejob takes precedence */
-			new_job_action_req(pjob2,
-				phook?phook->user:HOOK_PBSADMIN, JOB_ACT_REQ_DELETE);
+			new_job_action_req(pjob2, phook ? phook->user : HOOK_PBSADMIN, JOB_ACT_REQ_DELETE);
 		} else if ((reject_rerunjob != NULL) && (*reject_rerunjob)) {
-			new_job_action_req(pjob2,
-				phook?phook->user:HOOK_PBSADMIN, JOB_ACT_REQ_REQUEUE);
+			new_job_action_req(pjob2, phook ? phook->user : HOOK_PBSADMIN, JOB_ACT_REQ_REQUEUE);
 		}
 	}
 	rc = 0;
@@ -2951,8 +2942,7 @@ new_job_action_req(job *pjob, enum hook_user huser, int action)
  *
  */
 static void
-post_periodic_hook(pwt)
-struct work_task *pwt;
+post_periodic_hook(struct work_task *pwt)
 {
 	int	 wstat = pwt->wt_aux;
 	hook	 *phook = (hook *)pwt->wt_parm1;
@@ -3400,17 +3390,14 @@ post_run_hook(struct work_task *ptask)
 				/* hook script executed by PBSADMIN or not. */
 				if (reject_deletejob) {
 					/* deletejob takes precedence */
-					new_job_action_req(pjob, phook->user,
-						JOB_ACT_REQ_DELETE);
+					new_job_action_req(pjob, phook->user, JOB_ACT_REQ_DELETE);
 				} else if (reject_rerunjob) {
-					new_job_action_req(pjob, phook->user,
-						JOB_ACT_REQ_REQUEUE);
+					new_job_action_req(pjob, phook->user, JOB_ACT_REQ_REQUEUE);
 				}
 
 				/* Whether or not we accept or reject, we'll make */
 				/* job changes, vnode changes, job actions */
-				update_ajob_status_using_cmd(pjob,
-					IS_RESCUSED_FROM_HOOK, 0);
+				update_ajob_status_using_cmd(pjob, IS_RESCUSED_FROM_HOOK, 0);
 			}
 
 
@@ -3627,8 +3614,7 @@ void reply_hook_bg(job *pjob)
 				 */
 				if ((pjob2 = job_alloc()) != NULL) {
 					(void)snprintf(pjob2->ji_qs.ji_jobid, sizeof(pjob2->ji_qs.ji_jobid), "%s", jobid);
-					pjob2->ji_wattr[(int)JOB_ATR_run_version].at_val.at_long =
-							runver;
+					pjob2->ji_wattr[(int)JOB_ATR_run_version].at_val.at_long = runver;
 					pjob2->ji_wattr[(int)JOB_ATR_run_version].at_flags |= ATR_VFLAG_SET;
 					/* JOB_ACT_REQ_DEALLOCATE request will tell the
 					 * the server that this mom has completely deleted the
