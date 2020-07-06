@@ -933,7 +933,7 @@ get_servername_random(unsigned int *port)
 /**
  * @brief
  * 	send IS_HELLOSVR message to Server.
- * 
+ *
  * @param[in]	stream	- connection stream
  *
  * @par
@@ -1664,19 +1664,14 @@ send_sisters_deljob_wait(job *pjob)
  *
  */
 void
-set_job_toexited(char *jobid)
+set_job_toexited(job *pjob)
 {
-	job *pjob;
-
-	pjob = find_job(jobid);
-	if (pjob) {
-		pjob->ji_qs.ji_substate = JOB_SUBSTATE_EXITED;
-		if (pjob->ji_qs.ji_svrflags & JOB_SVFLG_CHKPT) {
-			/* if checkpointed, save state to disk, otherwise  */
-			/* leave unchanges on disk so recovery will resend */
-			/* obit to server                                  */
-			(void)job_save(pjob, SAVEJOB_QUICK);
-		}
+	pjob->ji_qs.ji_substate = JOB_SUBSTATE_EXITED;
+	if (pjob->ji_qs.ji_svrflags & JOB_SVFLG_CHKPT) {
+		/* if checkpointed, save state to disk, otherwise  */
+		/* leave unchanges on disk so recovery will resend */
+		/* obit to server                                  */
+		(void)job_save(pjob, SAVEJOB_QUICK);
 	}
 }
 

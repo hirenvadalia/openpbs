@@ -7222,13 +7222,14 @@ get_job_update(job *pjob, int use_rtn_list_ext)
 	attribute *at;
 	attribute_def *ad;
 
-	prused = (ruu *) calloc(1, sizeof(ruu));
+	prused = (ruu *) malloc(sizeof(ruu));
 	if (prused == NULL) {
 		log_joberr(errno, __func__, "Out of memory while encoding stat update", pjob->ji_qs.ji_jobid);
 		return NULL;
 	}
 	CLEAR_LINK(prused->ru_pending);
 	CLEAR_HEAD(prused->ru_attr);
+	prused->ru_comment = NULL;
 	prused->ru_pjobid = strdup(pjob->ji_qs.ji_jobid);
 	if (prused->ru_pjobid == NULL) {
 		FREE_RUU(prused);

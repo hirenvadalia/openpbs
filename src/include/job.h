@@ -1229,6 +1229,11 @@ extern void del_job_dirs(job *pjob);
 extern void del_chkpt_files(job *pjob);
 #endif
 
+extern void get_jobowner(char *, char *);
+extern struct batch_request *cpy_stage(struct batch_request *preq, job *pjob, enum job_atr ati, int direction);
+extern struct batch_request *cpy_stdfile(struct batch_request *preq, job *pjob, enum job_atr ati);
+extern int has_stage(job *pjob);
+
 #ifdef	__cplusplus
 }
 #endif

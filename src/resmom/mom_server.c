@@ -937,11 +937,19 @@ is_request(int stream, int version)
 			log_eventf(PBSEVENT_DEBUG2, PBS_EVENTCLASS_JOB, LOG_ERR, __func__, "received ack obits = %d", njobs);
 
 			while(njobs--) {
+				job *pjob = NULL;
 				jobid = disrst(stream, &ret);
 				if (ret != DIS_SUCCESS)
 					goto err;
 				log_event(PBSEVENT_DEBUG, PBS_EVENTCLASS_JOB, LOG_INFO, jobid, "Job exited, Server acknowledged Obit");
-				set_job_toexited(jobid);
+				pjob = find_job(jobid);
+				if (pjob) {
+					if (!has_stage(pjob)) {
+						mom_deljob(pjob);
+					} else {
+						set_job_toexited(pjob);
+					}
+				}
 				free(jobid);
 				jobid = NULL;
 			}
