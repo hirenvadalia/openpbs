@@ -4433,10 +4433,8 @@ post_restart(job *pjob, int ev)
 		pjob->ji_qs.ji_substate = JOB_SUBSTATE_RUNNING;
 		start_walltime(pjob);
 
-		if (mom_get_sample() != PBSE_NONE) {
-			time_resc_updated = time_now;
-			(void)mom_set_use(pjob);
-		}
+		time_resc_updated = time_now;
+		(void)mom_set_use(pjob);
 	} else {
 		pjob->ji_qs.ji_substate = JOB_SUBSTATE_SUSPEND;
 		stop_walltime(pjob);

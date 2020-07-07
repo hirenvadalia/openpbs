@@ -1759,6 +1759,8 @@ send_sisters_inner(job *pjob, int com, pbs_jobndstm_t command_func,
 int
 send_sisters(job *pjob, int com, pbs_jobndstm_t command_func)
 {
+	if (pjob->ji_numnodes == 1)
+		return 0;
 	return (send_sisters_inner(pjob, com, command_func, NULL));
 }
 

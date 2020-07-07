@@ -4147,62 +4147,15 @@ cput_sum(job *pjob)
 		ptask != NULL;
 		ptask = (task *)GET_NEXT(ptask->ti_jobtask)) {
 
+		proc_stat_t ps;
+
 		/* DEAD task */
 		if (ptask->ti_qs.ti_sid <= 1) {
 			cputime += ptask->ti_cput;
 			continue;
 		}
 
-		active_tasks++;
-		tcput = 0;
-		taskprocs = 0;
-		for (i=0; i<nproc; i++) {
-			ps = &proc_info[i];
-
-			/* is this process part of the task? */
-			if (ptask->ti_qs.ti_sid != ps->session)
-				continue;
-
-			nps++;
-			taskprocs++;
-
-			/* don't include zombie unless it is the top proc */
-			if ((ps->state == 'Z') && (ps->pid != ps->session) &&
-				(ps->ppid != mom_pid))
-				continue;
-
-			pcput = (ps->utime + ps->stime +
-				ps->cutime + ps->cstime);
-
-			if (pcput > num_oscpus * (sampletime_ceil + 1 - pjob->ji_qs.ji_stime) * CPUT_POSSIBLE_FACTOR ) {
-				sprintf(log_buffer,
-					"cput for process %d impossible (%lds > %lds * %d), ignoring",
-					ps->pid,
-					pcput,
-					(sampletime_ceil + 1 - pjob->ji_qs.ji_stime),
-					num_oscpus);
-				log_event(PBSEVENT_DEBUG, PBS_EVENTCLASS_JOB,
-					LOG_DEBUG, pjob->ji_qs.ji_jobid,
-					log_buffer);
-				sampletime_floor = pjob->ji_qs.ji_stime;
-				sampletime_ceil = pjob->ji_qs.ji_stime;
-				return 0;
-
-			} else {
-				tcput += pcput;
-			}
-
-			DBPRT(("%s: task %8.8X ses %d pid %d cputime %lu\n",
-				__func__, ptask->ti_qs.ti_task,
-				ps->session, ps->pid, tcput))
-		}
-		if (tcput > ptask->ti_cput)
-			ptask->ti_cput = tcput;
-		cputime += ptask->ti_cput;
-		DBPRT(("%s: task %8.8X cput %lu total %lu\n", __func__,
-			ptask->ti_qs.ti_task, ptask->ti_cput, cputime))
-
-		if (taskprocs == 0) {
+		if (mom_get_proc_info(ptask->ti_qs.ti_sid, &ps) != PBSE_NONE) {
 			/*
 			 * Linux seems to be able to forget about a
 			 * process on rare occations.  See if the
@@ -4256,6 +4209,39 @@ cput_sum(job *pjob)
 			ptask->ti_qs.ti_status = TI_STATE_EXITED;
 			task_save(ptask);
 			exiting_tasks = 1;
+		} else {
+			sampletime_ceil = time(0);
+		}
+
+		/* don't include zombie unless it is the top proc */
+		if ((ps.state == 'Z') && (ps.pid != ps.session) &&
+			(ps.ppid != mom_pid))
+			continue;
+
+		pcput = (ps.utime + ps.stime +
+			ps.cutime + ps.cstime);
+
+		if (pcput > num_oscpus * (sampletime_ceil + 1 - pjob->ji_qs.ji_stime) * CPUT_POSSIBLE_FACTOR ) {
+			sprintf(log_buffer,
+				"cput for process %d impossible (%lds > %lds * %d), ignoring",
+				ps.pid,
+				pcput,
+				(sampletime_ceil + 1 - pjob->ji_qs.ji_stime),
+				num_oscpus);
+			log_event(PBSEVENT_DEBUG, PBS_EVENTCLASS_JOB,
+				LOG_DEBUG, pjob->ji_qs.ji_jobid,
+				log_buffer);
+			sampletime_floor = pjob->ji_qs.ji_stime;
+			sampletime_ceil = pjob->ji_qs.ji_stime;
+			return 0;
+		} else {
+			if (tcput > ptask->ti_cput)
+				ptask->ti_cput = tcput;
+			cputime += ptask->ti_cput;
+			DBPRT(("%s: task %8.8X cput %lu total %lu\n", __func__,
+				ptask->ti_qs.ti_task, ptask->ti_cput, cputime))
+			active_tasks++;
+			nps++;
 		}
 	}
 
@@ -4299,21 +4285,20 @@ cput_sum(job *pjob)
 static ulong
 mem_sum(job *pjob)
 {
-	int		i;
-	ulong		segadd;
-	proc_stat_t	*ps;
+	ulong		segadd = 0;
+	proc_stat_t	ps;
+	task	*ptask;
 
-	segadd = 0;
-
-	for (i=0; i<nproc; i++) {
-
-		ps = &proc_info[i];
-
-		if (!injob(pjob, ps->session))
+	for (ptask = (task *)GET_NEXT(pjob->ji_tasks);
+		ptask;
+		ptask = (task *)GET_NEXT(ptask->ti_jobtask)) {
+		if (ptask->ti_qs.ti_sid <= 1)
 			continue;
-		segadd += ps->vsize;
+		if (mom_get_proc_info(ptask->ti_qs.ti_sid, &ps) != PBSE_NONE)
+			continue;
+		segadd += ps.vsize;
 		DBPRT(("%s: pid: %d  pr_size: %lu  total: %lu\n",
-			__func__, ps->pid, (ulong)ps->vsize, segadd))
+			__func__, ps.pid, (ulong)ps.vsize, segadd))
 	}
 
 	return (segadd);
@@ -4333,19 +4318,18 @@ mem_sum(job *pjob)
 static ulong
 resi_sum(job *pjob)
 {
-	int		i;
-	ulong		resisize;
-	proc_stat_t	*ps;
+	ulong		resisize = 0;
+	proc_stat_t	ps;
+	task	*ptask;
 
-	resisize = 0;
-	for (i=0; i<nproc; i++) {
-
-		ps = &proc_info[i];
-
-		if (!injob(pjob, ps->session))
+	for (ptask = (task *)GET_NEXT(pjob->ji_tasks);
+		ptask;
+		ptask = (task *)GET_NEXT(ptask->ti_jobtask)) {
+		if (ptask->ti_qs.ti_sid <= 1)
 			continue;
-
-		resisize += ps->rss * pagesize;
+		if (mom_get_proc_info(ptask->ti_qs.ti_sid, &ps) != PBSE_NONE)
+			continue;
+		resisize += ps.rss * pagesize;
 	}
 
 	return (resisize);
@@ -4552,6 +4536,83 @@ mom_open_poll(void)
 	return (PBSE_NONE);
 }
 
+static int
+mom_get_proc_info_fromfile(char *filepath, proc_stat_t *ps, uid_t uid)
+{
+	struct stat sb;
+	FILE *fd = NULL;
+	static char *stat_str = NULL;
+	static char path[MAXPATHLEN + 1];
+	unsigned long long starttime;
+
+	if (uid == -1 && stat(filepath, &sb) == -1)
+		return PBSE_INTERNAL;
+
+	if (stat_str == NULL) {
+		stat_str = choose_procflagsfmt();
+		if (stat_str == NULL) {
+			log_err(errno, __func__, "choose_procflagsfmt allocation failed");
+			return PBSE_INTERNAL;
+		}
+	}
+
+	if (hz == 0)
+		hz = sysconf(_SC_CLK_TCK);
+
+	if ((fd = fopen(filepath, "r")) == NULL)
+		return PBSE_INTERNAL;
+
+	if (fscanf(fd, stat_str,
+		   &ps->pid,	 /* "%d "	1  pid %d The process id */
+		   path,	 /* "(%[^)]) "	2  comm %s The filename of the executable */
+		   &ps->state,	 /* "%c "	3  state %c "RSDZTW" */
+		   &ps->ppid,	 /* "%d "	4  ppid %d The PID of the parent */
+		   &ps->pgrp,	 /* "%d "	5  pgrp %d The process group ID */
+		   &ps->session, /* "%d "	6  session %d The session ID */
+				 /* "%*d "	7  ignored:  tty_nr */
+				 /* "%*d "	8  ignored:  tpgid */
+		   &ps->flags,	 /* "%u or %lu"	9  flags */
+				 /* "%*lu "	10 ignored:  minflt */
+				 /* "%*lu "	11 ignored:  cminflt */
+				 /* "%*lu "	12 ignored:  majflt */
+				 /* "%*lu "	13 ignored:  cmajflt */
+		   &ps->utime,	 /* "%lu "	14 utime %lu */
+		   &ps->stime,	 /* "%lu "	15 stime %lu */
+		   &ps->cutime,	 /* "%ld "	16 cutime %ld */
+		   &ps->cstime,	 /* "%ld "	17 cstime %ld */
+				 /* "%*ld "	18 ignored:  priority %ld */
+		                 /* "%*ld "	19 ignored:  nice %ld */
+		                 /* "%*ld "	20 ignored:  num_threads %ld */
+		                 /* "%*ld "	21 ignored:  itrealvalue %ld - no longer maintained */
+		   &starttime,   /* "%llu "	22 starttime (was %lu before Linux 2.6 - see proc(5) for conversion details */
+		   &ps->vsize,   /* "%lu "	23 vsize (bytes) */
+		   &ps->rss      /* "%ld "	24 rss (number of pages) */
+		   ) != 14) {
+		fclose(fd);
+		return PBSE_INTERNAL;
+	}
+	fclose(fd);
+
+	ps->uid = uid == -1 ? sb.st_uid : uid;
+	ps->start_time = linux_time + (starttime / hz);
+	snprintf(ps->comm, sizeof(ps->comm), "%.*s", (int) (sizeof(ps->comm) - 1), path);
+	ps->utime = JTOS(ps->utime);
+	ps->stime = JTOS(ps->stime);
+	ps->cutime = JTOS(ps->cutime);
+	ps->cstime = JTOS(ps->cstime);
+
+	return PBSE_NONE;
+}
+
+int
+mom_get_proc_info(pid_t pid, proc_stat_t *ps)
+{
+	char procname[MAXPATHLEN + 1];
+
+	sprintf(procname, "/proc/%d/stat", (int)pid);
+	return mom_get_proc_info_fromfile(procname, ps, -1);
+}
+
 /**
  * @brief
  * 	Declare start of polling loop.
@@ -4564,21 +4625,17 @@ mom_open_poll(void)
 int
 mom_get_sample(void)
 {
-	struct dirent		*dent = NULL;
-	FILE			*fd = NULL;
-	static char		path[MAXPATHLEN + 1];
-	char			procname[MAXPATHLEN + 1]; /* space for dent->d_name plus extra */
-	char			procid[MAXPATHLEN + 1];
-	struct stat		sb;
-	proc_stat_t		*ps = NULL;
-	int			nprocs = 0;
-	int			ncached = 0;
-	int			ncantstat = 0;
-	int			nnomem = 0;
-	unsigned long long 	starttime;
-	int			nskipped = 0;
-	extern time_t		time_last_sample;
-	char			*stat_str = NULL;
+	extern time_t time_last_sample;
+	struct dirent *dent = NULL;
+	char procname[MAXPATHLEN + 1];
+	proc_stat_t *ps = NULL;
+	int nprocs = 0;
+	int ncached = 0;
+	int ncantstat = 0;
+	int nnomem = 0;
+	int nskipped = 0;
+	long st, et;
+	struct timeval tval;
 
 	/* There are no job tasks created in mock run mode, so no need to walk the proc table */
 	if (mock_run)
@@ -4590,14 +4647,13 @@ mom_get_sample(void)
 
 	rewinddir(pdir);
 	nproc = 0;
-	fd = NULL;
-	if (hz == 0)
-		hz = sysconf(_SC_CLK_TCK);
 	time_last_sample = time(0);
 	sampletime_floor = time_last_sample;
+	gettimeofday(&tval, NULL);
+	st = (tval.tv_sec * 1000L) + (tval.tv_usec / 1000L);
 	while (errno = 0, (dent = readdir(pdir)) != NULL) {
-		int	nomem = 0;
-		struct	stat	sbuf;
+		int nomem = 0;
+		struct stat sb;
 
 		nprocs++;
 
@@ -4611,62 +4667,17 @@ mom_get_sample(void)
 			} else
 				continue;
 		}
-		snprintf(procid, sizeof(procid), "/proc/%s", dent->d_name);
-		if ((stat(procid, &sbuf) == -1) || (sbuf.st_uid == 0)) {
+		sprintf(procname, "/proc/%s/stat", dent->d_name);
+		if (stat(procname, &sb) == -1 || sb.st_uid == 0) {
 			/* ignore root-owned processes */
 			nskipped++;
 			continue;
 		}
-		snprintf(procname, sizeof(procname), "/proc/%s/stat", dent->d_name);
-
-		if ((fd = fopen(procname, "r")) == NULL) {
-			ncantstat++;
-			continue;
-		}
-
 		ps = &proc_info[nproc];
-		stat_str = choose_procflagsfmt();
-		if (stat_str == NULL) {
-			log_err(errno, __func__, "choose_procflagsfmt allocation failed");
-			return PBSE_INTERNAL;
-		}
-		if (fscanf(fd, stat_str,
-			   &ps->pid,		/* "%d "	1  pid %d The process id */
-			   path,		/* "(%[^)]) "	2  comm %s The filename of the executable */
-			   &ps->state,		/* "%c "	3  state %c "RSDZTW" */
-			   &ps->ppid,		/* "%d "	4  ppid %d The PID of the parent */
-			   &ps->pgrp,		/* "%d "	5  pgrp %d The process group ID */
-			   &ps->session,	/* "%d "	6  session %d The session ID */
-				   		/* "%*d "	7  ignored:  tty_nr */
-	 		   			/* "%*d "	8  ignored:  tpgid */
-			   &ps->flags,		/* "%u or %lu"	9  flags */
-					   	/* "%*lu "	10 ignored:  minflt */
-					   	/* "%*lu "	11 ignored:  cminflt */
-					   	/* "%*lu "	12 ignored:  majflt */
-					   	/* "%*lu "	13 ignored:  cmajflt */
-			   &ps->utime,		/* "%lu "	14 utime %lu */
-			   &ps->stime,		/* "%lu "	15 stime %lu */
-			   &ps->cutime,		/* "%ld "	16 cutime %ld */
-			   &ps->cstime,		/* "%ld "	17 cstime %ld */
-				   		/* "%*ld "	18 ignored:  priority %ld */
-			   			/* "%*ld "	19 ignored:  nice %ld */
-			   			/* "%*ld "	20 ignored:  num_threads %ld */
-			   			/* "%*ld "	21 ignored:  itrealvalue %ld - no longer maintained */
-			   &starttime,		/* "%llu "	22 starttime (was %lu before Linux 2.6 - see proc(5) for conversion details */
-			   &ps->vsize,		/* "%lu "	23 vsize (bytes) */
-			   &ps->rss		/* "%ld "	24 rss (number of pages) */
-			) != 14) {
+		if (mom_get_proc_info_fromfile(procname, ps, sb.st_uid) != PBSE_NONE) {
 			ncantstat++;
-			fclose(fd);
 			continue;
 		}
-
-		if (fstat(fileno(fd), &sb) == -1) {
-			fclose(fd);
-			continue;
-		}
-		ps->uid = sb.st_uid;
-		fclose(fd);
 
 		/*
 		 ** A .pid thread shows the memory of the process
@@ -4676,34 +4687,23 @@ mom_get_sample(void)
 			ps->vsize = 0;
 			ps->rss = 0;
 		}
-
-		ps->start_time = linux_time + (starttime / hz);
-		snprintf(ps->comm, sizeof(ps->comm), "%.*s",
-			(int)(sizeof(ps->comm) - 1), path);
-
-		ps->utime = JTOS(ps->utime);
-		ps->stime = JTOS(ps->stime);
-		ps->cutime = JTOS(ps->cutime);
-		ps->cstime = JTOS(ps->cstime);
 		if (++nproc == max_proc) {
-			void	*hold;
+			void *hold;
 			DBPRT(("%s: alloc more proc table space %d\n", __func__, nproc))
 			max_proc += TBL_INC;
-			hold = realloc((void *)proc_info,
-				max_proc*sizeof(proc_stat_t));
+			hold = realloc((void *) proc_info, max_proc * sizeof(proc_stat_t));
 			assert(hold != NULL);
-			proc_info = (proc_stat_t *)hold;
+			proc_info = (proc_stat_t *) hold;
 		}
 	}
 	if (errno != 0 && errno != ENOENT)
 		log_err(errno, __func__, "readdir");
 	sampletime_ceil = time_last_sample;
-	sprintf(log_buffer,
-		"nprocs:  %d, cantstat:  %d, nomem:  %d, skipped:  %d, "
-		"cached:  %d",
-		nprocs - 2, ncantstat, nnomem, nskipped,
-		ncached);
-	log_event(PBSEVENT_DEBUG4, 0, LOG_DEBUG, __func__, log_buffer);
+	gettimeofday(&tval, NULL);
+	et = (tval.tv_sec * 1000L) + (tval.tv_usec / 1000L);
+	log_eventf(PBSEVENT_DEBUG2, PBS_EVENTCLASS_NODE, LOG_DEBUG, __func__,
+		   "nprocs:  %d, cantstat:  %d, nomem:  %d, skipped:  %d, cached:  %d, time: %ld",
+		   nprocs - 2, ncantstat, nnomem, nskipped, ncached, et - st);
 	return (PBSE_NONE);
 }
 
@@ -4733,7 +4733,7 @@ mom_set_use(job *pjob)
 	attribute	*at_req;
 	resource_def	*rd;
 	u_Long 		*lp_sz, lnum_sz;
-	ulong		*lp, lnum, oldcput;
+	ulong		*lp = NULL, lnum, oldcput;
 	long		ncpus_req;
 
 	assert(pjob != NULL);
@@ -4780,12 +4780,12 @@ mom_set_use(job *pjob)
 		pres->rs_value.at_type = ATR_TYPE_LONG;
 		pres->rs_value.at_val.at_long = 0;
 	}
-	lp = (ulong *)&pres->rs_value.at_val.at_long;
-	oldcput = *lp;
-	lnum = cput_sum(pjob);
-	lnum = MAX(*lp, lnum);
 	if ((pres->rs_value.at_flags & ATR_VFLAG_HOOK) == 0) {
 		/* don't conflict with hook setting a value */
+		lp = (ulong *)&pres->rs_value.at_val.at_long;
+		oldcput = *lp;
+		lnum = cput_sum(pjob);
+		lnum = MAX(*lp, lnum);
 		*lp = lnum;
 	}
 
@@ -4801,6 +4801,12 @@ mom_set_use(job *pjob)
 	if ((pres->rs_value.at_flags & ATR_VFLAG_HOOK) == 0) {
 		/* now calculate weighted moving average cpu usage */
 		/* percentage */
+		if (lp == NULL) {
+			lp = (ulong *)&pres->rs_value.at_val.at_long;
+			oldcput = *lp;
+			lnum = cput_sum(pjob);
+			lnum = MAX(*lp, lnum);
+		}
 		calc_cpupercent(pjob, oldcput, lnum, sampletime_ceil);
 	}
 	pjob->ji_sampletim = sampletime_floor;
@@ -4993,36 +4999,9 @@ kill_session(pid_t sesid, int sig, int dir)
 	if (sesid <= 1)
 		return 0;
 
-	(void)mom_get_sample();
-	ct = bld_ptree(sesid);
-	DBPRT(("%s: bld_ptree %d\n", __func__, ct))
+	killpg(sesid, sig);
 
-	/*
-	 ** Find index into the Proc_lnks table for the session lead.
-	 */
-	for (i = 0; i < ct; i++) {
-		if (Proc_lnks[i].pl_pid == sesid) {
-			kill_ptree(i, dir, sig);
-			break;
-		}
-	}
-	/*
-	 ** Do a linear pass.
-	 */
-	for (i = 0; i < ct; i++) {
-		if (Proc_lnks[i].pl_done)
-			continue;
-		DBPRT(("%s: cleanup %d\n", __func__, Proc_lnks[i].pl_pid))
-		kill(Proc_lnks[i].pl_pid, sig);
-	}
-
-	/*
-	 ** Kill the process group in case anything was missed reading /proc
-	 */
-	if ((sig == SIGKILL) || (ct == 0))
-		killpg(sesid, sig);
-
-	return ct;
+	return 1;
 }
 
 /**
@@ -5168,21 +5147,14 @@ cput_job(pid_t jobid)
 char *
 cput_proc(pid_t pid)
 {
-	int		i;
-	double		cputime;
-	proc_stat_t	*ps = NULL;
+	double cputime;
+	proc_stat_t ps;
 
-	mom_get_sample();
-	for (i = 0; i < nproc; i++) {
-		ps = &proc_info[i];
-		if (ps->pid == pid)
-			break;
-	}
-	if (i == nproc) {
+	if (mom_get_proc_info(pid, &ps)) {
 		rm_errno = RM_ERR_EXIST;
 		return NULL;
 	}
-	cputime = dsecs(ps->utime) + dsecs(ps->stime);
+	cputime = dsecs(ps.utime) + dsecs(ps.stime);
 
 	sprintf(ret_string, "%.2f", cputime * cputfactor);
 	return ret_string;
@@ -5285,21 +5257,14 @@ mem_job(pid_t sid)
 char *
 mem_proc(pid_t pid)
 {
-	int		i;
-	proc_stat_t	*ps = NULL;
+	proc_stat_t ps;
 
-	mom_get_sample();
-	for (i = 0; i < nproc; i++) {
-		ps = &proc_info[i];
-		if (ps->pid == pid)
-			break;
-	}
-	if (i == nproc) {
+	if (mom_get_proc_info(pid, &ps) != PBSE_NONE) {
 		rm_errno = RM_ERR_SYSTEM;
 		return NULL;
 	}
 
-	sprintf(ret_string, "%lukb", (ulong)ps->vsize >> 10); /* KB */
+	sprintf(ret_string, "%lukb", (ulong)ps.vsize >> 10); /* KB */
 	return ret_string;
 }
 
@@ -5402,22 +5367,14 @@ resi_job(pid_t jobid)
 static char *
 resi_proc(pid_t pid)
 {
-	int		i;
-	proc_stat_t	*ps = NULL;
+	proc_stat_t ps;
 
-
-	mom_get_sample();
-	for (i = 0; i < nproc; i++) {
-		ps = &proc_info[i];
-		if (ps->pid == pid)
-			break;
-	}
-	if (i == nproc) {
+	if (mom_get_proc_info(pid, &ps) != PBSE_NONE) {
 		rm_errno = RM_ERR_EXIST;
 		return NULL;
 	}
 	/* in KB */
-	sprintf(ret_string, "%lukb", ((ulong)ps->rss * (ulong)pagesize) >> 10);
+	sprintf(ret_string, "%lukb", ((ulong)ps.rss * (ulong)pagesize) >> 10);
 	return ret_string;
 }
 

@@ -1300,7 +1300,7 @@ scan_for_terminated(void)
 		 ** will be exited in kill_job or by cput_sum() as can not be
 		 ** seen again by scan_for_terminated().
 		 */
-		if (pjob->ji_qs.ji_svrflags & JOB_SVFLG_TERMJOB) {
+		/*if (pjob->ji_qs.ji_svrflags & JOB_SVFLG_TERMJOB) {
 			int	n;
 
 			(void)mom_get_sample();
@@ -1311,7 +1311,7 @@ scan_for_terminated(void)
 					ptask->ti_qs.ti_task, n))
 				continue;
 			}
-		}
+		}*/
 
 		kill_session(ptask->ti_qs.ti_sid, SIGKILL, 0);
 		ptask->ti_qs.ti_status = TI_STATE_EXITED;

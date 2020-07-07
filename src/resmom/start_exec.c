@@ -1826,10 +1826,9 @@ record_finish_exec(int sd)
 	pjob->ji_qs.ji_substate = JOB_SUBSTATE_RUNNING;
 	job_save(pjob, SAVEJOB_QUICK);
 
-	if (mom_get_sample() == PBSE_NONE) {
-		time_resc_updated = time_now;
-		(void)mom_set_use(pjob);
-	}
+	time_resc_updated = time_now;
+	(void)mom_set_use(pjob);
+
 	/* these are set for update_ajob_status() so that it will */
 	/* return them to the Server on the first update below.   */
 	/* Later the corresponding code should be removed from req_commit() */

@@ -743,7 +743,7 @@ dis_clear_buf(pbs_dis_buf_t *tp)
 	tp->tdis_lead = 0;
 	tp->tdis_trail = 0;
 	tp->tdis_eod = 0;
-	memset(tp->tdis_thebuf, '\0', tp->tdis_bufsize);
+	tp->tdis_thebuf[0] = '\0';
 }
 
 /**
@@ -1162,14 +1162,16 @@ dis_setup_chan(int fd, pbs_tcp_chan_t * (*inner_transport_get_chan)(int))
 	if (chan == NULL) {
 		if (errno == ENOTCONN)
 			return;
-		chan = (pbs_tcp_chan_t *) calloc(1, sizeof(pbs_tcp_chan_t));
+		chan = (pbs_tcp_chan_t *) malloc(sizeof(pbs_tcp_chan_t));
 		assert(chan != NULL);
-		chan->readbuf.tdis_thebuf = calloc(1, PBS_DIS_BUFSZ);
+		chan->readbuf.tdis_thebuf = malloc(PBS_DIS_BUFSZ);
 		assert(chan->readbuf.tdis_thebuf != NULL);
 		chan->readbuf.tdis_bufsize = PBS_DIS_BUFSZ;
-		chan->writebuf.tdis_thebuf = calloc(1, PBS_DIS_BUFSZ);
+		chan->writebuf.tdis_thebuf = malloc(PBS_DIS_BUFSZ);
 		assert(chan->writebuf.tdis_thebuf != NULL);
 		chan->writebuf.tdis_bufsize = PBS_DIS_BUFSZ;
+		chan->is_old_client = 0;
+		memset(chan->auths, 0, sizeof(chan->auths));
 		rc = transport_set_chan(fd, chan);
 		assert(rc == 0);
 	}

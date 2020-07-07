@@ -1095,9 +1095,9 @@ set_homedir_to_local_default(job *pjob, char *username)
 			log_event(PBSEVENT_ERROR, PBS_EVENTCLASS_JOB, LOG_ERR,
 				__func__, "Home directory was not found, job passed is NULL");
 		}
-		
+
 	}
-	
+
 	home_dir = default_local_homedir(pjob->ji_wattr[(int)JOB_ATR_euser].at_val.at_str, pjob->ji_user->pw_userlogin, 0);
 	if(home_dir != NULL)
 		strcpy(lpath, home_dir);
@@ -1222,7 +1222,7 @@ becomeuser(job *pjob)
 	struct passwd *pwdp;
 
 	if ((pwdp = check_pwd(pjob)) == NULL) {
-		sprintf(log_buffer, "check_pwd failed for job: %s and user: %s", 
+		sprintf(log_buffer, "check_pwd failed for job: %s and user: %s",
 			pjob->ji_qs.ji_jobid, pjob->ji_user);
 		log_event(PBSEVENT_ERROR, PBS_EVENTCLASS_JOB, LOG_ERR,
 			__func__, log_buffer);
@@ -1230,13 +1230,13 @@ becomeuser(job *pjob)
 	}
 	if (pwdp->pw_userlogin != INVALID_HANDLE_VALUE) {
 		if (!impersonate_user(pwdp->pw_userlogin)) {
-			sprintf(log_buffer, "Failed to ImpersonateLoggedOnUser job: %s and user: %s", 
+			sprintf(log_buffer, "Failed to ImpersonateLoggedOnUser job: %s and user: %s",
 				pjob->ji_qs.ji_jobid, pjob->ji_user);
 			log_joberr(-1, __func__, log_buffer, pjob->ji_qs.ji_jobid);
 			return -1;
 		}
 	}else{
-		sprintf(log_buffer, "Failed to ImpersonateLoggedOnUser. Got an invalid value for handle. job: %s and user: %s", 
+		sprintf(log_buffer, "Failed to ImpersonateLoggedOnUser. Got an invalid value for handle. job: %s and user: %s",
 			pjob->ji_qs.ji_jobid, pjob->ji_user);
 		log_event(PBSEVENT_ERROR, PBS_EVENTCLASS_JOB, LOG_ERR,
 			__func__, log_buffer);
@@ -1967,7 +1967,7 @@ finish_exec(job *pjob)
 						log_errf(-1, __func__, "ExpandEnvironmentStringsForUser failed for PATH : envbuf=%s", envbuf);
 				} else
 					log_err(-1, __func__, "DuplicateTokenEx failed");
-			} else 
+			} else
 				log_err(-1, __func__, "OpenProcessToken failed");
 
 			if (hLogin != INVALID_HANDLE_VALUE && hLogin != NULL)

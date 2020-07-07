@@ -7507,12 +7507,7 @@ send_pending_ruu()
 static void
 send_pending_updates(int force)
 {
-	static time_t next_update = 0;
-
-	if (force || time_now > next_update) {
-		send_pending_ruu();
-		next_update = time_now + 0.5;
-	}
+	send_pending_ruu();
 }
 
 /**
@@ -10883,13 +10878,6 @@ main(int argc, char *argv[])
 
 		if ((pjob = (job *)GET_NEXT(svr_alljobs)) == NULL)
 			continue;
-
-		/* there are jobs so update status	 */
-		/* if we just got a sample, don't bother */
-		if (time_now > time_last_sample) {
-			if (mom_get_sample() != PBSE_NONE)
-				continue;
-		}
 
 		time_resc_updated = time_now;
 		for (pjob = (job *)GET_NEXT(svr_alljobs);
