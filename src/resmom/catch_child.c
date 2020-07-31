@@ -2570,6 +2570,11 @@ mom_set_use_all(void)
 		if (mom_get_sample() == PBSE_NONE) {
 			pjob = (job *) GET_NEXT(svr_alljobs);
 			while (pjob) {
+				if ((pjob->ji_qs.ji_state == JOB_STATE_EXITING && (pjob->ji_qs.ji_substate >= JOB_SUBSTATE_OBIT || pjob->ji_qs.ji_substate == JOB_SUBSTATE_EXITED)) ||
+					(pjob->ji_qs.ji_state == JOB_STATE_RUNNING && pjob->ji_qs.ji_substate <= JOB_SUBSTATE_PRERUN)) {
+					pjob = (job *)GET_NEXT(pjob->ji_alljobs);
+					continue;
+				}
 				mom_set_use(pjob);
 				pjob = (job *)GET_NEXT(pjob->ji_alljobs);
 			}

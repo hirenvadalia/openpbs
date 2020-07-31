@@ -62,6 +62,7 @@
 #include <sys/wait.h>
 #include <netinet/in.h>
 #include <fcntl.h>
+#include <ftw.h>
 
 #if defined(__osf__)
 #include <stropts.h>
@@ -1043,6 +1044,16 @@ mkjobdir(char *jobid, char *jobdir, uid_t uid, gid_t gid)
 	return 0;
 }
 
+static int
+rmFiles(const char *pathname, const struct stat *sbuf, int type, struct FTW *ftwb)
+{
+	if (remove(pathname) < 0) {
+		perror("ERROR: remove");
+		return -1;
+	}
+	return 0;
+}
+
 /**
  * @brief
  * 	rmtmpdir - remove the temporary directory
@@ -1058,13 +1069,8 @@ mkjobdir(char *jobid, char *jobdir, uid_t uid, gid_t gid)
 void
 rmtmpdir(char *jobid)
 {
-	static	char	rmdir[MAXPATHLEN+1];
 	struct	stat	sb;
-	pid_t	pid;
-	char	*rm = "/bin/rm";
-	char	*rf = "-rf";
 	char	*tmpdir;
-	char	*newdir = rmdir;
 
 	/* Hello, is any body there? */
 	tmpdir = tmpdirname(jobid);
@@ -1076,30 +1082,10 @@ rmtmpdir(char *jobid)
 		return;
 	}
 
-	sprintf(rmdir, "%s/pbs_remove.%s", pbs_tmpdir, jobid);
-	if (rename(tmpdir, newdir) == -1) {
-		char *msgbuf;
-
-		pbs_asprintf(&msgbuf, "%s %s", tmpdir, newdir);
-		log_joberr(errno, __func__, msgbuf, jobid);
-		free(msgbuf);
-		newdir = tmpdir;
+	if (nftw(tmpdir, rmFiles, 20, FTW_DEPTH|FTW_MOUNT|FTW_PHYS) < 0) {
+		perror("ERROR: ntfw");
+		exit(1);
 	}
-
-	/* fork and exec the cleantmp process */
-	pid = fork();
-	if (pid < 0) {
-		log_err(errno, __func__, "fork");
-		return;
-	}
-
-	if (pid > 0)		/* parent */
-		return;
-
-	tpp_terminate();
-	execl(rm, "pbs_cleandir", rf, newdir, NULL);
-	log_err(errno, __func__, "execl");
-	exit(21);
 }
 
 /**

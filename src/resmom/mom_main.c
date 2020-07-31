@@ -6481,11 +6481,11 @@ finish_loop(time_t waittime)
 		debug_report();
 	if (termin_child) {
 		scan_for_terminated();
-		waittime = 1;	/* want faster time around to next loop */
+		waittime = 0;	/* want faster time around to next loop */
 	}
 	if (exiting_tasks) {
 		scan_for_exiting();
-		waittime = 1;	/* want faster time around to next loop */
+		waittime = 0;	/* want faster time around to next loop */
 	}
 
 	if (waittime > next_sample_time)
@@ -7091,7 +7091,7 @@ mom_over_limit(job *pjob)
 
 		at = &pjob->ji_wattr[(int)JOB_ATR_resc_used];
 		assert(at->at_type == ATR_TYPE_RESC);
-		
+
 		rd = &svr_resc_def[RESC_CPUPERCENT];
 		prescpup = find_resc_entry(at, rd);
 		if ((prescpup != NULL) &&

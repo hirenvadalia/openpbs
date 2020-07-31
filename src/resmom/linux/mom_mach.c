@@ -4567,8 +4567,7 @@ mom_get_sample(void)
 	struct dirent		*dent = NULL;
 	FILE			*fd = NULL;
 	static char		path[MAXPATHLEN + 1];
-	char			procname[MAXPATHLEN + 1]; /* space for dent->d_name plus extra */
-	char			procid[MAXPATHLEN + 1];
+	char			procpath[MAXPATHLEN + 1];
 	struct stat		sb;
 	proc_stat_t		*ps = NULL;
 	int			nprocs = 0;
@@ -4595,6 +4594,11 @@ mom_get_sample(void)
 		hz = sysconf(_SC_CLK_TCK);
 	time_last_sample = time(0);
 	sampletime_floor = time_last_sample;
+	stat_str = choose_procflagsfmt();
+	if (stat_str == NULL) {
+		log_err(errno, __func__, "choose_procflagsfmt allocation failed");
+		return PBSE_INTERNAL;
+	}
 	while (errno = 0, (dent = readdir(pdir)) != NULL) {
 		int	nomem = 0;
 		struct	stat	sbuf;
@@ -4611,25 +4615,20 @@ mom_get_sample(void)
 			} else
 				continue;
 		}
-		snprintf(procid, sizeof(procid), "/proc/%s", dent->d_name);
-		if ((stat(procid, &sbuf) == -1) || (sbuf.st_uid == 0)) {
+		sprintf(procpath, "/proc/%s", dent->d_name);
+		if ((stat(procpath, &sbuf) == -1) || (sbuf.st_uid == 0)) {
 			/* ignore root-owned processes */
 			nskipped++;
 			continue;
 		}
-		snprintf(procname, sizeof(procname), "/proc/%s/stat", dent->d_name);
+		strcat(procpath, "/stat");
 
-		if ((fd = fopen(procname, "r")) == NULL) {
+		if ((fd = fopen(procpath, "r")) == NULL) {
 			ncantstat++;
 			continue;
 		}
 
 		ps = &proc_info[nproc];
-		stat_str = choose_procflagsfmt();
-		if (stat_str == NULL) {
-			log_err(errno, __func__, "choose_procflagsfmt allocation failed");
-			return PBSE_INTERNAL;
-		}
 		if (fscanf(fd, stat_str,
 			   &ps->pid,		/* "%d "	1  pid %d The process id */
 			   path,		/* "(%[^)]) "	2  comm %s The filename of the executable */
@@ -4678,8 +4677,7 @@ mom_get_sample(void)
 		}
 
 		ps->start_time = linux_time + (starttime / hz);
-		snprintf(ps->comm, sizeof(ps->comm), "%.*s",
-			(int)(sizeof(ps->comm) - 1), path);
+		sprintf(ps->comm, "%.*s", (int)(sizeof(ps->comm) - 1), path);
 
 		ps->utime = JTOS(ps->utime);
 		ps->stime = JTOS(ps->stime);
@@ -4698,12 +4696,11 @@ mom_get_sample(void)
 	if (errno != 0 && errno != ENOENT)
 		log_err(errno, __func__, "readdir");
 	sampletime_ceil = time_last_sample;
-	sprintf(log_buffer,
+	log_eventf(PBSEVENT_DEBUG4, 0, LOG_DEBUG, __func__,
 		"nprocs:  %d, cantstat:  %d, nomem:  %d, skipped:  %d, "
 		"cached:  %d",
 		nprocs - 2, ncantstat, nnomem, nskipped,
 		ncached);
-	log_event(PBSEVENT_DEBUG4, 0, LOG_DEBUG, __func__, log_buffer);
 	return (PBSE_NONE);
 }
 

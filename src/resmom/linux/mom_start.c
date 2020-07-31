@@ -1215,8 +1215,6 @@ scan_for_terminated(void)
 
 	termin_child = 0;
 
-	mom_set_use_all();
-
 	/* Now figure out which task(s) have terminated (are zombies) */
 
 	while ((pid = waitpid(-1, &statloc, WNOHANG)) > 0) {
