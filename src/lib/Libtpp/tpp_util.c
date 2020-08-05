@@ -2262,10 +2262,7 @@ tpp_netaddr(tpp_addr_t *ap)
 char *
 tpp_netaddr_sa(struct sockaddr *sa)
 {
-	tpp_tls_t *ptr;
-	int len = TPP_GEN_BUF_SZ;
-
-	ptr = tpp_get_tls();
+	tpp_tls_t *ptr = tpp_get_tls();
 	if (!ptr) {
 		fprintf(stderr, "Out of memory\n");
 		return NULL;
@@ -2273,12 +2270,12 @@ tpp_netaddr_sa(struct sockaddr *sa)
 	ptr->tppstaticbuf[0] = '\0';
 
 #ifdef WIN32
-	WSAAddressToString((LPSOCKADDR)&sa, sizeof(struct sockaddr), NULL, (LPSTR)&ptr->tppstaticbuf, &len);
+	WSAAddressToString((LPSOCKADDR)&sa, sizeof(struct sockaddr), NULL, (LPSTR)&ptr->tppstaticbuf, sizeof(ptr->tppstaticbuf));
 #else
 	if (sa->sa_family == AF_INET)
-		inet_ntop(sa->sa_family, &(((struct sockaddr_in *) sa)->sin_addr), ptr->tppstaticbuf, len);
+		inet_ntop(sa->sa_family, &(((struct sockaddr_in *) sa)->sin_addr), ptr->tppstaticbuf, sizeof(ptr->tppstaticbuf));
 	else
-		inet_ntop(sa->sa_family, &(((struct sockaddr_in6 *) sa)->sin6_addr), ptr->tppstaticbuf, len);
+		inet_ntop(sa->sa_family, &(((struct sockaddr_in6 *) sa)->sin6_addr), ptr->tppstaticbuf, sizeof(ptr->tppstaticbuf));
 #endif
 
 	return ptr->tppstaticbuf;

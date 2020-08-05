@@ -435,7 +435,7 @@ tpp_cr_server_socket(int port)
 	if (tpp_sock_bind(sd, (struct sockaddr *) &serveraddr, sizeof(serveraddr)) == -1) {
 		char *msgbuf;
 #ifdef HAVE_STRERROR_R
-		char buf[TPP_GEN_BUF_SZ + 1];
+		char buf[TPP_GEN_BUF_SZ];
 
 		if (strerror_r(errno, buf, sizeof(buf)) == 0)
 			pbs_asprintf(&msgbuf, "%s while binding to port %d", buf, port);
@@ -1212,19 +1212,13 @@ add_transport_conn(phy_conn_t *conn)
 			if (errno != EINPROGRESS && errno != EWOULDBLOCK && errno != EAGAIN) {
 				char *msgbuf;
 #ifdef HAVE_STRERROR_R
-				char buf[TPP_GEN_BUF_SZ + 1];
+				char buf[TPP_GEN_BUF_SZ];
 
 				if (strerror_r(errno, buf, sizeof(buf)) == 0)
-					pbs_asprintf(&msgbuf,
-						"%s while connecting to %s:%d", buf,
-						conn->conn_params->hostname,
-						conn->conn_params->port);
+					pbs_asprintf(&msgbuf, "%s while connecting to %s:%d", buf, conn->conn_params->hostname, conn->conn_params->port);
 				else
 #endif
-					pbs_asprintf(&msgbuf,
-						"Error %d while connecting to %s:%d", errno,
-						conn->conn_params->hostname,
-						conn->conn_params->port);
+					pbs_asprintf(&msgbuf, "Error %d while connecting to %s:%d", errno, conn->conn_params->hostname, conn->conn_params->port);
 				tpp_log(LOG_ERR, NULL, msgbuf);
 				free(msgbuf);
 				return -1;

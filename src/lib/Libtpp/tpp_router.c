@@ -1090,6 +1090,7 @@ router_pkt_handler(int tfd, void *buf, int len, void *c, void *extra)
 	tpp_addr_t connected_host;
 	conn_auth_t *authdata = (conn_auth_t *)extra;
 	tpp_addr_t *addr = tpp_get_connected_host(tfd);
+	char msg[TPP_GEN_BUF_SZ];
 	short rc;
 
 	if (!addr)
@@ -1140,89 +1141,85 @@ again:
 			memcpy(&ahdr, buf, sizeof(tpp_auth_pkt_hdr_t));
 
 			if (authdata == NULL) {
-				char msg[TPP_GEN_BUF_SZ];
-				if (!is_string_in_arr(tpp_conf->supported_auth_methods, ahdr.auth_method)) {
+				msg[0] = '\0';
+				if (!is_string_in_arr(tpp_conf->supported_auth_methods, ahdr.auth_method))
 					snprintf(msg, sizeof(msg), "tfd=%d, Authentication method %s not allowed in connection %s", tfd, ahdr.auth_method, tpp_netaddr(&connected_host));
-					tpp_log(LOG_CRIT, NULL, msg);
-					tpp_send_ctl_msg(tfd, TPP_MSG_AUTHERR, &connected_host, &this_router->router_addr, -1, 0, msg);
-					return 0; /* let connection be alive, so we can send error */
-				}
-				if (strcmp(ahdr.auth_method, AUTH_RESVPORT_NAME) != 0 && get_auth(ahdr.auth_method) == NULL) {
-					snprintf(msg, sizeof(msg), "tfd=%d, Authentication method not supported in connection %s", tfd, tpp_netaddr(&connected_host));
-					tpp_log(LOG_CRIT, NULL, msg);
-					tpp_send_ctl_msg(tfd, TPP_MSG_AUTHERR, &connected_host, &this_router->router_addr, -1, 0, msg);
-					return 0; /* let connection be alive, so we can send error */
-				}
-				if (ahdr.encrypt_method[0] != '\0' && get_auth(ahdr.encrypt_method) == NULL) {
-					snprintf(msg, sizeof(msg), "tfd=%d, Encryption method not supported in connection %s", tfd, tpp_netaddr(&connected_host));
-					tpp_log(LOG_CRIT, NULL, msg);
-					tpp_send_ctl_msg(tfd, TPP_MSG_AUTHERR, &connected_host, &this_router->router_addr, -1, 0, msg);
-					return 0; /* let connection be alive, so we can send error */
-				}
 
-				len_in = (size_t)len - sizeof(tpp_auth_pkt_hdr_t);
-				data_in = calloc(1, len_in);
-				if (data_in == NULL) {
-					tpp_log(LOG_CRIT, __func__, "Out of memory allocating authdata credential");
+				else if (strcmp(ahdr.auth_method, AUTH_RESVPORT_NAME) != 0 && get_auth(ahdr.auth_method) == NULL)
+					snprintf(msg, sizeof(msg), "tfd=%d, Authentication method not supported in connection %s", tfd, tpp_netaddr(&connected_host));
+				
+				else if (ahdr.encrypt_method[0] != '\0' && get_auth(ahdr.encrypt_method) == NULL)
+					snprintf(msg, sizeof(msg), "tfd=%d, Encryption method not supported in connection %s", tfd, tpp_netaddr(&connected_host));
+
+				if (msg[0] != '\0') {
+					/* error message was set, to take action */
+					tpp_log(LOG_CRIT, NULL, msg);
+					tpp_send_ctl_msg(tfd, TPP_MSG_AUTHERR, &connected_host, &this_router->router_addr, -1, 0, msg);
+					return 0; /* let connection be alive, so we can send error */
+				}
+			}
+
+			len_in = (size_t)len - sizeof(tpp_auth_pkt_hdr_t);
+			data_in = calloc(1, len_in);
+			if (data_in == NULL) {
+				tpp_log(LOG_CRIT, __func__, "Out of memory allocating authdata credential");
+				return -1;
+			}
+			memcpy(data_in, (char *)buf + sizeof(tpp_auth_pkt_hdr_t), len_in);
+
+			if (authdata == NULL) {
+				authdata = tpp_make_authdata(tpp_conf, AUTH_SERVER, ahdr.auth_method, ahdr.encrypt_method);
+				if (authdata == NULL) {
+					/* tpp_make_authdata already logged error */
+					free(data_in);
 					return -1;
 				}
-				memcpy(data_in, (char *)buf + sizeof(tpp_auth_pkt_hdr_t), len_in);
+				tpp_transport_set_conn_extra(tfd, authdata);
+			}
 
-				if (authdata == NULL) {
-					authdata = tpp_make_authdata(tpp_conf, AUTH_SERVER, ahdr.auth_method, ahdr.encrypt_method);
-					if (authdata == NULL) {
-						/* tpp_make_authdata already logged error */
-						free(data_in);
-						return -1;
-					}
+			rc = tpp_handle_auth_handshake(tfd, tfd, authdata, ahdr.for_encrypt, data_in, len_in);
+			if (rc != 1) {
+				free(data_in);
+				return rc;
+			}
+
+			free(data_in);
+
+			if (ahdr.for_encrypt == FOR_ENCRYPT &&
+				strcmp(authdata->config->auth_method, AUTH_RESVPORT_NAME) != 0) {
+
+				if (strcmp(authdata->config->auth_method, authdata->config->encrypt_method) != 0) {
+					if (authdata->conn_initiator) {
+						rc = tpp_handle_auth_handshake(tfd, tfd, authdata, FOR_AUTH, NULL, 0);
+						if (rc != 1) {
+							return rc;
+						}
+					} else
+						return 0;
+				} else {
+					authdata->authctx = authdata->encryptctx;
+					authdata->authdef = authdata->encryptdef;
 					tpp_transport_set_conn_extra(tfd, authdata);
 				}
-
-				rc = tpp_handle_auth_handshake(tfd, tfd, authdata, ahdr.for_encrypt, data_in, len_in);
-				if (rc != 1) {
-					free(data_in);
-					return rc;
-				}
-
-				free(data_in);
-
-				if (ahdr.for_encrypt == FOR_ENCRYPT &&
-					strcmp(authdata->config->auth_method, AUTH_RESVPORT_NAME) != 0) {
-
-					if (strcmp(authdata->config->auth_method, authdata->config->encrypt_method) != 0) {
-						if (authdata->conn_initiator) {
-							rc = tpp_handle_auth_handshake(tfd, tfd, authdata, FOR_AUTH, NULL, 0);
-							if (rc != 1) {
-								return rc;
-							}
-						} else
-							return 0;
-					} else {
-						authdata->authctx = authdata->encryptctx;
-						authdata->authdef = authdata->encryptdef;
-						tpp_transport_set_conn_extra(tfd, authdata);
-					}
-				}
-
-				if (ctx == NULL) {
-					if ((ctx = (tpp_context_t *) malloc(sizeof(tpp_context_t))) == NULL) {
-						tpp_log(LOG_CRIT, __func__, "Out of memory allocating tpp context");
-						return -1;
-					}
-					ctx->ptr = NULL;
-					ctx->type = TPP_AUTH_NODE; /* denoting that this is an authenticated connection */
-				}
-
-				/*
-				* associate this router structure (information) with
-				* this physical connection
-				*/
-				tpp_transport_set_conn_ctx(tfd, ctx);
-
-				/* send TPP_CTL_JOIN msg to fellow router */
-				return router_send_ctl_join(tfd, buf, c);
-
 			}
+
+			if (ctx == NULL) {
+				if ((ctx = (tpp_context_t *) malloc(sizeof(tpp_context_t))) == NULL) {
+					tpp_log(LOG_CRIT, __func__, "Out of memory allocating tpp context");
+					return -1;
+				}
+				ctx->ptr = NULL;
+				ctx->type = TPP_AUTH_NODE; /* denoting that this is an authenticated connection */
+			}
+
+			/*
+			* associate this router structure (information) with
+			* this physical connection
+			*/
+			tpp_transport_set_conn_ctx(tfd, ctx);
+
+			/* send TPP_CTL_JOIN msg to fellow router */
+			return router_send_ctl_join(tfd, buf, c);
 		}
 		break;
 
@@ -1230,28 +1227,30 @@ again:
 			unsigned char hop;
 			unsigned char node_type;
 			tpp_join_pkt_hdr_t *hdr = (tpp_join_pkt_hdr_t *) buf;
-			char msg[TPP_GEN_BUF_SZ + 1];
 
 			hop = hdr->hop;
 			node_type = hdr->node_type;
 
 			if (ctx == NULL) { /* connection not yet authenticated */
+				msg[0] = '\0';
 				if (extra && strcmp(((conn_auth_t *)extra)->config->auth_method, AUTH_RESVPORT_NAME) != 0) {
 					/*
 					 * In case of external authentication, ctx must already be set
 					 * so error out if ctx is not set.
 					 */
-					snprintf(msg, TPP_GEN_BUF_SZ, "tfd=%d Unauthenticated connection from %s", tfd, tpp_netaddr(&connected_host));
-					tpp_log(LOG_CRIT, NULL, msg);
-					tpp_send_ctl_msg(tfd, TPP_MSG_AUTHERR, &connected_host, &this_router->router_addr, -1, 0,msg);
-					return 0; /* let connection be alive, so we can send error */
+					snprintf(msg, sizeof(msg), "tfd=%d Unauthenticated connection from %s", tfd, tpp_netaddr(&connected_host));
 				} else {
-					if (!is_string_in_arr(tpp_conf->supported_auth_methods, AUTH_RESVPORT_NAME)) {
-						snprintf(msg, TPP_GEN_BUF_SZ, "tfd=%d, Authentication method %s not allowed in connection %s", tfd, AUTH_RESVPORT_NAME, tpp_netaddr(&connected_host));
-						tpp_log(LOG_CRIT, NULL, msg);
-						tpp_send_ctl_msg(tfd, TPP_MSG_AUTHERR, &connected_host, &this_router->router_addr, -1, 0, msg);
-						return 0; /* let connection be alive, so we can send error */
-					}
+					if (!is_string_in_arr(tpp_conf->supported_auth_methods, AUTH_RESVPORT_NAME))
+						snprintf(msg, sizeof(msg), "tfd=%d, Authentication method %s not allowed in connection %s", tfd, AUTH_RESVPORT_NAME, tpp_netaddr(&connected_host));
+					
+					else if (tpp_transport_isresvport(tfd) != 0) /* reserved port based authentication, and is not yet authenticated, so check resv port */
+						snprintf(msg, sizeof(msg), "Connection from non-reserved port, rejected");
+				}
+				if (msg[0] != '\0') {
+					/* error message was set above, take action */
+					tpp_log(LOG_CRIT, NULL, msg);
+					tpp_send_ctl_msg(tfd, TPP_MSG_AUTHERR, &connected_host, &this_router->router_addr, -1, 0, msg);
+					return 0; /* let connection be alive, so we can send error */
 				}
 			}
 
@@ -1577,7 +1576,6 @@ again:
 			int rsize = 0;
 			int csize = 0;
 			void *tmp;
-			char msg[TPP_GEN_BUF_SZ];
 
 			/* find the fd to forward to via the associated router */
 			tpp_mcast_pkt_hdr_t *mhdr = (tpp_mcast_pkt_hdr_t *) buf;
@@ -1640,7 +1638,7 @@ again:
 				pbs_idx_find(cluster_leaves_idx, (void **)&dest_host, (void **)&l, NULL);
 				if (l == NULL) {
 					tpp_unlock_rwlock(&router_lock);
-					snprintf(msg, TPP_GEN_BUF_SZ, "pbs_comm:%s: Dest not found at pbs_comm", tpp_netaddr(&this_router->router_addr));
+					snprintf(msg, sizeof(msg), "pbs_comm:%s: Dest not found at pbs_comm", tpp_netaddr(&this_router->router_addr));
 					log_noroute(src_host, dest_host, src_sd, msg);
 					tpp_send_ctl_msg(tfd, TPP_MSG_NOROUTE, src_host, dest_host, src_sd, 0, msg);
 					continue;
@@ -1651,7 +1649,7 @@ again:
 				tpp_unlock_rwlock(&router_lock);
 
 				if (target_router == NULL) {
-					snprintf(msg, TPP_GEN_BUF_SZ, "pbs_comm:%s: No target pbs_comm found", tpp_netaddr(&this_router->router_addr));
+					snprintf(msg, sizeof(msg), "pbs_comm:%s: No target pbs_comm found", tpp_netaddr(&this_router->router_addr));
 					log_noroute(src_host, dest_host, src_sd, msg);
 					tpp_send_ctl_msg(tfd, TPP_MSG_NOROUTE, src_host, dest_host, src_sd, 0, msg);
 					continue;
@@ -1823,7 +1821,6 @@ mcast_err:
 			tpp_packet_t *pkt = NULL;
 			unsigned int src_sd;
 			tpp_data_pkt_hdr_t *dhdr = (tpp_data_pkt_hdr_t *) buf;
-			char msg[TPP_GEN_BUF_SZ];
 
 			src_host = &dhdr->src_addr;
 			dest_host = &dhdr->dest_addr;
@@ -1834,7 +1831,7 @@ mcast_err:
 			pbs_idx_find(cluster_leaves_idx, (void **)&dest_host, (void **)&l, NULL);
 			if (l == NULL) {
 				tpp_unlock_rwlock(&router_lock);
-				snprintf(msg, TPP_GEN_BUF_SZ, "tfd=%d, pbs_comm:%s: Dest not found", tfd, tpp_netaddr(&this_router->router_addr));
+				snprintf(msg, sizeof(msg), "tfd=%d, pbs_comm:%s: Dest not found", tfd, tpp_netaddr(&this_router->router_addr));
 				log_noroute(src_host, dest_host, src_sd, msg);
 				tpp_send_ctl_msg(tfd, TPP_MSG_NOROUTE, src_host, dest_host, src_sd, 0, msg);
 				return 0;
@@ -1845,7 +1842,7 @@ mcast_err:
 			tpp_unlock_rwlock(&router_lock);
 
 			if (target_router == NULL) {
-				snprintf(msg, TPP_GEN_BUF_SZ, "tfd=%d, pbs_comm:%s: No target pbs_comm found", tfd, tpp_netaddr(&this_router->router_addr));
+				snprintf(msg, sizeof(msg), "tfd=%d, pbs_comm:%s: No target pbs_comm found", tfd, tpp_netaddr(&this_router->router_addr));
 				log_noroute(src_host, dest_host, src_sd, msg);
 				tpp_send_ctl_msg(tfd, TPP_MSG_NOROUTE, src_host, dest_host, src_sd, 0, msg);
 				return 0;
