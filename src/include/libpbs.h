@@ -413,6 +413,7 @@ int encode_DIS_JobsList(int sock, char **jobs_list, int numofjobs);
 int get_server_fd_from_jid(int c, char *jobid);
 int multi_svr_op(int fd);
 int get_job_svr_inst_id(int c, char *job_id);
+int validate_running_user(char *);
 
 #ifdef __cplusplus
 }

@@ -60,6 +60,7 @@
 
 #include <sys/stat.h>
 #include <unistd.h>
+#include "libpbs.h"
 
 #ifndef WIN32
 #define shorten_and_cleanup_path(p) strdup(p)
@@ -259,10 +260,10 @@ parse_config_line(FILE *fp, char **key, char **val)
 
 /**
  * @brief frame the psi_t struct from svr instance id passed
- * 
+ *
  * @param[in,out] psi - server instance id
  * @param[in] svr_id - server instance id
- * @return int 
+ * @return int
  * @retval 0 - success
  * @retval !0 - failure
  */
@@ -294,9 +295,9 @@ frame_psi(psi_t *psi, char *svr_id)
 /**
  * @brief
  * parse_psi - parses the PBS_SERVER_INSTANCES
- *    
+ *
  * @param[in] conf_value  configuration value set in pbs.conf
- * 
+ *
  * @return int
  * @retval -1, For error
  * @retval 0, For success
@@ -1210,7 +1211,7 @@ err:
 		free_string_array(pbs_conf.supported_auth_methods);
 		pbs_conf.supported_auth_methods = NULL;
 	}
-	
+
 	if (psi_value != NULL)
 		free(psi_value);
 
@@ -1292,7 +1293,7 @@ pbs_get_conf_var(char *conf_var_name)
 		fclose(fp);
 	}
 	free(conf_file);
-	
+
 	if (conf_val_out)
 		return conf_val_out;
 
@@ -1405,4 +1406,43 @@ int
 get_num_servers(void)
 {
 	return pbs_conf.pbs_num_servers;
+}
+
+/**
+ * @brief Validate running user.
+ * If PBS_DAEMON_SERVICE_USER is set, and user is root, change user to it.
+ *
+ * @param[in] exename - name of executable (argv[0])
+ *
+ * @retval Error code
+ * @return 0 - Failure
+ * @return 1 - Success
+ *
+ * @par Side Effects:
+ *	None
+ */
+int
+validate_running_user(char *exename) {
+	if (pbs_conf.pbs_daemon_service_user) {
+		struct passwd *user = getpwnam(pbs_conf.pbs_daemon_service_user);
+		if (user == NULL) {
+			fprintf(stderr, "%s: PBS_DAEMON_SERVICE_USER [%s] does not exist\n", exename, pbs_conf.pbs_daemon_service_user);
+			return 0;
+		}
+
+		if (geteuid() == 0) {
+			setuid(user->pw_uid);
+			pbs_strncpy(pbs_current_user, pbs_conf.pbs_daemon_service_user, PBS_MAXUSER);
+		}
+
+		if (user->pw_uid != getuid()) {
+			fprintf(stderr, "%s: Must be run by PBS_DAEMON_SERVICE_USER [%s]\n", exename, pbs_conf.pbs_daemon_service_user);
+			return 0;
+		}
+	} else if ((geteuid() != 0) || getuid() != 0) {
+		fprintf(stderr, "%s: Must be run by PBS_DAEMON_SERVICE_USER if set or root if not set\n", exename);
+		return 0;
+	}
+
+	return 1;
 }

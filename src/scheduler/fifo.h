@@ -244,8 +244,6 @@ int scheduler_simulation_task(int pbs_sd, int debug);
 
 int set_validate_sched_attrs(int);
 
-int validate_running_user(char *exename);
-
 int send_run_job(int virtual_sd, int has_runjob_hook, const std::string& jobid, char *execvnode, char *svr_id_job);
 
 #endif	/* _FIFO_H */

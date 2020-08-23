@@ -69,6 +69,7 @@
 
 #include <ctype.h>
 
+#include "libpbs.h"
 #include "pbs_ifl.h"
 #include "pbs_internal.h"
 #include "log.h"
@@ -324,7 +325,7 @@ main(int argc, char **argv)
 	struct tpp_config conf;
 	int tpp_fd;
 	char *pc;
-	int numthreads;
+	int numthreads = 0;
 	char lockfile[MAXPATHLEN + 1];
 	char path_log[MAXPATHLEN + 1];
 	char svr_home[MAXPATHLEN + 1];
@@ -349,12 +350,6 @@ main(int argc, char **argv)
 	while (--i > 2)
 		(void)close(i); /* close any file desc left open by parent */
 
-	/* If we are not run with real and effective uid of 0, forget it */
-	if ((getuid() != 0) || (geteuid() != 0)) {
-		fprintf(stderr, "%s: Must be run by root\n", argv[0]);
-		return (2);
-	}
-
 	/* set standard umask */
 	umask(022);
 
@@ -362,6 +357,41 @@ main(int argc, char **argv)
 	if (pbs_loadconf(0) == 0) {
 		fprintf(stderr, "%s: Configuration error\n", argv[0]);
 		return (1);
+	}
+
+	if (validate_running_user(argv[0]) == 0)
+		return (1);
+
+	if (getuid() != 0 && strcmp(pbs_conf.auth_method, AUTH_RESVPORT_NAME) == 0) {
+		fprintf(stderr, "%s: resport authentication is not supported while running as non-root user\n", argv[0]);
+		return (1);
+	}
+
+	log_event_mask = &pbs_conf.pbs_comm_log_events;
+
+	while ((c = getopt(argc, argv, "r:t:e:N")) != -1) {
+		switch (c) {
+			case 'e':
+				*log_event_mask = strtol(optarg, NULL, 0);
+				break;
+			case 'r':
+				routers = optarg;
+				break;
+			case 't':
+				numthreads = atol(optarg);
+				if (numthreads <= 0) {
+					fprintf(stderr, "%s: number of threads must be > 0\n", argv[0]);
+					usage(argv[0]);
+					return (1);
+				}
+				break;
+			case 'N':
+				stalone = 1;
+				break;
+			default:
+				usage(argv[0]);
+				return (1);
+		}
 	}
 
 	set_log_conf(pbs_conf.pbs_leaf_name, pbs_conf.pbs_mom_node_name,
@@ -379,11 +409,12 @@ main(int argc, char **argv)
 	i = getgid();
 	(void)setgroups(1, (gid_t *)&i);	/* secure suppl. groups */
 
-	log_event_mask = &pbs_conf.pbs_comm_log_events;
 	tpp_set_logmask(*log_event_mask);
 
-	routers = pbs_conf.pbs_comm_routers;
-	numthreads = pbs_conf.pbs_comm_threads;
+	if (routers == NULL)
+		routers = pbs_conf.pbs_comm_routers;
+	if (numthreads == 0)
+		numthreads = pbs_conf.pbs_comm_threads;
 
 	server_host[0] = '\0';
 	if (pbs_conf.pbs_comm_name) {
@@ -423,29 +454,6 @@ main(int argc, char **argv)
 		return (1);
 	}
 
-	while ((c = getopt(argc, argv, "r:t:e:N")) != -1) {
-		switch (c) {
-			case 'e': *log_event_mask = strtol(optarg, NULL, 0);
-				break;
-			case 'r':
-				routers = optarg;
-				break;
-			case 't':
-				numthreads = atol(optarg);
-				if (numthreads == -1) {
-					usage(argv[0]);
-					return (1);
-				}
-				break;
-			case 'N':
-				stalone = 1;
-				break;
-			default:
-				usage(argv[0]);
-				return (1);
-		}
-	}
-
 	(void)strcpy(daemonname, "Comm@");
 	(void)strcat(daemonname, name);
 	if ((pc = strchr(daemonname, (int)'.')) != NULL)
@@ -457,7 +465,10 @@ main(int argc, char **argv)
 	}
 
 	(void) snprintf(path_log, sizeof(path_log), "%s/%s", pbs_conf.pbs_home_path, PBS_COMM_LOGDIR);
-	(void) log_open(log_file, path_log);
+	if (log_open(log_file, path_log) == -1) {
+		fprintf(stderr, "%s: logfile could not be opened\n", argv[0]);
+		exit(1);
+	}
 
 	/* set pbs_comm's process limits */
 	set_proc_limits(pbs_conf.pbs_core_limit, TPP_MAXOPENFD); /* set_proc_limits can call log_record, so call only after opening log file */
