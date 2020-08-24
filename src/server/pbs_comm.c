@@ -400,14 +400,14 @@ main(int argc, char **argv)
 
 	umask(022);
 
+	i = getgid();
+	(void)setgroups(1, (gid_t *)&i);	/* secure suppl. groups */
+
 	/* The following is code to reduce security risks                */
 	/* start out with standard umask, system resource limit infinite */
 	if ((num_var_env = setup_env(pbs_conf.pbs_environment)) == -1) {
 		exit(1);
 	}
-
-	i = getgid();
-	(void)setgroups(1, (gid_t *)&i);	/* secure suppl. groups */
 
 	tpp_set_logmask(*log_event_mask);
 
@@ -489,7 +489,7 @@ main(int argc, char **argv)
 		return (3);
 	}
 
-	if ((lockfds = open(lockfile, O_CREAT | O_WRONLY, 0600)) < 0) {
+	if ((lockfds = open(lockfile, O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)) < 0) {
 		(void) sprintf(log_buffer, "pbs_comm: unable to open lock file");
 		log_err(errno, __func__, log_buffer);
 		return (1);

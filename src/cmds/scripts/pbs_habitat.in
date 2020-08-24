@@ -311,6 +311,13 @@ if [ "${PBS_START_SERVER:-0}" != 0 ] ; then
 		echo "*** Setting default queue and resource limits."
 		echo "***"
 
+		${PBS_EXEC}/sbin/pbs_dataservice start > /dev/null
+		ret=$?
+		if [ $ret -ne 0 ]; then
+			echo "*** Error starting pbs dataservice"
+			exit $ret
+		fi
+
 		${PBS_EXEC}/sbin/pbs_server -t create > /dev/null
 		ret=$?
 		if [ $ret -ne 0 ]; then
@@ -377,6 +384,7 @@ if [ "${PBS_START_SERVER:-0}" != 0 ] ; then
 
 	if [ $PBS_START_MOM != 0 ]; then
 		if [ $server_started -eq 0 ]; then
+			${PBS_EXEC}/sbin/pbs_dataservice start > /dev/null
 			${PBS_EXEC}/sbin/pbs_server > /dev/null
 			server_started=1
 		fi
@@ -394,6 +402,7 @@ if [ "${PBS_START_SERVER:-0}" != 0 ] ; then
 
 	if [ $server_started -eq 1 ]; then
 		${PBS_EXEC}/bin/qterm
+		${PBS_EXEC}/sbin/pbs_dataservice stop > /dev/null
 	fi
 fi
 

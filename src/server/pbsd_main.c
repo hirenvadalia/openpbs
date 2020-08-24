@@ -117,7 +117,6 @@ extern int takeover_from_secondary(void);
 extern int  be_secondary(time_t sec);
 extern void set_srv_prov_attributes();
 extern int connect_to_db(int);
-extern void stop_db();
 #ifdef NAS /* localmod 005 */
 extern int chk_and_update_db_svrhost();
 #endif /* localmod 005 */
@@ -185,7 +184,6 @@ sigset_t	allsigs;
 /* private data */
 static char    *suffix_slash = "/";
 static int	brought_up_alt_sched = 0;
-void stop_db();
 extern void mark_nodes_unknown(int);
 
 /*
@@ -657,12 +655,6 @@ main(int argc, char **argv)
 	while (--i > 2)
 		(void)close(i); /* close any file desc left open by parent */
 
-	/* If we are not run with real and effective uid of 0, forget it */
-	if ((getuid() != 0) || (geteuid() != 0)) {
-		fprintf(stderr, "%s: Must be run by root\n", argv[0]);
-		return (1);
-	}
-
 	/* set standard umask */
 	umask(022);
 
@@ -673,13 +665,20 @@ main(int argc, char **argv)
 
 	/* initialize the thread context */
 	if (pbs_client_thread_init_thread_context() != 0) {
-		log_err(-1, __func__,
-			"Unable to initialize thread context");
+		fprintf(stderr, "%s: Unable to initialize thread context", argv[0]);
 		return (1);
 	}
 
 	if (pbs_loadconf(0) == 0)
 		return (1);
+
+	if (validate_running_user(argv[0]) == 0)
+		return (1);
+
+	if (getuid() != 0 && strcmp(pbs_conf.auth_method, AUTH_RESVPORT_NAME) == 0) {
+		fprintf(stderr, "%s: resport authentication is not supported while running as non-root user\n", argv[0]);
+		return (1);
+	}
 
 	set_log_conf(pbs_conf.pbs_leaf_name, pbs_conf.pbs_mom_node_name,
 			pbs_conf.locallog, pbs_conf.syslogfac,
@@ -697,12 +696,12 @@ main(int argc, char **argv)
 		if (endp)
 			*endp = '\0';
 	} else if (gethostname(server_host, (sizeof(server_host) - 1)) == -1) {
-		log_err(-1, __func__, "Host name too large");
+		fprintf(stderr, "%s: Could not determine my hostname, errno=%d", argv[0], errno);
 		return (-1);
 	}
 	if ((server_host[0] == '\0') ||
 	    (get_fullhostname(server_host, server_host, (sizeof(server_host) - 1)) == -1)) {
-		log_err(-1, __func__, "Unable to get my host name");
+		fprintf(stderr, "%s: Could not determine my hostname\n", argv[0]);
 		return (-1);
 	}
 
@@ -728,7 +727,7 @@ main(int argc, char **argv)
 
 	pbs_server_name = pbs_default();
 	if ((!pbs_server_name) || (*pbs_server_name == '\0')) {
-		log_err(-1, __func__, "Unable to get server host name");
+		fprintf(stderr, "%s: Unable to get server host name", msg_daemonname);
 		return (-1);
 	}
 
@@ -757,15 +756,13 @@ main(int argc, char **argv)
 				servicename = optarg;
 				if (strlen(server_name) + strlen(servicename) + 1 >
 					(size_t)PBS_MAXSERVERNAME) {
-					(void)fprintf(stderr,
-						"%s: -p host:port too long\n", argv[0]);
+					(void)fprintf(stderr, "%s: -p host:port too long\n", argv[0]);
 					return (1);
 				}
 				(void)strcat(server_name, ":");
 				(void)strcat(server_name, servicename);
 				if ((pbs_server_port_dis = atoi(servicename)) == 0) {
-					(void)fprintf(stderr,
-						"%s: -p host:port invalid\n", argv[0]);
+					(void)fprintf(stderr, "%s: -p host:port invalid\n", argv[0]);
 					return (1);
 				}
 				break;
@@ -777,8 +774,7 @@ main(int argc, char **argv)
 					}
 				}
 				if (i == RECOV_Invalid) {
-					(void)fprintf(stderr, "%s -t bad recovery type\n",
-						argv[0]);
+					(void)fprintf(stderr, "%s: -t bad recovery type\n", argv[0]);
 					return (1);
 				}
 				break;
@@ -791,8 +787,7 @@ main(int argc, char **argv)
 			case 'F':
 				i = atoi(optarg);
 				if (i < -1) {
-					(void)fprintf(stderr, "%s -F invalid delay time\n",
-						argv[0]);
+					(void)fprintf(stderr, "%s: -F invalid delay time\n", argv[0]);
 					return (1);
 				}
 				secondary_delay = (time_t)i;
@@ -823,8 +818,7 @@ main(int argc, char **argv)
 				break;
 			case 'R':
 				if ((pbs_rm_port = atoi(optarg)) == 0) {
-					(void)fprintf(stderr, "%s: bad -R %s\n",
-						argv[0], optarg);
+					(void)fprintf(stderr, "%s: bad -R %s\n", argv[0], optarg);
 					return 1;
 				}
 				break;
@@ -846,25 +840,16 @@ main(int argc, char **argv)
 
 	/* make sure no other server is running with this home directory */
 
-	(void)sprintf(lockfile, "%s/%s/server.lock", pbs_conf.pbs_home_path,
-		PBS_SVR_PRIVATE);
+	(void)sprintf(lockfile, "%s/%s/server.lock", pbs_conf.pbs_home_path, PBS_SVR_PRIVATE);
 	if ((are_primary = are_we_primary()) == FAILOVER_SECONDARY) {
 		strcat(lockfile, ".secondary");
 	} else if (are_primary == FAILOVER_CONFIG_ERROR) {
-		log_err(-1, msg_daemonname, "neither primary or secondary server");
+		fprintf(stderr, "%s: neither primary or secondary server\n", msg_daemonname);
 		return (3);
 	}
 
-#ifdef NAS /* localmod 104 */
-	if ((lockfds = open(lockfile, O_CREAT | O_WRONLY, 0644)) < 0)
-#else
-	if ((lockfds = open(lockfile, O_CREAT | O_WRONLY, 0600)) < 0)
-#endif /* localmod 104 */
-	{
-		(void)sprintf(log_buffer, "%s: unable to open lock file",
-			msg_daemonname);
-		(void)fprintf(stderr, "%s\n", log_buffer);
-		log_err(errno, msg_daemonname, log_buffer);
+	if ((lockfds = open(lockfile, O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)) < 0) {
+		(void)fprintf(stderr, "%s: unable to open lock file\n", msg_daemonname);
 		return (2);
 	}
 
@@ -904,29 +889,23 @@ main(int argc, char **argv)
 	CLEAR_HEAD(svr_execjob_preresume_hooks);
 	CLEAR_HEAD(svr_allscheds);
 	CLEAR_HEAD(svr_creds_cache);
-	CLEAR_HEAD(unlicensed_nodes_list);
 
 	/* initialize paths that we will need */
-	path_priv       = build_path(pbs_conf.pbs_home_path, PBS_SVR_PRIVATE,
-		suffix_slash);
-	path_spool      = build_path(pbs_conf.pbs_home_path, PBS_SPOOLDIR,
-		suffix_slash);
-	path_jobs       = build_path(path_priv, PBS_JOBDIR, suffix_slash);
-	path_users      = build_path(path_priv, PBS_USERDIR, suffix_slash);
-	path_rescdef	= build_path(path_priv, PBS_RESCDEF, NULL);
-	path_acct	= build_path(path_priv, PBS_ACCT, suffix_slash);
-	path_track	= build_path(path_priv, PBS_TRACKING, NULL);
-	path_prov_track	= build_path(path_priv, PBS_PROV_TRACKING, NULL);
+	path_priv = build_path(pbs_conf.pbs_home_path, PBS_SVR_PRIVATE, suffix_slash);
+	path_spool = build_path(pbs_conf.pbs_home_path, PBS_SPOOLDIR, suffix_slash);
+	path_jobs = build_path(path_priv, PBS_JOBDIR, suffix_slash);
+	path_users = build_path(path_priv, PBS_USERDIR, suffix_slash);
+	path_rescdef = build_path(path_priv, PBS_RESCDEF, NULL);
+	path_acct = build_path(path_priv, PBS_ACCT, suffix_slash);
+	path_track = build_path(path_priv, PBS_TRACKING, NULL);
+	path_prov_track = build_path(path_priv, PBS_PROV_TRACKING, NULL);
 	path_usedlicenses = build_path(path_priv, "usedlic", NULL);
 	path_secondaryact = build_path(path_priv, "secondary_active", NULL);
-	path_hooks       = build_path(path_priv, PBS_HOOKDIR, suffix_slash);
-	path_hooks_workdir = build_path(path_priv, PBS_HOOK_WORKDIR,
-		suffix_slash);
-	path_hooks_tracking = build_path(path_priv, PBS_HOOK_TRACKING,
-		HOOK_TRACKING_SUFFIX);
+	path_hooks = build_path(path_priv, PBS_HOOKDIR, suffix_slash);
+	path_hooks_workdir = build_path(path_priv, PBS_HOOK_WORKDIR, suffix_slash);
+	path_hooks_tracking = build_path(path_priv, PBS_HOOK_TRACKING, HOOK_TRACKING_SUFFIX);
 	path_hooks_rescdef = build_path(path_hooks, PBS_RESCDEF, NULL);
 	path_svrlive = build_path(path_priv, PBS_SVRLIVE, NULL);
-
 
 	/* save original environment in case we re-exec */
 	origevp = environ;
@@ -941,12 +920,13 @@ main(int argc, char **argv)
 	*log_event_mask = get_sattr_long(SVR_ATR_log_events);
 	(void)sprintf(path_log, "%s/%s", pbs_conf.pbs_home_path, PBS_LOGFILES);
 
-	(void)log_open(log_file, path_log);
-	(void)sprintf(log_buffer, msg_startup1, PBS_VERSION, server_init_type);
-	log_event(PBSEVENT_SYSTEM | PBSEVENT_ADMIN | PBSEVENT_FORCE,
-		LOG_NOTICE,
-		PBS_EVENTCLASS_SERVER, msg_daemonname, log_buffer);
-
+	if (log_open(log_file, path_log) == -1) {
+		fprintf(stderr, "%s: logfile could not be opened\n", msg_daemonname);
+		exit(1);
+	}
+	log_eventf(PBSEVENT_SYSTEM | PBSEVENT_ADMIN | PBSEVENT_FORCE,
+		   LOG_NOTICE, PBS_EVENTCLASS_SERVER,
+		   msg_daemonname, msg_startup1, PBS_VERSION, server_init_type);
 
 	/*Initialize security library's internal data structures*/
 	if (load_auths(AUTH_SERVER)) {
@@ -961,9 +941,7 @@ main(int argc, char **argv)
 		p_cslog = log_err;
 
 		if ((csret = CS_server_init()) != CS_SUCCESS) {
-			sprintf(log_buffer,
-				"Problem initializing security library (%d)", csret);
-			log_err(-1, __func__, log_buffer);
+			log_errf(-1, __func__, "Problem initializing security library (%d)", csret);
 			exit(3);
 		}
 	}
@@ -1090,7 +1068,6 @@ main(int argc, char **argv)
 		log_event(PBSEVENT_SYSTEM | PBSEVENT_FORCE, LOG_NOTICE,
 			PBS_EVENTCLASS_SERVER, msg_daemonname, msg_svrdown);
 		acct_close();
-		stop_db();
 		log_close(1);
 		return (0);
 	}
@@ -1104,7 +1081,6 @@ main(int argc, char **argv)
 		log_event(PBSEVENT_SYSTEM | PBSEVENT_ADMIN, PBS_EVENTCLASS_SERVER,
 			LOG_ERR, msg_daemonname, log_buffer);
 		fprintf(stderr, "%s\n", log_buffer);
-		stop_db();
 		return (4);
 	}
 
@@ -1112,10 +1088,8 @@ main(int argc, char **argv)
 
 #ifndef DEBUG
 	if (stalone == 0 && already_forked == 0) {
-		if ((sid = go_to_background()) == -1) {
-			stop_db();
+		if ((sid = go_to_background()) == -1)
 			return (2);
-		}
 	}
 	pbs_close_stdfiles();
 #else	/* DEBUG is defined */
@@ -1149,7 +1123,6 @@ main(int argc, char **argv)
 		(void) sprintf(log_buffer, "add connection for init_network failed");
 		log_event(PBSEVENT_SYSTEM | PBSEVENT_ADMIN, PBS_EVENTCLASS_SERVER,
 			LOG_ERR, msg_daemonname, log_buffer);
-		stop_db();
 		return (3);
 	}
 
@@ -1184,7 +1157,6 @@ main(int argc, char **argv)
 	if (!nodename) {
 		log_err(-1, __func__, log_buffer);
 		fprintf(stderr, "%s\n", "Unable to determine TPP node name");
-		stop_db();
 		return (1);
 	}
 
@@ -1194,7 +1166,6 @@ main(int argc, char **argv)
 	if (rc == -1) {
 		(void) sprintf(log_buffer, "Error setting TPP config");
 		fprintf(stderr, "%s", log_buffer);
-		stop_db();
 		return (3);
 	}
 
@@ -1204,7 +1175,6 @@ main(int argc, char **argv)
 	if ((tppfd = tpp_init(&tpp_conf)) == -1) {
 		log_err(-1, msg_daemonname, "tpp_init failed");
 		fprintf(stderr, "%s", log_buffer);
-		stop_db();
 		return (3);
 	}
 
@@ -1216,7 +1186,6 @@ main(int argc, char **argv)
 	if (pbsd_init(server_init_type) != 0) {
 		log_err(-1, msg_daemonname, "pbsd_init failed");
 		pbs_python_ext_quick_shutdown_interpreter();
-		stop_db();
 		return (3);
 	}
 
@@ -1284,7 +1253,6 @@ main(int argc, char **argv)
 
 	if (svr_interp_data.daemon_name == NULL) { /* should not happen */
 		log_err(errno, msg_daemonname, "strdup failed!");
-		stop_db();
 		return (1);
 	}
 
@@ -1298,7 +1266,6 @@ main(int argc, char **argv)
 
 	if (pbs_python_ext_start_interpreter(&svr_interp_data) != 0) {
 		log_err(-1, msg_daemonname, "Failed to start Python interpreter");
-		stop_db();
 		free(keep_daemon_name);
 		return (1);
 	}
@@ -1312,7 +1279,6 @@ main(int argc, char **argv)
 	periodic_req = alloc_br(PBS_BATCH_HookPeriodic);
 	if (periodic_req == NULL) {
 		log_err(errno, msg_daemonname, "Out of memory!");
-		stop_db();
 		free(keep_daemon_name);
 		return (1);
 	}
@@ -1465,9 +1431,6 @@ main(int argc, char **argv)
 
 	if (state != SV_STATE_SECIDLE && (shutdown_who & SHUT_WHO_MOM))
 		shutdown_nodes();
-
-	/* if brought up the DB, take it down */
-	stop_db();
 
 	if (are_primary == FAILOVER_SECONDARY) {
 		/* we are the secondary server */

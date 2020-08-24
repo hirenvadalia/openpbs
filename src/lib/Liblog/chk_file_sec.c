@@ -233,7 +233,7 @@ tempstat(struct stat *sp, int isdir, int sticky, int disallow, int uid)
  */
 int
 chk_file_sec(char *path, int isdir, int sticky, int disallow, int fullpath) {
-	return chk_file_sec_user(path, isdir, sticky, disallow, fullpath, 0);
+	return chk_file_sec_user(path, isdir, sticky, disallow, fullpath, getuid());
 }
 
 

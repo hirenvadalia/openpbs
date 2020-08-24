@@ -163,7 +163,6 @@ extern void   on_job_exit(struct work_task *);
 extern void   on_job_rerun(struct work_task *);
 extern int resize_prov_table(int newsize);
 extern void offline_all_provisioning_vnodes(void);
-extern void stop_db();
 extern job *job_recov_db_spl(pbs_db_job_info_t *dbjob, job *pjob);
 extern pbs_sched *sched_alloc(char *sched_name);
 extern job *recov_job_cb(pbs_db_obj_info_t *, int *);
@@ -1778,10 +1777,8 @@ need_y_response(int type, char *txt)
 		return;		/* already gotten a response */
 
 	fflush(stdin);
-	if ((type > RECOV_CREATE) || (type < RECOV_HOT)) {
-		stop_db();
+	if ((type > RECOV_CREATE) || (type < RECOV_HOT))
 		exit(1);
-	}
 
 	tp = t[type];
 
@@ -1801,7 +1798,6 @@ need_y_response(int type, char *txt)
 			case 'n':
 			case 'N':
 				printf("PBS server %s initialization aborted\n", server_name);
-				stop_db();
 				exit(0);
 		}
 		printf("y(es) or n(o) please:\n");

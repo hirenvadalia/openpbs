@@ -1439,6 +1439,7 @@ validate_running_user(char *exename) {
 			fprintf(stderr, "%s: Must be run by PBS_DAEMON_SERVICE_USER [%s]\n", exename, pbs_conf.pbs_daemon_service_user);
 			return 0;
 		}
+		setgid(user->pw_gid);
 	} else if ((geteuid() != 0) || getuid() != 0) {
 		fprintf(stderr, "%s: Must be run by PBS_DAEMON_SERVICE_USER if set or root if not set\n", exename);
 		return 0;

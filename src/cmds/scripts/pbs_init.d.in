@@ -400,6 +400,15 @@ start_pbs() {
 			if [ -f ${pbslibdir}/init.d/limits.pbs_server ] ; then
 				. ${pbslibdir}/init.d/limits.pbs_server
 			fi
+			${PBS_EXEC}/sbin/pbs_dataservice status > /dev/null 2>&1
+			if [ $? -ne 0 ]; then
+				${PBS_EXEC}/sbin/pbs_dataservice start > /dev/null
+				ret=$?
+				if [ $ret -ne 0 ]; then
+					echo "error starting pbs dataservice" >&2
+					return 1
+				fi
+			fi
 			if ${PBS_EXEC}/sbin/pbs_server ; then
 				echo "PBS server"
 			else
