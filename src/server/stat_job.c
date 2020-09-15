@@ -260,12 +260,6 @@ status_job(job *pjob, struct batch_request *preq, svrattrl *pal, pbs_list_head *
 		if (svr_authorize_jobreq(preq, pjob))
 			return (PBSE_PERM);
 
-	if (pjob->ji_qs.ji_svrflags & JOB_SVFLG_ArrayJob) {
-		/* for Array Job, if array_indices_remaining is modified */
-		/* then need to recalculate the string value	     */
-		update_array_indices_remaining_attr(pjob);
-	}
-
 	/* calc eligible time on the fly and return, don't save. */
 	if (server.sv_attr[SVR_ATR_EligibleTimeEnable].at_val.at_long == TRUE) {
 		if (get_jattr_long(pjob, JOB_ATR_accrue_type) == JOB_ELIGIBLE) {
@@ -370,8 +364,9 @@ status_subjob(job *pjob, struct batch_request *preq, svrattrl *pal, int subj, pb
 	int		   rc = 0;
 	int		   oldeligflags = 0;
 	int		   oldatypflags = 0;
-	char 		   subjob_state = -1;
 	char 		   *old_subjob_comment = NULL;
+	char sjst;
+	int sjsst;
 
 	/* see if the client is authorized to status this job */
 
@@ -384,11 +379,13 @@ status_subjob(job *pjob, struct batch_request *preq, svrattrl *pal, int subj, pb
 
 	/* if subjob job obj exists, use real job structure */
 
-	if ((get_subjob_state(pjob, subj) != JOB_STATE_LTR_QUEUED) && (psubjob = pjob->ji_ajtrk->tkm_tbl[subj].trk_psubjob)) {
-
-		status_job(psubjob, preq, pal, pstathd, bad);
-		return 0;
+	psubjob = get_subjob_state(pjob, subj, &sjst, &sjsst);
+	if (psubjob) {
+		return status_job(psubjob, preq, pal, pstathd, bad);
 	}
+
+	if (sjst == JOB_STATE_LTR_UNKNOWN)
+		return PBSE_UNKJOBID;
 
 	/* otherwise we fake it with info from the parent      */
 	/* allocate reply structure and fill in header portion */
@@ -416,12 +413,11 @@ status_subjob(job *pjob, struct batch_request *preq, svrattrl *pal, int subj, pb
 	 * fake the job state and comment by setting the parent job's state
 	 * and comment to that of the subjob
 	 */
-	subjob_state = get_subjob_state(pjob, subj);
 	realstate = get_job_state(pjob);
-	set_job_state(pjob, subjob_state);
+	set_job_state(pjob, sjst);
 
-	if (subjob_state == JOB_STATE_LTR_EXPIRED || subjob_state == JOB_STATE_LTR_FINISHED) {
-		if (pjob->ji_ajtrk->tkm_tbl[subj].trk_substate == JOB_SUBSTATE_FINISHED) {
+	if (sjst == JOB_STATE_LTR_EXPIRED || sjst == JOB_STATE_LTR_FINISHED) {
+		if (sjsst == JOB_SUBSTATE_FINISHED) {
 			if (is_jattr_set(pjob, JOB_ATR_Comment)) {
 				old_subjob_comment = strdup(get_jattr_str(pjob, JOB_ATR_Comment));
 				if (old_subjob_comment == NULL)
@@ -430,7 +426,7 @@ status_subjob(job *pjob, struct batch_request *preq, svrattrl *pal, int subj, pb
 			if (set_jattr_str_slim(pjob, JOB_ATR_Comment, "Subjob finished", NULL)) {
 				return (PBSE_SYSTEM);
 			}
-		} else if (pjob->ji_ajtrk->tkm_tbl[subj].trk_substate == JOB_SUBSTATE_FAILED) {
+		} else if (sjsst == JOB_SUBSTATE_FAILED) {
 			if (is_jattr_set(pjob, JOB_ATR_Comment)) {
 				old_subjob_comment = strdup(get_jattr_str(pjob, JOB_ATR_Comment));
 				if (old_subjob_comment == NULL)
@@ -439,7 +435,7 @@ status_subjob(job *pjob, struct batch_request *preq, svrattrl *pal, int subj, pb
 			if (set_jattr_str_slim(pjob, JOB_ATR_Comment, "Subjob failed", NULL)) {
 				return (PBSE_SYSTEM);
 			}
-		} else if (pjob->ji_ajtrk->tkm_tbl[subj].trk_substate == JOB_SUBSTATE_TERMINATED) {
+		} else if (sjsst == JOB_SUBSTATE_TERMINATED) {
 			if (is_jattr_set(pjob, JOB_ATR_Comment)) {
 				old_subjob_comment = strdup(get_jattr_str(pjob, JOB_ATR_Comment));
 				if (old_subjob_comment == NULL)

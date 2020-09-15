@@ -201,8 +201,21 @@ dup_range(range *old_r)
 
 	if (new_r == NULL)
 		return NULL;
-		
+
 	return new_r;
+}
+
+int
+range_count(range *r)
+{
+	int count = 0;
+	range *cur = r;
+
+	while (cur != NULL) {
+		count += cur->count;
+		cur = cur->next;
+	}
+	return count;
 }
 
 
@@ -404,7 +417,7 @@ range_remove_value(range **r, int val)
 	range *prev = NULL;
 	int done = 0;
 
-	if (r == NULL || *r == NULL)
+	if (r == NULL || *r == NULL || val < 0)
 		return 0;
 
 	if (!range_contains(*r, val))
@@ -415,7 +428,7 @@ range_remove_value(range **r, int val)
 		if (cur->start == val && cur->end == val) {
 			if (prev == NULL)  /* we're removing the first range struct in the list */
 				*r = (*r)->next;
-			else 
+			else
 				prev->next = cur->next;
 			free_range(cur);
 			return 1;
@@ -431,7 +444,7 @@ range_remove_value(range **r, int val)
 			range *next_range = NULL;
 			if ((next_range = new_range(0, 0, 1, 0, NULL)) == NULL)
 				return 0;
-				
+
 			next_range->count = (cur->end - val)/cur->step;
 			next_range->step = cur->step;
 			next_range->start = val + cur->step;
@@ -440,8 +453,8 @@ range_remove_value(range **r, int val)
 
 			cur->count = (val - cur->start)/cur->step;
 			cur->end = val - cur->step;
-			cur->next = next_range;			
-			return 1;	
+			cur->next = next_range;
+			return 1;
 		}
 
 		if (!done) {
@@ -455,7 +468,7 @@ range_remove_value(range **r, int val)
 		if (cur->start > cur->end) {
 			if (prev == NULL)   /* we're removing the first range struct in the list */
 				*r = (*r)->next;
-			else 
+			else
 				prev->next = cur->next;
 			free_range(cur);
 		}
@@ -512,32 +525,32 @@ range_add_value(range **r, int val, int range_step)
 			if ((first_range = new_range(val, val, cur->step, 1, cur)) == NULL) {
 				return 0;
 			}
-			*r = first_range;			
+			*r = first_range;
 			return 1;
 		}
 	}
 
 	/* The value that needs to be added is in between the cur and the next sub-ranges  */
-	
+
 	while (cur != NULL && cur->next != NULL ) {
 
 		next_range = cur->next;
 		if ((val > cur->end) && (val < next_range->start)) {
-			
+
 			if ((val == cur->end + cur->step) && (val == next_range->start - next_range->step)) {
 				/* Adding this value would coalesce these two sub-ranges  */
 				cur->end = next_range->end;
 				cur->next = next_range->next;
 				cur->count++;
-				free_range(next_range);	
+				free_range(next_range);
 				return 1;
 
 			} else if (val == cur->end + cur->step) {
 				/* Value falls in the cur sub-range end  */
 				cur->end += cur->step;
 				cur->count++;
-				return 1; 
-	 
+				return 1;
+
 			} else if (val == next_range->start - next_range->step) {
 				/* Value falls in the next sub-range start  */
 				next_range->start -= next_range->step;
@@ -552,13 +565,13 @@ range_add_value(range **r, int val, int range_step)
 				}
 				cur->next = mid_range;
  				return 1;
-			}		
+			}
 		}
 		cur = next_range;
 	}
 
 	/* Coming out of the loop and check the extreme right corner case */
-	
+
 	if (cur != NULL && val > cur->end) {
 		if (val == cur->end + cur->step) {
 			cur->end += cur->step;
@@ -571,7 +584,7 @@ range_add_value(range **r, int val, int range_step)
 				return 0;
 			}
 			cur->next = end_range;
-			return 1;		
+			return 1;
 		}
 	}
 
@@ -635,7 +648,7 @@ parse_subjob_index(char *pc, char **ep, int *pstart, int *pend, int *pstep, int 
 	int end;
 	int step;
 	char *eptr;
-	
+
 	if (pc == NULL)
 		return (-1);
 
