@@ -569,24 +569,30 @@ e.accept()
         """
         a = {'job_history_enable': 'true'}
         self.server.manager(MGR_CMD_SET, SERVER, a)
-        a = {'resources_available.ncpus': 1}
+        a = {'resources_available.ncpus': 2}
         self.server.manager(MGR_CMD_SET, NODE, a, self.mom.shortname)
         j = Job(TEST_USER, attrs={
-            ATTR_J: '1-2', 'Resource_List.select': 'ncpus=1'})
+            ATTR_J: '1-3', 'Resource_List.select': 'ncpus=1'})
         j.set_sleep_time(60)
         j_id = self.server.submit(j)
         subjid_1 = j.create_subjob_id(j_id, 1)
+        subjid_2 = j.create_subjob_id(j_id, 2)
         self.server.expect(JOB, {'job_state': 'R'}, subjid_1)
+        self.server.expect(JOB, {'job_state': 'R'}, subjid_2)
         a = {'scheduling': 'false'}
         self.server.manager(MGR_CMD_SET, SERVER, a)
         self.server.rerunjob(subjid_1)
+        self.server.rerunjob(subjid_2)
         self.server.expect(JOB, {'job_state': 'Q'}, subjid_1)
+        self.server.expect(JOB, {'job_state': 'Q'}, subjid_2)
         self.kill_and_restart_svr()
         self.server.expect(JOB, {'job_state': 'Q'}, subjid_1)
+        self.server.expect(JOB, {'job_state': 'Q'}, subjid_2)
         a = {'scheduling': 'true'}
         self.server.manager(MGR_CMD_SET, SERVER, a)
         a = {'job_state': 'R'}
         self.server.expect(JOB, a, subjid_1)
+        self.server.expect(JOB, a, subjid_2)
 
     @skipOnCpuSet
     def test_rerun_node_fail_requeue(self):

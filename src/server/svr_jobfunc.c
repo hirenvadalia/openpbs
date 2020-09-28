@@ -4985,8 +4985,17 @@ svr_setjob_histinfo(job *pjob, histjob_type type)
 			(ptbl = pjob->ji_ajinfo)) {
 			if (pjob->ji_terminated)
 				newsubstate = JOB_SUBSTATE_TERMINATED;
-			else
-				newsubstate = JOB_SUBSTATE_FINISHED;
+			else {
+				int i;
+				for (i = ptbl->tkm_start; i <= ptbl->tkm_end; i += ptbl->tkm_step) {
+					int sjsst;
+					get_subjob_state(pjob, i, NULL, &sjsst);
+					if (sjsst == JOB_SUBSTATE_FAILED || sjsst == JOB_SUBSTATE_TERMINATED) {
+						newsubstate = sjsst;
+						break;
+					}
+				}
+			}
 		} else { /* Non-Array job */
 			if (pjob->ji_terminated) {
 				newsubstate = JOB_SUBSTATE_TERMINATED;

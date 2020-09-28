@@ -223,7 +223,7 @@ int is_job_array(char *jobid);
 /*
  *
  *	modify_job_array_for_qrun - modify a job array for qrun -
- * 				    set queued_subjobs to just the
+ * 				    set remaining_subjobs to just the
  *				    range which is being run
  *				    set qrun_job on server
  */

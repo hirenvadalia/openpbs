@@ -312,6 +312,12 @@ counts *counts_max(counts *cmax, counts *new);
  *      check_run_job - function used by resource_resv_filter to filter out
  *                      non-running jobs.
  */
+int check_queued_subjob(resource_resv *job, void *arg);
+
+/*
+ *      check_run_job - function used by resource_resv_filter to filter out
+ *                      non-running jobs.
+ */
 int check_run_job(resource_resv *job, void *arg);
 
 /*

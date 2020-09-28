@@ -598,7 +598,8 @@ struct job_info
 	resource_resv *parent_job;	/* pointer to the parent array job */
 
 	/* job array information */
-	range *queued_subjobs;		/* a list of ranges of queued subjob indices */
+	resource_resv **queued_subjobs; /* instantiated queued subjobs */
+	range *remaining_subjobs;	/* a list of ranges of remaining subjob indices */
 	long max_run_subjobs;		/* Max number of running subjobs at any time */
 	long running_subjobs;		/* number of currently running subjobs */
 

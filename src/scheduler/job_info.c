@@ -591,7 +591,7 @@ query_jobs_chunk(th_data_query_jinfo *data)
 		}
 
 		/* Make sure scheduler does not process a subjob in undesirable state*/
-		if (resresv->job->is_subjob && !resresv->job->is_running && !resresv->job->is_exiting &&
+		if (resresv->job->is_subjob && !resresv->job->is_queued && !resresv->job->is_running && !resresv->job->is_exiting &&
 			!resresv->job->is_suspended && !resresv->job->is_provisioning) {
 			log_event(PBSEVENT_SCHED, PBS_EVENTCLASS_RESV, LOG_DEBUG,
 				resresv->name, "Subjob found in undesirable state, ignoring this job");
@@ -1127,6 +1127,14 @@ query_jobs(status *policy, int pbs_sd, queue_info *qinfo, resource_resv **pjobs,
 
 	pbs_statfree(jobs);
 
+	for (i = 0; i < jidx; i++) {
+		if (resresv_arr[i]->job->is_subjob && resresv_arr[i]->job->is_queued) {
+			resource_resv *array = find_resource_resv(resresv_arr, resresv_arr[i]->job->array_id);
+			if (array != NULL)
+				array->job->queued_subjobs = add_resresv_to_array(array->job->queued_subjobs, resresv_arr[i], NO_FLAGS);
+		}
+	}
+
 	return resresv_arr;
 }
 
@@ -1317,7 +1325,7 @@ query_job(struct batch_status *job, server_info *sinfo, schd_error *err)
 		}
 		/* array_indices_remaining */
 		else if (!strcmp(attrp->name, ATTR_array_indices_remaining))
-			resresv->job->queued_subjobs = range_parse(attrp->value);
+			resresv->job->remaining_subjobs = range_parse(attrp->value);
 		else if (!strcmp(attrp->name, ATTR_max_run_subjobs)) {
 			count = strtol(attrp->value, &endp, 10);
 			if (*endp == '\0')
@@ -1481,6 +1489,7 @@ new_job_info()
 	jinfo->array_index = UNSPECIFIED;
 	jinfo->parent_job = NULL;
 	jinfo->queued_subjobs = NULL;
+	jinfo->remaining_subjobs = NULL;
 	jinfo->max_run_subjobs = UNSPECIFIED;
 	jinfo->running_subjobs = 0;
 	jinfo->attr_updates = NULL;
@@ -1543,7 +1552,10 @@ free_job_info(job_info *jinfo)
 		free(jinfo->array_id);
 
 	if (jinfo->queued_subjobs != NULL)
-		free_range_list(jinfo->queued_subjobs);
+		free_resource_resv_array(jinfo->queued_subjobs);
+
+	if (jinfo->remaining_subjobs != NULL)
+		free_range_list(jinfo->remaining_subjobs);
 
 	if (jinfo->depend_job_str != NULL)
 		free (jinfo->depend_job_str);
@@ -2854,7 +2866,8 @@ dup_job_info(job_info *ojinfo, queue_info *nqinfo, server_info *nsinfo)
 
 	njinfo->array_index = ojinfo->array_index;
 	njinfo->array_id = string_dup(ojinfo->array_id);
-	njinfo->queued_subjobs = dup_range_list(ojinfo->queued_subjobs);
+	njinfo->queued_subjobs = dup_resource_resv_array(ojinfo->queued_subjobs, nsinfo, nqinfo);
+	njinfo->remaining_subjobs = dup_range_list(ojinfo->remaining_subjobs);
 	njinfo->max_run_subjobs = ojinfo->max_run_subjobs;
 
 	njinfo->resreleased = dup_nspecs(ojinfo->resreleased, nsinfo->nodes, NULL);
@@ -4020,8 +4033,9 @@ resource_resv *
 create_subjob_from_array(resource_resv *array, int index, char *subjob_name)
 {
 	resource_resv *subjob;	/* job_info structure for new subjob */
-	range *tmp;			/* a tmp ptr to hold the queued_indices ptr */
+	range *tmp;			/* a tmp ptr to hold the remaining_indices ptr */
 	schd_error *err;
+	resource_resv **tmp_queued_subjobs;
 
 	if (array == NULL || array->job == NULL)
 		return NULL;
@@ -4033,8 +4047,10 @@ create_subjob_from_array(resource_resv *array, int index, char *subjob_name)
 	if (err == NULL)
 		return NULL;
 
-	/* so we don't dup the queued_indices for the subjob */
-	tmp = array->job->queued_subjobs;
+	/* so we don't dup the queued subjobs and remainine_indices for the subjob */
+	tmp = array->job->remaining_subjobs;
+	array->job->remaining_subjobs = NULL;
+	tmp_queued_subjobs = array->job->queued_subjobs;
 	array->job->queued_subjobs = NULL;
 
 	subjob = dup_resource_resv(array, array->server, array->job->queue, err);
@@ -4043,7 +4059,8 @@ create_subjob_from_array(resource_resv *array, int index, char *subjob_name)
 	subjob->job->depend_job_str = string_dup(array->job->depend_job_str);
 	subjob->job->dependent_jobs = (resource_resv **) dup_array(array->job->dependent_jobs);
 
-	array->job->queued_subjobs = tmp;
+	array->job->remaining_subjobs = tmp;
+	array->job->queued_subjobs = tmp_queued_subjobs;
 
 	if (subjob == NULL) {
 		free_schd_error(err);
@@ -4086,7 +4103,7 @@ update_array_on_run(job_info *array, job_info *subjob)
 	if (array == NULL || subjob == NULL)
 		return 0;
 
-	range_remove_value(&array->queued_subjobs, subjob->array_index);
+	range_remove_value(&array->remaining_subjobs, subjob->array_index);
 
 	if (array->is_queued) {
 		array->is_begin = 1;
@@ -4137,7 +4154,7 @@ is_job_array(char *jobname)
 /**
  * @brief
  *		modify_job_array_for_qrun - modify a job array for qrun -
- *				    set queued_subjobs to just the
+ *				    set remaining_subjobs to just the
  *				    range which is being run
  *				    set qrun_job on server
  *
@@ -4195,13 +4212,29 @@ modify_job_array_for_qrun(server_info *sinfo, char *jobid)
 	job = find_resource_resv(sinfo->jobs, name);
 
 	if (job != NULL) {
-		/* lets only run the jobs which were requested */
-		r2 = range_intersection(r, job->job->queued_subjobs);
-		if (r2 != NULL) {
-			free_range_list(job->job->queued_subjobs);
-			job->job->queued_subjobs = r2;
+		int step = job->job->remaining_subjobs != NULL ? job->job->remaining_subjobs->step : r->step;
+		if (count_array(job->job->queued_subjobs) > 0) {
+			int i;
+			for (i = 0; job->job->queued_subjobs[i] != NULL; i++) {
+				range_add_value(&(job->job->remaining_subjobs), job->job->queued_subjobs[i]->job->array_index, step);
+				remove_resresv_from_array(sinfo->jobs, job->job->queued_subjobs[i]);
+				sinfo->sc.total--;
+				sinfo->sc.queued--;
+				remove_resresv_from_array(sinfo->all_resresv, job->job->queued_subjobs[i]);
+				remove_resresv_from_array(job->job->queue->jobs, job->job->queued_subjobs[i]);
+				job->job->queue->sc.total--;
+				job->job->queue->sc.queued--;
+			}
+			free_resource_resv_array
+			(job->job->queued_subjobs);
+			job->job->queued_subjobs = NULL;
 		}
-		else {
+		/* lets only run the jobs which were requested */
+		r2 = range_intersection(r, job->job->remaining_subjobs);
+		if (r2 != NULL) {
+			free_range_list(job->job->remaining_subjobs);
+			job->job->remaining_subjobs = r2;
+		} else {
 			free_range_list(r);
 			return 0;
 		}
@@ -4247,7 +4280,10 @@ queue_subjob(resource_resv *array, server_info *sinfo,
 	if (!array->job->is_array)
 		return NULL;
 
-	subjob_index = range_next_value(array->job->queued_subjobs, -1);
+	if (count_array(array->job->queued_subjobs) > 0)
+		return array->job->queued_subjobs[0];
+
+	subjob_index = range_next_value(array->job->remaining_subjobs, -1);
 	if (subjob_index >= 0) {
 		subjob_name = create_subjob_name(array->name, subjob_index);
 		if (subjob_name != NULL) {
@@ -4514,7 +4550,8 @@ update_accruetype(int pbs_sd, server_info *sinfo,
 	 */
 
 	if (resresv->job->is_array && resresv->job->is_begin &&
-		(range_next_value(resresv->job->queued_subjobs, -1) < 0)) {
+		count_array(resresv->job->queued_subjobs) == 0 &&
+		(range_next_value(resresv->job->remaining_subjobs, -1) < 0)) {
 		make_ineligible(pbs_sd, resresv);
 		return;
 	}
@@ -4821,10 +4858,10 @@ update_estimated_attrs(int pbs_sd, resource_resv *job,
 		if (job->job->is_subjob) {
 			array = find_resource_resv(job->server->jobs, job->job->array_id);
 			if (array != NULL) {
-				if (job->job->array_index !=
-					range_next_value(array->job->queued_subjobs, -1)) {
+				if (count_array(job->job->queued_subjobs) > 0 && job->job->queued_subjobs[0] != job)
 					return -1;
-				}
+				if (job->job->array_index != range_next_value(array->job->remaining_subjobs, -1))
+					return -1;
 			}
 			else
 				return -1;

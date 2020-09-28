@@ -1966,6 +1966,27 @@ create_server_arrays(server_info *sinfo)
 /**
  * @brief
  * 		helper function for resource_resv_filter() - returns 1 if
+ *		job is instantiated queued subjob of given parent array job id
+ *
+ * @param[in]	job	-	resource reservation job.
+ * @param[in]	arg	-	parent array job id
+ *
+ * @return	int
+ * @retval	0	: job not match
+ * @retval	1	: job is match
+ */
+int
+check_queued_subjob(resource_resv *job, void *arg)
+{
+	if (job->is_job && job->job != NULL && job->job->is_subjob && job->job->is_queued)
+		return strcmp(job->job->array_id, (char *)arg) == 0;
+
+	return 0;
+}
+
+/**
+ * @brief
+ * 		helper function for resource_resv_filter() - returns 1 if
  *		job is running
  *
  * @param[in]	job	-	resource reservation job.

@@ -1715,6 +1715,7 @@ run_update_resresv(status *policy, int pbs_sd, server_info *sinfo,
 		}
 
 		if (array != NULL) {
+			remove_resresv_from_array(array->job->queued_subjobs, rr);
 			update_array_on_run(array->job, rr->job);
 
 			/* Subjobs inherit all attributes from their parent job array. This means
@@ -1722,8 +1723,7 @@ run_update_resresv(status *policy, int pbs_sd, server_info *sinfo,
 			 * before running the subresresv.  If all subresresvs have run,
 			 * then resresv array's accrue_type becomes ineligible.
 			 */
-			if (array->is_job &&
-				range_next_value(array->job->queued_subjobs, -1) < 0)
+			if (array->is_job && count_array(array->job->queued_subjobs) == 0 && range_next_value(array->job->remaining_subjobs, -1) < 0)
 				update_accruetype(pbs_sd, sinfo, ACCRUE_MAKE_INELIGIBLE, SUCCESS, array);
 			else
 				update_accruetype(pbs_sd, sinfo, ACCRUE_MAKE_ELIGIBLE, SUCCESS, array);

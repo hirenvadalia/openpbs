@@ -342,11 +342,8 @@ update_sj_parent(job *parent, job *sj, char *sjid, char oldstate, char newstate)
 	ptbl->tkm_subjsct[ostatenum]--;
 	ptbl->tkm_subjsct[nstatenum]++;
 
-	if (oldstate == JOB_STATE_LTR_QUEUED)
+	if (oldstate == JOB_STATE_LTR_QUEUED) {
 		range_remove_value(&ptbl->trm_quelist, idx);
-	if (newstate == JOB_STATE_LTR_QUEUED)
-		range_add_value(&ptbl->trm_quelist, idx, ptbl->tkm_step);
-	if (oldstate == JOB_STATE_LTR_QUEUED || newstate == JOB_STATE_LTR_QUEUED) {
 		update_array_indices_remaining_attr(parent);
 		save_parent = 1;
 	}
@@ -466,19 +463,19 @@ get_subjob_state(job *parent, int sjidx, char *state, int *substate)
 	if (((sjidx - parent->ji_ajinfo->tkm_start) % parent->ji_ajinfo->tkm_step) != 0)
 		return NULL;
 
+	if (range_contains(parent->ji_ajinfo->trm_quelist, sjidx)) {
+		if (state)
+			*state = JOB_STATE_LTR_QUEUED;
+		if (substate)
+			*substate = JOB_SUBSTATE_QUEUED;
+		return NULL;
+	}
 	sj = find_job(mk_subjob_id(parent, sjidx));
 	if (sj == NULL) {
-		if (range_contains(parent->ji_ajinfo->trm_quelist, sjidx)) {
-			if (state)
-				*state = JOB_STATE_LTR_QUEUED;
-			if (substate)
-				*substate = JOB_SUBSTATE_QUEUED;
-		} else {
-			if (state)
-				*state = JOB_STATE_LTR_EXPIRED;
-			if (substate)
-				*substate = JOB_SUBSTATE_FINISHED;
-		}
+		if (state)
+			*state = JOB_STATE_LTR_EXPIRED;
+		if (substate)
+			*substate = JOB_SUBSTATE_FINISHED;
 		return NULL;
 	}
 
