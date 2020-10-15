@@ -55,4 +55,3 @@ else
 	echo "Total jobs: ${njobs}, Total svrs: 1, Jobs per Svr: ${njobs}"
 fi
 podman exec pbs-server-1 ${_self} svr-submit ${njobs} ${jtype} ${nsj}
-wait

@@ -20,6 +20,6 @@ How to use:
 
 5. run 'python3 master.py &> master.log' from this dir as yourself on first node
 
-6. once above finish, you should have 'results' dir in current dir, copy master.log in it, tar 'results'
+6. once above finish, you should have 'results' dir in current dir, copy info.txt and master.log in it, tar 'results'
 
 7. share results tarball with multiserver team

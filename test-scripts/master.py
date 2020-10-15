@@ -22,6 +22,7 @@ def copy_artifacts(host):
     _c += [os.path.join(MYDIR, 'pbs.tgz')]
     _c += [os.path.join(MYDIR, 'entrypoint')]
     _c += [os.path.join(MYDIR, 'submit-jobs.sh')]
+    _c += [os.path.join(MYDIR, 'truncate-logs.sh')]
     _c += [host + ':' + MYDIR]
     subprocess.run(_c)
   _c = ['podman', 'load', '-i']
@@ -233,6 +234,10 @@ def main():
     sys.exit(1)
 
   os.chdir(MYDIR)
+
+  if not os.path.isfile('config.json'):
+    print('Could not find config.json file')
+    sys.exit(1)
 
   with open('config.json') as f:
     conf = json.load(f)
