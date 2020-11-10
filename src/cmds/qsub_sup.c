@@ -1410,10 +1410,23 @@ get_comm_filename(char *fname)
 {
 	char *env_svr = getenv(PBS_CONF_SERVER_NAME);
 	char *env_port = getenv(PBS_CONF_BATCH_SERVICE_PORT);
+	char *svr_inst = getenv(PBS_CONF_SERVER_INSTANCES);
 	int count = 0;
 
+	if (svr_inst != NULL) {
+		char *svr_inst_copy = strdup(svr_inst);
+		char *p = svr_inst_copy;
 
-	count = snprintf(fname, MAXPIPENAME, "%s/pbs_%.16s_%lu_%.8s_%.32s_%.16s_%.5s",
+		while (p && *p != NULL && *p != '\0') {
+			if (*p == ':' || *p == ',' || *p == '/' || *p == ' ' || *p == '.')
+				*p = '_';
+			p++;
+		}
+		svr_inst = svr_inst_copy;
+	}
+
+
+	count = snprintf(fname, MAXPIPENAME, "%s/pbs_%.16s_%lu_%.8s_%.32s_%.16s_%.5s_%s",
 		tmpdir,
 		((server_out == NULL || server_out[0] == 0) ?
 		"default" : server_out),
@@ -1421,11 +1434,12 @@ get_comm_filename(char *fname)
 		cred_name,
 		get_conf_path(),
 		(env_svr == NULL)?"":env_svr,
-		(env_port == NULL)?"":env_port
+		(env_port == NULL)?"":env_port,
+		svr_inst == NULL?"":svr_inst
 		);
 
 	if (count >= MAXPIPENAME) {
-		snprintf(fname, MAXPIPENAME, "%s/pbs_%.16s_%lu_%.8s_%.32s_%.16s_%.5s",
+		snprintf(fname, MAXPIPENAME, "%s/pbs_%.16s_%lu_%.8s_%.32s_%.16s_%.5s_%s",
 		TMP_DIR,
 		((server_out == NULL || server_out[0] == 0) ?
 		"default" : server_out),
@@ -1433,7 +1447,8 @@ get_comm_filename(char *fname)
 		cred_name,
 		get_conf_path(),
 		(env_svr == NULL)?"":env_svr,
-		(env_port == NULL)?"":env_port
+		(env_port == NULL)?"":env_port,
+		svr_inst == NULL?"":svr_inst
 		);
 	}
 }
