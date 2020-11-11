@@ -1246,12 +1246,14 @@ again:
 					else if (tpp_transport_isresvport(tfd) != 0) /* reserved port based authentication, and is not yet authenticated, so check resv port */
 						snprintf(msg, sizeof(msg), "Connection from non-reserved port, rejected");
 				}
+#if 0
 				if (msg[0] != '\0') {
 					/* error message was set above, take action */
 					tpp_log(LOG_CRIT, NULL, msg);
 					tpp_send_ctl_msg(tfd, TPP_MSG_AUTHERR, &connected_host, &this_router->router_addr, -1, 0, msg);
 					return 0; /* let connection be alive, so we can send error */
 				}
+#endif
 			}
 
 			/* check if type was router or leaf */
