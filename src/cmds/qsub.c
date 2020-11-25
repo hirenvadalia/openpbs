@@ -113,16 +113,6 @@
 #undef DEBUG
 #endif /* localmod 004 */
 
-#ifdef DEBUG
-#ifdef NAS /* localmod 004 */
-#define DBPRT(x)	fprintf x;
-#else
-#define DBPRT(x)	printf x;
-#endif /* localmod 004 */
-#else
-#define DBPRT(x)
-#endif
-
 #if defined(HAVE_SYS_IOCTL_H)
 #include <sys/ioctl.h>
 #endif /* HAVE_SYS_IOCTL_H */
