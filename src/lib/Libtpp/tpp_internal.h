@@ -213,7 +213,7 @@ typedef struct {
  */
 typedef struct {
 	int ntotlen;
-	unsigned char type;        /* type of the packet - TPP_DATA, JOIN etc */	
+	unsigned char type;        /* type of the packet - TPP_DATA, JOIN etc */
 
 	unsigned int src_magic;    /* magic id of source stream */
 
@@ -313,7 +313,7 @@ enum TPP_MSG_TYPES {
 #define TPP_ROUTER_STATE_CONNECTING		1   /* Leaf is connecting to router */
 #define TPP_ROUTER_STATE_CONNECTED		2   /* Leaf connected to router */
 
-#define TPP_MBOX_NAME_SZ	10 /* max 10 mbox_name size */
+#define TPP_MBOX_NAME_SZ	15 /* max 15 mbox_name size */
 
 /*
  * This structure contains the information about what kind of end-point
