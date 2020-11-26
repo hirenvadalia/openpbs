@@ -57,7 +57,7 @@ fi
 
 /usr/sbin/sshd
 
-# for server: <home path> server svrno (1 - start/0 - no start sched/comm) port dbport asyncdb moms cpus svrinsts?
+# for server: <home path> server svrno (1 - start/0 - no start sched/comm) port dbport asyncdb moms cpus vnodes svrinsts?
 _phome=/var/spool/pbs
 if [ "x$1" != "xdefault" ]; then
     _phome=$1
@@ -76,6 +76,7 @@ if [ "x$2" == "xserver" -a $# -ge 6 ]; then
         echo PBS_START_SCHED=$4
         echo PBS_START_COMM=$4
         echo PBS_SCP=$(which scp)
+        echo PBS_SCHED_THREADS=1
         echo PBS_LOG_HIGHRES_TIMESTAMP=1
         echo PBS_CORE_LIMIT=unlimited
         echo PBS_BATCH_SERVICE_PORT=$5
@@ -84,7 +85,7 @@ if [ "x$2" == "xserver" -a $# -ge 6 ]; then
         echo PBS_LEAF_ROUTERS=pbs-server-1:17001
     } > /etc/pbs.conf
     unset _phome
-# for mom: <home path> mom momport ownserver ownserverport name svrinsts?
+# for mom: <home path> mom momport ownserver ownserverport name vnodes svrinsts?
 elif [ "x$2" == "xmom" -a $# -ge 5 ]; then
     _port=$3
     {
@@ -124,6 +125,7 @@ if [ "x$2" == "xserver" ]; then
     fi
     _moms=$8
     _cpus=$9
+    _vnodes=${10}
     if [ "x${_moms}" != "xnone" ]; then
         for _ms in ${_moms//-/ }
         do
@@ -142,13 +144,31 @@ if [ "x$2" == "xserver" ]; then
                     _port=${_m#*=}
                     _port=$(( 18000 + _port ))
                     /opt/pbs/bin/qmgr -c "c n pbs-mom-${_si}-${_mi} MoM=${_host},Port=${_port}"
-                    if [ "x${_cpus}" != "x0" ]; then
+                    if [ "x${_vnodes}" == "x0" -a "x${_cpus}" != "x0" ]; then
                         /opt/pbs/bin/qmgr -c "s n pbs-mom-${_si}-${_mi} resources_available.ncpus = ${_cpus}"
                     fi
                 done
             done
         done
     fi
-    unset _mom _moms _cpus _name _host _mport
+    unset _mom _moms _cpus _name _host _mport _vnodes
+else
+    _mom=$6
+    _cpu=$7
+    _count=$8
+    {
+         echo '$configversion 2'
+         echo "${_mom}: resources_available.ncpus=0"
+         echo "${_mom}: resources_available.mem=0"
+         for i in $(seq 1 1 ${_count})
+         do
+             echo "${_mom}[${i}]: resources_available.ncpus=${_cpu}"
+             echo "${_mom}[${i}]: resources_available.host=${_mom}"
+         done
+     } > /tmp/vnodes
+     /opt/pbs/sbin/pbs_mom -s remove vnodes
+     /opt/pbs/sbin/pbs_mom -s insert vnodes /tmp/vnodes
+     /opt/pbs/libexec/pbs_init.d restart
+     unset _mom _cpu _count
 fi
 exec /bin/bash

@@ -12,6 +12,7 @@ ME = socket.getfqdn(socket.gethostname())
 def run_cmd(host, cmd):
   if host != ME:
     cmd = ['ssh', host] + cmd
+  print("Running: " + " ".join(cmd))
   p = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
   return p.returncode == 0
 
@@ -65,7 +66,7 @@ def cleanup_system(host):
   _c = ['podman', 'rmi', '-f', 'pbs:latest']
   run_cmd(host, _c)
 
-def setup_pbs(host, c, svrs, sips, moms, ncpus, asyncdb):
+def setup_pbs(host, c, svrs, sips, moms, ncpus, asyncdb, vnodes):
   _e = os.path.join(MYDIR, 'entrypoint')
   _c = ['podman', 'run', '--network', 'host', '-itd']
   _c += ['--rm', '-l', 'pbs=1', '-v', '%s:%s' % (MYDIR, MYDIR)]
@@ -80,9 +81,10 @@ def setup_pbs(host, c, svrs, sips, moms, ncpus, asyncdb):
     else:
       _c += ['0']
     _c += [moms]
-    _c += [str(ncpus)]
   elif c[2] == 'mom':
     _c += [c[0]]
+  _c += [str(ncpus)]
+  _c += [str(vnodes)]
   if len(svrs) > 1:
     _c += [','.join(svrs)]
   p = run_cmd(host, _c)
@@ -94,6 +96,7 @@ def setup_pbs(host, c, svrs, sips, moms, ncpus, asyncdb):
     print('Configured %s' % c[0])
   else:
     print('Failed to configure %s' % c[0])
+    print('Command is : %s' % " ".join(_c))
   return p
 
 def setup_cluster(tconf, hosts, ips, conf):
@@ -102,6 +105,7 @@ def setup_cluster(tconf, hosts, ips, conf):
   _mph = tconf['num_moms_per_host']
   _cpm = tconf['num_cpus_per_mom']
   _dbt = tconf['async_db']
+  _vnd = tconf['num_vnodes_per_mom']
 
   if _tm == 0 and _mph == 0:
     print('Invalid setup configuration for no. of mom')
@@ -119,9 +123,14 @@ def setup_cluster(tconf, hosts, ips, conf):
     if _hi == _hl:
       _hi = 0
   if _tm != 0:
+    print("Total moms requested: %d" % _tm)
+    print("*************************************")
     _hi = 0
-    for i in range(1, _tm + 1):
-      _confs[hosts[_hi]]['nm'] += 1
+    i = 0
+    while i < _tm:
+      if _confs[hosts[_hi]]['ns'] == 0:
+        _confs[hosts[_hi]]['nm'] += 1
+        i += 1
       _hi += 1
       if _hi == _hl:
         _hi = 0
@@ -130,6 +139,7 @@ def setup_cluster(tconf, hosts, ips, conf):
   _sips = []
   _scnt = 1
   for i, _h in enumerate(hosts):
+    no_moms=0
     for _ in range(_confs[_h]['ns']):
       _c = ['pbs-server-%d' % _scnt, 'default', 'server', str(_scnt)]
       _c.append('1' if _scnt == 1 else '0')
@@ -141,6 +151,12 @@ def setup_cluster(tconf, hosts, ips, conf):
       _sips.append('pbs-server-%d:%s' % (_scnt, ips[i]))
       _confs[_h]['svrs'].append(_c)
       _scnt += 1
+      if _hl > 1:
+        no_moms=1
+      print("Setup pbs server on: %s" % _h)
+    if no_moms == 1:
+        continue
+    print("Mom count for host %s: %d" % (_h, _confs[hosts[i]]['nm']))
     for _ in range(_confs[_h]['nm']):
       _c = ['', 'default', 'mom', str(_lps)]
       _lps += 2
@@ -199,10 +215,10 @@ def setup_cluster(tconf, hosts, ips, conf):
     _ps = []
     for _h, _cs in moms.items():
       for _c in _cs:
-        _ps.append(executor.submit(setup_pbs, _h, _c, _svrs, _sips, _moms, _cpm, _dbt))
+        _ps.append(executor.submit(setup_pbs, _h, _c, _svrs, _sips, _moms, _cpm, _dbt, _vnd))
     for _h, _cs in svrs.items():
       for _c in _cs:
-        _ps.append(executor.submit(setup_pbs, _h, _c, _svrs, _sips, _moms, _cpm, _dbt))
+        _ps.append(executor.submit(setup_pbs, _h, _c, _svrs, _sips, _moms, _cpm, _dbt, _vnd))
     r = list(set([_p.result() for _p in wait(_ps)[0]]))
   if len(r) != 1:
     return False
@@ -273,7 +289,7 @@ def main():
 
   subprocess.run(['rm', '-rf', 'results'])
 
-  with ProcessPoolExecutor() as executor:
+  with ProcessPoolExecutor(max_workers=len(hosts)) as executor:
     _ps = []
     for _h in hosts:
       _ps.append(executor.submit(copy_artifacts, _h))
