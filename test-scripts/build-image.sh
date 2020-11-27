@@ -99,8 +99,9 @@ RUN set -ex \\
 
 FROM base
 ENV LANG=C.utf8 LC_ALL=C.utf8
-COPY --from=genrpm /tmp/rpms /tmp/rpms
+COPY --from=genrpm /tmp/rpms /opt/rpms
 RUN set -ex \\
+    && cp -rf /opt/rpms /tmp/ \\
     && dnf install -y /tmp/rpms/* \\
     && rm -rf /var/spool/pbs /etc/pbs.conf* /tmp/* \\
     && dnf -y clean all
@@ -125,4 +126,7 @@ __PP_DF__
 }
 
 build_image
-podman image save pbs:latest | gzip -c > pbs.tgz
+podman image save pbs:latest | gzip -c > ${cur_dir}/test-scripts/pbs.tgz
+podman run -it -v /tmp:/htmp --entrypoint /bin/bash pbs:latest -c "cp -rfv /opt/rpms /htmp"
+cp -v /tmp/rpms/*-server*.rpm ${cur_dir}/test-scripts/openpbs-server.rpm
+rm -rf /tmp/rpms

@@ -7,7 +7,13 @@ resultdir=${curdir}/results/$1
 num_jobs=$2
 jtype=$3
 num_subjobs=$4
-CON_CMD="podman exec pbs-server-1"
+nocon=$5
+if [ "x${nocon}" == "x1" ]; then
+	CON_CMD=""
+	export PBS_CONF_FILE=/tmp/pbs/confs/pbs-server-1.conf
+else
+	CON_CMD="podman exec pbs-server-1"
+fi
 SSH_CMD="ssh -o ControlMaster=auto -o ControlPersist=300 -o ControlPath=~/.ssh/.cm-%r@%h@%p -o StrictHostKeyChecking=no"
 SCP_CMD="scp -o ControlMaster=auto -o ControlPersist=300 -o ControlPath=~/.ssh/.cm-%r@%h@%p -o StrictHostKeyChecking=no"
 
@@ -59,8 +65,7 @@ function wait_jobs() {
 }
 
 function collect_logs() {
-	local _host _svrs _d _fsvr="" _destd=${resultdir}/$1
-	workd="/tmp/pbs"
+	local _host _svrs _d _fsvr="" _destd=${resultdir}/$1 workd="/tmp/pbs"
 	mkdir -p ${_destd}
 	for _host in $(cat ${curdir}/nodes)
 	do
@@ -95,6 +100,11 @@ function collect_logs() {
 			echo "Saving logs from ${_d}"
 			rm -rf ${_destd}/${_d}
 			mkdir -p ${_destd}/${_d}
+			if [ -d ${workd}/${_d} ]; then
+				cp -rf ${workd}/${_d}/mom_logs ${_destd}/${_d}/
+			else
+				${SCP_CMD} -qr ${_host}:${workd}/${_d}/mom_logs ${_destd}/${_d}/
+			fi
 		done
 		${SSH_CMD} ${_host} ${curdir}/truncate-logs.sh
 	done
@@ -109,7 +119,7 @@ function collect_logs() {
 ############################
 function test_with_sched_off() {
 	${CON_CMD} /opt/pbs/bin/qmgr -c "s s scheduling=0"
-	${curdir}/submit-jobs.sh ${num_jobs} ${jtype} ${num_subjobs}
+	${curdir}/submit-jobs.sh ${nocon} ${num_jobs} ${jtype} ${num_subjobs}
 	${CON_CMD} /opt/pbs/bin/qmgr -c "s s scheduling=1"
 	wait_jobs
 	collect_logs sched_off
@@ -117,7 +127,7 @@ function test_with_sched_off() {
 
 function test_with_sched_on() {
 	${CON_CMD} /opt/pbs/bin/qmgr -c "s s scheduling=1"
-	${curdir}/submit-jobs.sh ${num_jobs} ${jtype} ${num_subjobs}
+	${curdir}/submit-jobs.sh ${nocon} ${num_jobs} ${jtype} ${num_subjobs}
 	wait_jobs
 	collect_logs sched_on
 }

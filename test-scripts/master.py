@@ -4,6 +4,7 @@ import pathlib
 import socket
 import subprocess
 import sys
+import argparse
 from concurrent.futures import ProcessPoolExecutor, wait
 
 MYDIR = str(pathlib.Path(__file__).resolve().parent)
@@ -16,20 +17,26 @@ def run_cmd(host, cmd):
   p = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
   return p.returncode == 0
 
-def copy_artifacts(host):
+def copy_artifacts(host, nocon):
   if host != ME:
     run_cmd(host, ['mkdir', '-p', MYDIR])
     _c = ['scp', '-p']
-    _c += [os.path.join(MYDIR, 'pbs.tgz')]
+    if not nocon:
+      _c += [os.path.join(MYDIR, 'pbs.tgz')]
+    _c += [os.path.join(MYDIR, 'openpbs-server.rpm')]
+    _c += [os.path.join(MYDIR, 'cleanup-pbs.sh')]
     _c += [os.path.join(MYDIR, 'entrypoint')]
+    _c += [os.path.join(MYDIR, 'get-top.sh')]
+    _c += [os.path.join(MYDIR, 'setup-pbs.sh')]
     _c += [os.path.join(MYDIR, 'submit-jobs.sh')]
     _c += [os.path.join(MYDIR, 'truncate-logs.sh')]
     _c += [host + ':' + MYDIR]
     subprocess.run(_c)
-  _c = ['podman', 'load', '-i']
-  _c += [os.path.join(MYDIR, 'pbs.tgz')]
-  _c += ['pbs:latest']
-  run_cmd(host, _c)
+  if not nocon:
+    _c = ['podman', 'load', '-i']
+    _c += [os.path.join(MYDIR, 'pbs.tgz')]
+    _c += ['pbs:latest']
+    run_cmd(host, _c)
 
 def delete_container(host, cid):
   _c = ['podman', 'rm', '-vf', str(cid), '&>/dev/null']
@@ -42,9 +49,9 @@ def cleanup_containers(host):
   if host != ME:
     _s = ['ssh', host]
   try:
-      p = subprocess.check_output(_s + _c)
+    p = subprocess.check_output(_s + _c)
   except:
-    return
+    p = ''
   p = p.splitlines()
   p = [x.strip() for x in p]
   p = [x.decode() for x in p if len(x) > 0]
@@ -56,17 +63,30 @@ def cleanup_containers(host):
       wait(_ps)
   _c = ['podman', 'run', '--network', 'host', '-it']
   _c += ['--rm', '-l', 'pbs=1', '-v', '/tmp:/tmp/htmp']
-  _c += ['centos:8', 'rm', '-rf', '/tmp/htmp/pbs']
+  _c += ['centos:8', 'rm', '-rf']
+  _c += ['/tmp/htmp/pbs', '/tmp/htmp/rpms']
+  _c += ['/tmp/htmp/pbssetuplogs']
   _c += ['&>/dev/null']
   run_cmd(host, _c)
 
-def cleanup_system(host):
-  print('Cleaning system on %s' % host)
-  cleanup_containers(host)
-  _c = ['podman', 'rmi', '-f', 'pbs:latest']
-  run_cmd(host, _c)
+def cleanup_pbs(host):
+  _s = []
+  if host != ME:
+    _s = ['ssh', host]
+  run_cmd(host, _s + [os.path.join(MYDIR, 'cleanup-pbs.sh')])
+  _c = ['rm', '-rf', '/tmp/pbs', '/tmp/rpms', '/tmp/pbssetuplogs']
+  run_cmd(host, _s + _c)
 
-def setup_pbs(host, c, svrs, sips, moms, ncpus, asyncdb, vnodes):
+def cleanup_system(host, nocon):
+  print('Cleaning system on %s' % host)
+  if nocon:
+    cleanup_pbs(host)
+  else:
+    cleanup_containers(host)
+    _c = ['podman', 'rmi', '-f', 'pbs:latest']
+    run_cmd(host, _c)
+
+def setup_pbs_con(host, c, svrs, sips, moms, ncpus, asyncdb, vnodes, firstsvr):
   _e = os.path.join(MYDIR, 'entrypoint')
   _c = ['podman', 'run', '--network', 'host', '-itd']
   _c += ['--rm', '-l', 'pbs=1', '-v', '%s:%s' % (MYDIR, MYDIR)]
@@ -85,12 +105,13 @@ def setup_pbs(host, c, svrs, sips, moms, ncpus, asyncdb, vnodes):
     _c += [c[0]]
   _c += [str(ncpus)]
   _c += [str(vnodes)]
+  _c += [firstsvr]
   if len(svrs) > 1:
     _c += [','.join(svrs)]
   p = run_cmd(host, _c)
   if p and c[2] == 'server':
     _c = ['podman', 'exec', c[0]]
-    _c += [_e, 'waitsvr', str(c[3]), moms]
+    _c += [_e, 'waitsvr', c[1], str(c[3]), moms]
     p = run_cmd(host, _c)
   if p:
     print('Configured %s' % c[0])
@@ -99,7 +120,41 @@ def setup_pbs(host, c, svrs, sips, moms, ncpus, asyncdb, vnodes):
     print('Command is : %s' % " ".join(_c))
   return p
 
-def setup_cluster(tconf, hosts, ips, conf):
+def setup_pbs_nocon(host, c, svrs, sips, moms, ncpus, asyncdb, vnodes, firstsvr):
+  _c = [os.path.join(MYDIR, 'setup-pbs.sh')]
+  _c += c
+  if c[2] == 'server':
+    if asyncdb:
+      _c += ['1']
+    else:
+      _c += ['0']
+    _c += [moms]
+  elif c[2] == 'mom':
+    _c += [c[0]]
+  _c += [str(ncpus)]
+  _c += [str(vnodes)]
+  _c += [firstsvr]
+  if len(svrs) > 1:
+    _c += [','.join(svrs)]
+  p = run_cmd(host, _c)
+  if p and c[2] == 'server':
+    _c = [os.path.join(MYDIR, 'entrypoint')]
+    _c += ['waitsvr', c[1], str(c[3]), moms]
+    p = run_cmd(host, _c)
+  if p:
+    print('Configured %s' % c[0])
+  else:
+    print('Failed to configure %s' % c[0])
+    print('Command is : %s' % " ".join(_c))
+  return p
+
+def setup_pbs(host, c, svrs, sips, moms, ncpus, asyncdb, vnodes, nocon, firstsvr):
+  if nocon:
+    return setup_pbs_nocon(host, c, svrs, sips, moms, ncpus, asyncdb, vnodes, firstsvr)
+  else:
+    return setup_pbs_con(host, c, svrs, sips, moms, ncpus, asyncdb, vnodes, firstsvr)
+
+def setup_cluster(tconf, hosts, ips, conf, nocon):
   _ts = tconf['total_num_svrs']
   _tm = tconf['total_num_moms']
   _mph = tconf['num_moms_per_host']
@@ -128,7 +183,11 @@ def setup_cluster(tconf, hosts, ips, conf):
     _hi = 0
     i = 0
     while i < _tm:
-      if _confs[hosts[_hi]]['ns'] == 0:
+      if _hl > 1:
+        if _confs[hosts[_hi]]['ns'] == 0:
+          _confs[hosts[_hi]]['nm'] += 1
+          i += 1
+      else:
         _confs[hosts[_hi]]['nm'] += 1
         i += 1
       _hi += 1
@@ -138,10 +197,18 @@ def setup_cluster(tconf, hosts, ips, conf):
   _svrs = []
   _sips = []
   _scnt = 1
+  _svrhost = {}
+  _firstsvr = 'pbs-server-1'
   for i, _h in enumerate(hosts):
     no_moms=0
     for _ in range(_confs[_h]['ns']):
-      _c = ['pbs-server-%d' % _scnt, 'default', 'server', str(_scnt)]
+      _svrhost.setdefault(str(_scnt), _h)
+      _c = ['pbs-server-%d' % _scnt]
+      if nocon:
+        _c += ['/tmp/pbs']
+      else:
+        _c += ['default']
+      _c += ['server', str(_scnt)]
       _c.append('1' if _scnt == 1 else '0')
       _p = _lps
       _lps += 2
@@ -150,6 +217,8 @@ def setup_cluster(tconf, hosts, ips, conf):
       _svrs.append('pbs-server-%d:%d' % (_scnt, _p))
       _sips.append('pbs-server-%d:%s' % (_scnt, ips[i]))
       _confs[_h]['svrs'].append(_c)
+      if _scnt == 1 and nocon:
+        _firstsvr = _h.split('.')[0]
       _scnt += 1
       if _hl > 1:
         no_moms=1
@@ -158,7 +227,12 @@ def setup_cluster(tconf, hosts, ips, conf):
         continue
     print("Mom count for host %s: %d" % (_h, _confs[hosts[i]]['nm']))
     for _ in range(_confs[_h]['nm']):
-      _c = ['', 'default', 'mom', str(_lps)]
+      _c = ['']
+      if nocon:
+        _c += ['/tmp/pbs']
+      else:
+        _c += ['default']
+      _c += ['mom', str(_lps)]
       _lps += 2
       _confs[_h]['moms'].append(_c)
   for _h in hosts:
@@ -185,7 +259,10 @@ def setup_cluster(tconf, hosts, ips, conf):
     for _c in _confs[_h]['moms']:
       _s = _c[4]
       _c[0] = 'pbs-mom-%s-%d' % (_s, _mcs[_s])
-      _c[4] = 'pbs-server-%s' % _s
+      if nocon:
+        _c[4] = _svrhost[_s]
+      else:
+        _c[4] = 'pbs-server-%s' % _s
       if _s not in _moms[_h]:
         _moms[_h].setdefault(_s, [])
       _moms[_h][_s].append('%d=%s' % (_mcs[_s], int(_c[3]) - 18000))
@@ -204,49 +281,55 @@ def setup_cluster(tconf, hosts, ips, conf):
   with ProcessPoolExecutor(max_workers=len(hosts)) as executor:
     _ps = []
     for _h in hosts:
-      _ps.append(executor.submit(cleanup_containers, _h))
+      if nocon:
+        _ps.append(executor.submit(cleanup_pbs, _h))
+      else:
+        _ps.append(executor.submit(cleanup_containers, _h))
     wait(_ps)
 
   for _h in hosts:
     run_cmd(_h, ['mkdir', '-p', '/tmp/pbs'])
+    if nocon:
+      run_cmd(_h, [os.path.join(MYDIR, 'install-pbs.sh')])
 
   r = [False]
   with ProcessPoolExecutor(max_workers=10) as executor:
     _ps = []
     for _h, _cs in moms.items():
       for _c in _cs:
-        _ps.append(executor.submit(setup_pbs, _h, _c, _svrs, _sips, _moms, _cpm, _dbt, _vnd))
+        _ps.append(executor.submit(setup_pbs, _h, _c, _svrs, _sips, _moms, _cpm, _dbt, _vnd, nocon, _firstsvr))
     for _h, _cs in svrs.items():
       for _c in _cs:
-        _ps.append(executor.submit(setup_pbs, _h, _c, _svrs, _sips, _moms, _cpm, _dbt, _vnd))
+        _ps.append(executor.submit(setup_pbs, _h, _c, _svrs, _sips, _moms, _cpm, _dbt, _vnd, nocon, _firstsvr))
     r = list(set([_p.result() for _p in wait(_ps)[0]]))
   if len(r) != 1:
     return False
   return r[0]
 
-def run_tests(conf, hosts, ips):
+def run_tests(conf, hosts, ips, nocon):
   for _n, _s in conf['setups'].items():
     print('Configuring setup: %s' % _n)
-    r = setup_cluster(_s, hosts, ips, conf)
+    r = setup_cluster(_s, hosts, ips, conf, nocon)
     if not r:
       print('skipping test, see above for reason')
     else:
       _c = [os.path.join(MYDIR, 'run-test.sh'), _n]
       _c += [str(_s['total_num_jobs']), _s['job_type']]
       _c += [str(_s['num_subjobs'])]
+      _c.append('1' if nocon else '0')
       subprocess.run(_c)
 
 def main():
-  if os.getuid() == 0:
+  parser = argparse.ArgumentParser(prog='master.py')
+  parser.add_argument('--clean', action='store_true', help='Do cleanup')
+  parser.add_argument('--nocon', action='store_true', help='Run tests in non-container mode')
+  args = parser.parse_args()
+
+  if not args.nocon and os.getuid() == 0:
     print('This script must be run as non-root user!')
     sys.exit(1)
-  if len(sys.argv) > 2:
-    print('Usage: python3 master.py [clean]')
-    sys.exit(1)
-
-  if len(sys.argv) == 2 and sys.argv[1] != 'clean':
-    print('Invalid option: %s' % sys.argv[1])
-    print('Usage: python3 master.py [clean]')
+  elif args.nocon and os.getuid() != 0:
+    print('This script must run as root user in non-container mode!')
     sys.exit(1)
 
   os.chdir(MYDIR)
@@ -262,8 +345,12 @@ def main():
     print('Could not find nodes file')
     sys.exit(1)
 
-  if not os.path.isfile('pbs.tgz'):
-    print('Could not find pbs.tgz')
+  if args.nocon:
+    _f = 'openpbs-server.rpm'
+  else:
+    _f = 'pbs.tgz'
+  if not os.path.isfile(_f):
+    print('Could not find %s' % _f)
     sys.exit(1)
 
   hosts = []
@@ -281,10 +368,10 @@ def main():
   with ProcessPoolExecutor(max_workers=len(hosts)) as executor:
     _ps = []
     for _h in hosts:
-      _ps.append(executor.submit(cleanup_system, _h))
+      _ps.append(executor.submit(cleanup_system, _h, args.nocon))
     wait(_ps)
 
-  if len(sys.argv) == 2:
+  if args.clean:
     sys.exit(0)
 
   subprocess.run(['rm', '-rf', 'results'])
@@ -292,15 +379,15 @@ def main():
   with ProcessPoolExecutor(max_workers=len(hosts)) as executor:
     _ps = []
     for _h in hosts:
-      _ps.append(executor.submit(copy_artifacts, _h))
+      _ps.append(executor.submit(copy_artifacts, _h, args.nocon))
     wait(_ps)
 
-  run_tests(conf, hosts, ips)
+  run_tests(conf, hosts, ips, args.nocon)
 
   with ProcessPoolExecutor(max_workers=len(hosts)) as executor:
     _ps = []
     for _h in hosts:
-      _ps.append(executor.submit(cleanup_system, _h))
+      _ps.append(executor.submit(cleanup_system, _h, args.nocon))
     wait(_ps)
 
 

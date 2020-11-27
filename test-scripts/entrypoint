@@ -1,7 +1,12 @@
 #!/bin/bash
 
 if [ "x$1" == "xwaitsvr" ]; then
-    . /etc/pbs.conf
+    if [ "x$2" != "xdefault" ]; then
+        export PBS_CONF_FILE=${2}/confs/pbs-server-$3.conf
+        . ${2}/confs/pbs-server-$3.conf
+    else
+        . /etc/pbs.conf
+    fi
     _ct=0
     while true
     do
@@ -17,7 +22,7 @@ if [ "x$1" == "xwaitsvr" ]; then
         fi
     done
     sleep 10
-    _moms=$3
+    _moms=$4
     for _ms in ${_moms//-/ }
     do
         _host=${_ms//:*}
@@ -25,7 +30,7 @@ if [ "x$1" == "xwaitsvr" ]; then
         for _s in ${_ss//+/ }
         do
             _si=${_s//@*}
-            if [ "x${_si}" != "x${2}" ]; then
+            if [ "x${_si}" != "x${3}" ]; then
                 continue
             fi
             __ms=${_s#*@}
@@ -50,25 +55,35 @@ if [ "x$1" == "xwaitsvr" ]; then
         done
     done
     exit 0
-else
+elif [ "x$1" == "xdefault" ]; then
 	exec > >(tee -a /tmp/my.log) 2> >(tee -a /tmp/my.log >&2)
-	set -x
 fi
+set -x
 
 /usr/sbin/sshd
 
-# for server: <home path> server svrno (1 - start/0 - no start sched/comm) port dbport asyncdb moms cpus vnodes svrinsts?
+#                 1         2      3              4                          5    6      7       8    9    10       11     12
+# for server: <home path> server svrno (1 - start/0 - no start sched/comm) port dbport asyncdb moms cpus vnodes firstsvr svrinsts?
 _phome=/var/spool/pbs
 if [ "x$1" != "xdefault" ]; then
     _phome=$1
+    mkdir -p ${_phome}/confs
 fi
 
 chown root: ${_phome}
 chmod 0755 ${_phome}
 
 if [ "x$2" == "xserver" -a $# -ge 6 ]; then
+    _conf=/etc/pbs.conf
+    if [ "x$1" != "xdefault" ]; then
+        _conf=${_phome}/confs/pbs-server-$3.conf
+    fi
     {
-        echo PBS_SERVER=pbs-server-$3
+        if [ "x$1" != "xdefault" ]; then
+            echo PBS_SERVER=$(hostname -s)
+        else
+            echo PBS_SERVER=pbs-server-$3
+        fi
         echo PBS_EXEC=/opt/pbs
         echo PBS_HOME=${_phome}/pbs-server-$3
         echo PBS_START_SERVER=1
@@ -82,12 +97,17 @@ if [ "x$2" == "xserver" -a $# -ge 6 ]; then
         echo PBS_BATCH_SERVICE_PORT=$5
         echo PBS_BATCH_SERVICE_PORT_DIS=$5
         echo PBS_DATA_SERVICE_PORT=$6
-        echo PBS_LEAF_ROUTERS=pbs-server-1:17001
-    } > /etc/pbs.conf
-    unset _phome
-# for mom: <home path> mom momport ownserver ownserverport name vnodes svrinsts?
+        echo PBS_LEAF_ROUTERS=${11}:17001
+    } > ${_conf}
+    export PBS_CONF_FILE=${_conf}
+    unset _conf
+# for mom: <home path> mom momport ownserver ownserverport name ncpus vnodes firstsvr svrinsts?
 elif [ "x$2" == "xmom" -a $# -ge 5 ]; then
     _port=$3
+    _conf=/etc/pbs.conf
+    if [ "x$1" != "xdefault" ]; then
+        _conf=${_phome}/confs/${6}.conf
+    fi
     {
         echo PBS_SERVER=$4
         echo PBS_EXEC=/opt/pbs
@@ -103,9 +123,10 @@ elif [ "x$2" == "xmom" -a $# -ge 5 ]; then
         echo PBS_BATCH_SERVICE_PORT_DIS=$5
         echo PBS_MOM_SERVICE_PORT=${_port}
         echo PBS_MANAGER_SERVICE_PORT=$(( _port + 1 ))
-        echo PBS_LEAF_ROUTERS=pbs-server-1:17001
-    } > /etc/pbs.conf
-    unset _port _phome
+        echo PBS_LEAF_ROUTERS=$8:17001
+    } > ${_conf}
+    export PBS_CONF_FILE=${_conf}
+    unset _port _phome _conf
 else
     unset _phome
     exec /bin/bash
@@ -113,13 +134,13 @@ fi
 /opt/pbs/libexec/pbs_init.d start
 if [ "x$2" == "xserver" ]; then
     sleep 2
-    /opt/pbs/bin/qmgr -c "s sched sched_host = pbs-server-1"
+    /opt/pbs/bin/qmgr -c "s sched sched_host = ${11}"
     /opt/pbs/bin/qmgr -c "s sched sched_port = 15004"
     /opt/pbs/bin/qmgr -c 's s acl_roots = root@*'
     /opt/pbs/bin/qmgr -c "s s flatuid = 1"
     if [ "x$7" == "x1" ]; then
         /opt/pbs/libexec/pbs_init.d stop
-        sed -i 's/#synchronous_commit = on/synchronous_commit = off/g' /var/spool/pbs/pbs-server-${3}/datastore/postgresql.conf
+        sed -i 's/#synchronous_commit = on/synchronous_commit = off/g' ${_phome}/pbs-server-${3}/datastore/postgresql.conf
         /opt/pbs/libexec/pbs_init.d start
         sleep 10
     fi
@@ -151,24 +172,38 @@ if [ "x$2" == "xserver" ]; then
             done
         done
     fi
-    unset _mom _moms _cpus _name _host _mport _vnodes
+    unset _mom _moms _cpus _name _host _mport _vnodes _phome
 else
     _mom=$6
     _cpu=$7
     _count=$8
-    {
-         echo '$configversion 2'
-         echo "${_mom}: resources_available.ncpus=0"
-         echo "${_mom}: resources_available.mem=0"
-         for i in $(seq 1 1 ${_count})
-         do
-             echo "${_mom}[${i}]: resources_available.ncpus=${_cpu}"
-             echo "${_mom}[${i}]: resources_available.host=${_mom}"
-         done
-     } > /tmp/vnodes
-     /opt/pbs/sbin/pbs_mom -s remove vnodes
-     /opt/pbs/sbin/pbs_mom -s insert vnodes /tmp/vnodes
-     /opt/pbs/libexec/pbs_init.d restart
-     unset _mom _cpu _count
+    _fname=${_mom}-$(date "+%s")
+    if [ "x${_count}" == "x0" ]; then
+        {
+            echo '$configversion 2'
+            echo "${_mom}: resources_available.host=${_mom}"
+        } > /tmp/${_fname}
+    else
+        if [ "x${_cpu}" == "x0" ]; then
+            _cpu=$(nproc --all)
+        fi
+        {
+            echo '$configversion 2'
+            echo "${_mom}: resources_available.ncpus=0"
+            echo "${_mom}: resources_available.mem=0"
+            for i in $(seq 1 1 ${_count})
+            do
+                echo "${_mom}[${i}]: resources_available.ncpus=${_cpu}"
+                echo "${_mom}[${i}]: resources_available.host=${_mom}"
+            done
+        } > /tmp/${_fname}
+    fi
+    /opt/pbs/sbin/pbs_mom -s remove vnodes
+    /opt/pbs/sbin/pbs_mom -s insert vnodes /tmp/${_fname}
+    rm -f /tmp/${_fname}
+    /opt/pbs/libexec/pbs_init.d restart
+    unset _mom _cpu _count _fname
 fi
-exec /bin/bash
+if [ "x$1" == "xdefault" ]; then
+    exec /bin/bash
+fi

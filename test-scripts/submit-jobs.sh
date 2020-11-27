@@ -4,17 +4,23 @@ _curdir=$(dirname $(readlink -f $0))
 _self=${_curdir}/$(basename $0)
 cd ${_curdir}
 
-if [ $# -gt 4 ]; then
+if [ $# -gt 5 ]; then
 	echo "syntax: $0 <no. jobs> [j|ja] <no. subjob if ja>"
 	exit 1
 fi
 
 if [ "x$1" == "xsubmit" ]; then
-	njobs=$2
-	jtype=$3
-	nsj=$4
+	nocon=$2
+	njobs=$3
+	jtype=$4
+	nsj=$5
 
-	. /etc/pbs.conf
+	if [ "x${nocon}" == "x0" ]; then
+		. /etc/pbs.conf
+	else
+		. /tmp/pbs/confs/pbs-server-1.conf
+		export PBS_CONF_FILE=/tmp/pbs/confs/pbs-server-1.conf
+	fi
 
 	if [ "x${jtype}" == "xja" ]; then
 		for i in $(seq 1 $njobs)
@@ -31,27 +37,33 @@ if [ "x$1" == "xsubmit" ]; then
 fi
 
 if [ "x$1" == "xsvr-submit" ]; then
-	njobs=$2
-	jtype=$3
-	nsj=$4
+	nocon=$2
+	njobs=$3
+	jtype=$4
+	nsj=$5
 	users=$(awk -F: '/^(pbsu|tst)/ {print $1}' /etc/passwd)
 	_tu=$(awk -F: '/^(pbsu|tst)/ {print $1}' /etc/passwd | wc -l)
 	_jpu=$(( njobs / _tu ))
 
 	for usr in ${users}
 	do
-		( setsid sudo -Hiu ${usr} ${_self} submit ${_jpu} ${jtype} ${nsj}) &
+		( setsid sudo -Hiu ${usr} ${_self} submit ${nocon} ${_jpu} ${jtype} ${nsj}) &
 	done
 	wait
 	exit 0
 fi
 
-njobs=$1
-jtype=$2
-nsj=$3
+nocon=$1
+njobs=$2
+jtype=$3
+nsj=$4
 if [ "x${jtype}" == "xja" ]; then
 	echo "Total jobs array: ${njobs}, Total Subjob per array: ${nsj}, Total svrs: 1, Jobs array per Svr: ${njobs}"
 else
 	echo "Total jobs: ${njobs}, Total svrs: 1, Jobs per Svr: ${njobs}"
 fi
-podman exec pbs-server-1 ${_self} svr-submit ${njobs} ${jtype} ${nsj}
+if [ "x${nocon}" == "x0" ]; then
+	podman exec pbs-server-1 ${_self} svr-submit ${nocon} ${njobs} ${jtype} ${nsj}
+else
+	${_self} svr-submit ${nocon} ${njobs} ${jtype} ${nsj}
+fi
