@@ -1,48 +1,15 @@
 {
   "setups": {
     "25m0v200cpu_sync_j": {
-      "total_num_svrs": 1,
+      "total_num_svrs": 2,
       "total_num_moms": 25,
       "num_moms_per_host": 0,
       "num_cpus_per_mom": 200,
       "num_vnodes_per_mom": 0,
       "async_db": false,
       "job_type": "j",
-      "total_num_jobs": 100000,
-      "num_subjobs": 0
-    },
-    "25m0v200cpu_sync_ja": {
-      "total_num_svrs": 1,
-      "total_num_moms": 25,
-      "num_moms_per_host": 0,
-      "num_cpus_per_mom": 200,
-      "num_vnodes_per_mom": 0,
-      "async_db": false,
-      "job_type": "ja",
       "total_num_jobs": 100,
-      "num_subjobs": 1000
-    },
-    "25m0v200cpu_async_j": {
-      "total_num_svrs": 1,
-      "total_num_moms": 25,
-      "num_moms_per_host": 0,
-      "num_cpus_per_mom": 200,
-      "num_vnodes_per_mom": 0,
-      "async_db": true,
-      "job_type": "j",
-      "total_num_jobs": 100000,
       "num_subjobs": 0
-    },
-    "25m0v200cpu_async_ja": {
-      "total_num_svrs": 1,
-      "total_num_moms": 25,
-      "num_moms_per_host": 0,
-      "num_cpus_per_mom": 200,
-      "num_vnodes_per_mom": 0,
-      "async_db": true,
-      "job_type": "ja",
-      "total_num_jobs": 100,
-      "num_subjobs": 1000
     }
   }
 }

@@ -2448,10 +2448,20 @@ def parse_test_log(sname, tname, tpath):
     return ('%s@%s' % (sname, tname), info)
 
 if __name__ == '__main__':
+    results = []
     with ProcessPoolExecutor(max_workers=10) as executor:
         _ps = []
         order = []
         x = pathlib.Path(sys.argv[1]).absolute()
+        results_path = str(x)
+        dirname = os.path.dirname(results_path)
+        nodes_file = os.path.join(dirname, 'nodes')
+        hosts = 1
+        if os.path.exists(nodes_file):
+            with open(nodes_file) as f:
+                nodes_list = f.read().splitlines()
+                hosts = len(nodes_list)
+
         _s = [x for x in os.scandir(x) if x.is_dir()]
         setups = sorted(_s, key=lambda x: x.name)
         for s in setups:
@@ -2461,6 +2471,7 @@ if __name__ == '__main__':
                 order.append('%s@%s' % (s.name, t.name))
                 _ps.append(executor.submit(parse_test_log, s.name, t.name, t.path))
         r = dict([_p.result() for _p in wait(_ps)[0]])
+
         for n in order:
             sname, tname = n.split('@')
             print('=' * 80)
@@ -2478,3 +2489,59 @@ if __name__ == '__main__':
             # print('-' * 80)
             # print('Accounting summary:')
             # process_output(r[n]['accounting'])
+
+
+            config = sname.split('cpu')[0].split('m')
+            moms = int(config[0])
+            cpus = int(config[1])
+            vnodes = 1
+
+            qjobs = int(r[n]['server']['num_jobs_queued'])
+            rjobs = int(r[n]['server']['num_jobs_run'])
+            pjobs = qjobs - rjobs
+            if pjobs == 0:
+                pjobs = qjobs
+                subjobs = 0
+                array = "No"
+            else:
+                subjobs = int(rjobs / pjobs)
+                array = "Yes"
+
+            if tname == 'sched_on':
+                sched = 'On'
+            elif tname == 'sched_mixed':
+                sched = 'Mixed'
+            elif tname == 'sched_rtlimit':
+                sched = 'RateLimited'
+            else:
+                sched = 'Off'
+            
+            if 'async' in sname:
+                asyncdb = 'Yes'
+            else:
+                asyncdb = 'No'
+            try:
+                jsr = float(r[n]['server']['job_submit_rate'].split('/')[0])
+                jt = float(r[n]['server']['job_throughput'].split('/')[0])
+                jrr = float(r[n]['server']['job_run_rate'].split('/')[0])
+                jer = float(r[n]['server']['job_end_rate'].split('/')[0])
+
+                s = str(hosts) + ',' + sname + ',' + str(moms) + ',' + str(vnodes) + ',' + str(cpus) + ',' + sched + ',' + str(pjobs) + ',' + str(subjobs) + ',' + asyncdb + ',' + array + ',' + str(jsr) + ',' + str(jt) + ',' + str(jrr) + ',' + str(jer)
+
+                sched_stat = os.path.join(results_path, sname, tname, 'pbs-server-1' ,'sched_stats')
+                stat_line = ''
+                print("reading %s" % sched_stat)
+                if os.path.exists(sched_stat):
+                    with open(sched_stat) as f:
+                        print("reading %s" % sched_stat)
+                        stat_line = f.read().splitlines()[11]
+
+                stat = s + ',' + stat_line
+                results.append(stat)
+            except:
+                pass
+
+    print("Results in csv:")
+    print('Hosts,TestName,MoMs,Vnodes/MoM,Cpus/Vnode,Scheduling,Jobs,Subjobs,AsyncDB,ArrayJob,job_submit_rate/s,job_throughput/s,job_run_rate/s,job_end_rate/s,Total Cycles,Max cycle time,90p cycle time,75p cycle time,25p cycle time,Mean cycle time,Median cycle time,Min cycle time')
+    for s in results:
+        print(s)

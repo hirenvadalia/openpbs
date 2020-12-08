@@ -10,7 +10,7 @@ num_subjobs=$4
 nocon=$5
 if [ "x${nocon}" == "x1" ]; then
 	CON_CMD=""
-	export PBS_CONF_FILE=/tmp/pbs/confs/pbs-server-1.conf
+	export PBS_CONF_FILE=/var/spool/pbs/confs/pbs-server-1.conf
 else
 	CON_CMD="podman exec pbs-server-1"
 fi
@@ -65,7 +65,12 @@ function wait_jobs() {
 }
 
 function collect_logs() {
-	local _host _svrs _d _fsvr="" _destd=${resultdir}/$1 workd="/tmp/pbs"
+	local _host _svrs _d _fsvr="" _destd=${resultdir}/$1
+	if [ "x${nocon}" == "x1" ]; then
+		workd="/var/spool/pbs"
+	else
+		workd="/tmp/pbs"
+	fi
 	mkdir -p ${_destd}
 	for _host in $(cat ${curdir}/nodes)
 	do
@@ -79,11 +84,18 @@ function collect_logs() {
 			echo "Saving logs from ${_d}"
 			rm -rf ${_destd}/${_d}
 			mkdir -p ${_destd}/${_d}
+			if [ "x${nocon}" == "x1" ]; then
+				cmd="python3 ${curdir}/pbs_cycle_stats.py -s /var/spool/pbs/pbs-server-1/sched_logs"
+			else
+				cmd="podman exec -it ${_d} python3 ${curdir}/pbs_cycle_stats.py -s /var/spool/pbs/pbs-server-1/sched_logs"
+			fi
+			echo "Scheduler stats from server node ${_d}:"
 			if [ -d ${workd}/${_d} ]; then
 				cp -rf ${workd}/${_d}/server_logs ${_destd}/${_d}/
 				cp -rf ${workd}/${_d}/server_priv/accounting ${_destd}/${_d}/
 				if [ "x${_fsvr}" == "x" ]; then
 					cp -rf ${workd}/${_d}/sched_logs ${_destd}/${_d}/
+					$cmd > ${_destd}/${_d}/sched_stats
 					_fsvr=${_d}
 				fi
 			else
@@ -91,6 +103,7 @@ function collect_logs() {
 				${SCP_CMD} -qr ${_host}:${workd}/${_d}/server_priv/accounting ${_destd}/${_d}/
 				if [ "x${_fsvr}" == "x" ]; then
 					${SCP_CMD} -qr ${_host}:${workd}/${_d}/sched_logs ${_destd}/${_d}/sched_logs
+					${SSH_CMD} ${_host} $cmd > ${_destd}/${_d}/sched_stats
 					_fsvr=${_d}
 				fi
 			fi
@@ -131,6 +144,38 @@ function test_with_sched_on() {
 	wait_jobs
 	collect_logs sched_on
 }
+
+function test_with_mixed() {
+	${CON_CMD} /opt/pbs/bin/qmgr -c "s s scheduling=0"
+	let "half_num_jobs = ${num_jobs} / 2"
+	let "rem_num_jobs = ${num_jobs} - ${half_num_jobs}"
+	${curdir}/submit-jobs.sh ${nocon} ${half_num_jobs} ${jtype} ${num_subjobs}
+	${CON_CMD} /opt/pbs/bin/qmgr -c "s s scheduling=1"
+	${curdir}/submit-jobs.sh ${nocon} ${rem_num_jobs} ${jtype} ${num_subjobs}
+	wait_jobs
+	collect_logs sched_mixed
+}
+
+function test_with_rate_limit() {
+	${CON_CMD} /opt/pbs/bin/qmgr -c "s s scheduling=1"
+	jobs=5000
+	i=0
+	if [ ${num_subjobs} -eq 0 ]; then
+		while [ $i -lt ${num_jobs} ]; do
+			i=$[$i+$jobs]
+			${curdir}/submit-jobs.sh ${nocon} ${jobs} ${jtype} ${num_subjobs}
+			sleep 1 
+		done
+	else
+		while [ $i -lt ${num_jobs} ]; do
+			i=$[$i+1]
+			${curdir}/submit-jobs.sh ${nocon} 1 ${jtype} ${num_subjobs}
+			sleep 1 
+		done
+	fi
+	wait_jobs
+	collect_logs sched_rtlimit
+}
 ############################
 # end test funcs
 ############################
@@ -138,3 +183,7 @@ collect_info
 test_with_sched_off
 collect_info
 test_with_sched_on
+collect_info
+test_with_mixed
+#collect_info
+#test_with_rate_limit

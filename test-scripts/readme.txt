@@ -4,7 +4,7 @@ How to use:
    NOTE1: Use https://github.com/hirenvadalia/openpbs/tree/perftest
    NOTE2: This step MUST be run on your machine
 
-2. copy generated <path to pbs src dir>/pbs.tgz to this dir (aka 'test-scripts' - dir in which this readme.txt exists)
+2. copy generated RPM and <path to pbs src dir>/pbs.tgz to this dir (aka 'test-scripts' - dir in which this readme.txt exists)
    NOTE: This step MUST be run on your machine
 
 3. create file called 'nodes' in this dir and add per line uniq FQDN (IP not supported) of machine which are available for tests
@@ -19,6 +19,7 @@ How to use:
    NOTE: This step MUST be run on your machine
 
 5. run 'python3 master.py &> master.log' from this dir as yourself on first node
+   for native install, run 'python3 master.py --nocon &> master.log' from this dir as yourself on first node
 
 6. once above finish, you should have 'results' dir in current dir, copy info.txt and master.log in it, tar 'results'
 

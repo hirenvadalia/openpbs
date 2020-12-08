@@ -1417,7 +1417,7 @@ get_comm_filename(char *fname)
 		char *svr_inst_copy = strdup(svr_inst);
 		char *p = svr_inst_copy;
 
-		while (p && *p != NULL && *p != '\0') {
+		while (p != NULL && *p != '\0') {
 			if (*p == ':' || *p == ',' || *p == '/' || *p == ' ' || *p == '.')
 				*p = '_';
 			p++;

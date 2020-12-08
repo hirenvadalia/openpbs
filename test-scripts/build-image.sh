@@ -52,12 +52,18 @@ RUN set -ex \\
     && useradd -K UMASK=0022 -m -s /bin/bash -u 4368 -g tstgrp01 -G tstgrp01 pbsuser7 \\
     && useradd -K UMASK=0022 -m -s /bin/bash -u 11000 -g tstgrp00 -G tstgrp00 tstusr00 \\
     && useradd -K UMASK=0022 -m -s /bin/bash -u 11001 -g tstgrp00 -G tstgrp00 tstusr01 \\
-    && dnf install -y sudo openssh-server openssh-clients passwd which net-tools bc \\
+    && dnf install -y sudo openssh-server openssh-clients passwd which net-tools bc gdb valgrind perf \\
+    && dnf install -y dnf-plugins-core \\
+    && dnf config-manager --set-enabled powertools \\
+    && dnf install -y gcc make rpm-build libtool hwloc-devel libX11-devel libXt-devel libedit-devel libical-devel ncurses-devel perl postgresql-devel postgresql-contrib python3-devel tcl-devel \\
+    && dnf install -y tk-devel swig expat-devel openssl-devel libXext libXft autoconf automake gcc-c++ \\
+    && dnf install -y expat libedit postgresql-server postgresql-contrib python3 sendmail sudo tcl tk libical python3-pip \\
+    && pip3 install numpy \\
     && echo 'Defaults  always_set_home' > /etc/sudoers.d/pbs \\
     && echo 'Defaults  !requiretty' >> /etc/sudoers.d/pbs \\
     && echo 'ALL ALL=(ALL)  NOPASSWD: ALL' >> /etc/sudoers.d/pbs \\
     && echo '' > /etc/security/limits.conf \\
-	&& rm -f /etc/security/limits.d/*.conf \\
+    && rm -f /etc/security/limits.d/*.conf \\
     && ssh-keygen -A \\
     && /usr/sbin/sshd \\
     && ssh-keygen -N "" -C "common-ssh-pair" -f ~/.ssh/id_rsa -t rsa -q \\
@@ -95,7 +101,7 @@ RUN set -ex \\
     && CFLAGS="-g -O2 -Wall -Werror" rpmbuild -ba openpbs.spec --with ptl -D "_with_swig --with-swig=/usr/local" \\
     && mkdir -p /tmp/rpms \\
     && cp -v ~/rpmbuild/RPMS/x86_64/*-server*.rpm /tmp/rpms \\
-    && rm -f /tmp/rpms/*-debug*
+    && cp -v ~/rpmbuild/RPMS/x86_64/*-debug*.rpm /tmp/rpms
 
 FROM base
 ENV LANG=C.utf8 LC_ALL=C.utf8
@@ -128,5 +134,7 @@ __PP_DF__
 build_image
 podman image save pbs:latest | gzip -c > ${cur_dir}/test-scripts/pbs.tgz
 podman run -it -v /tmp:/htmp --entrypoint /bin/bash pbs:latest -c "cp -rfv /opt/rpms /htmp"
-cp -v /tmp/rpms/*-server*.rpm ${cur_dir}/test-scripts/openpbs-server.rpm
+cp /tmp/rpms/*-server*.rpm ${cur_dir}/test-scripts/openpbs-server.rpm
+cp -v /tmp/rpms/*-server*.rpm ${cur_dir}/test-scripts/
+cp -v /tmp/rpms/*-debug*.rpm ${cur_dir}/test-scripts/
 rm -rf /tmp/rpms

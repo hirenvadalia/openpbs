@@ -18,8 +18,8 @@ if [ "x$1" == "xsubmit" ]; then
 	if [ "x${nocon}" == "x0" ]; then
 		. /etc/pbs.conf
 	else
-		. /tmp/pbs/confs/pbs-server-1.conf
-		export PBS_CONF_FILE=/tmp/pbs/confs/pbs-server-1.conf
+		. /var/spool/pbs/confs/pbs-server-1.conf
+		export PBS_CONF_FILE=/var/spool/pbs/confs/pbs-server-1.conf
 	fi
 
 	if [ "x${jtype}" == "xja" ]; then
