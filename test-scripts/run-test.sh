@@ -84,18 +84,13 @@ function collect_logs() {
 			echo "Saving logs from ${_d}"
 			rm -rf ${_destd}/${_d}
 			mkdir -p ${_destd}/${_d}
-			if [ "x${nocon}" == "x1" ]; then
-				cmd="python3 ${curdir}/pbs_cycle_stats.py -s /var/spool/pbs/pbs-server-1/sched_logs"
-			else
-				cmd="podman exec -it ${_d} python3 ${curdir}/pbs_cycle_stats.py -s /var/spool/pbs/pbs-server-1/sched_logs"
-			fi
 			echo "Scheduler stats from server node ${_d}:"
 			if [ -d ${workd}/${_d} ]; then
 				cp -rf ${workd}/${_d}/server_logs ${_destd}/${_d}/
 				cp -rf ${workd}/${_d}/server_priv/accounting ${_destd}/${_d}/
 				if [ "x${_fsvr}" == "x" ]; then
 					cp -rf ${workd}/${_d}/sched_logs ${_destd}/${_d}/
-					$cmd > ${_destd}/${_d}/sched_stats
+					python3 ${curdir}/pbs_cycle_stats.py -s ${_destd}/${_d}/sched_logs > ${_destd}/${_d}/sched_stats
 					_fsvr=${_d}
 				fi
 			else
@@ -103,7 +98,7 @@ function collect_logs() {
 				${SCP_CMD} -qr ${_host}:${workd}/${_d}/server_priv/accounting ${_destd}/${_d}/
 				if [ "x${_fsvr}" == "x" ]; then
 					${SCP_CMD} -qr ${_host}:${workd}/${_d}/sched_logs ${_destd}/${_d}/sched_logs
-					${SSH_CMD} ${_host} $cmd > ${_destd}/${_d}/sched_stats
+					python3 ${curdir}/pbs_cycle_stats.py -s ${_destd}/${_d}/sched_logs > ${_destd}/${_d}/sched_stats
 					_fsvr=${_d}
 				fi
 			fi
@@ -119,7 +114,7 @@ function collect_logs() {
 				${SCP_CMD} -qr ${_host}:${workd}/${_d}/mom_logs ${_destd}/${_d}/
 			fi
 		done
-		${SSH_CMD} ${_host} ${curdir}/truncate-logs.sh
+		${SSH_CMD} ${_host} ${curdir}/truncate-logs.sh ${workd}
 	done
 }
 ###############################

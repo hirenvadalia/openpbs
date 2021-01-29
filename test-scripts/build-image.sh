@@ -58,6 +58,8 @@ RUN set -ex \\
     && dnf install -y gcc make rpm-build libtool hwloc-devel libX11-devel libXt-devel libedit-devel libical-devel ncurses-devel perl postgresql-devel postgresql-contrib python3-devel tcl-devel \\
     && dnf install -y tk-devel swig expat-devel openssl-devel libXext libXft autoconf automake gcc-c++ \\
     && dnf install -y expat libedit postgresql-server postgresql-contrib python3 sendmail sudo tcl tk libical python3-pip \\
+    && dnf install -y munge munge-libs munge-devel \\
+    && create-munge-key \\
     && pip3 install numpy \\
     && echo 'Defaults  always_set_home' > /etc/sudoers.d/pbs \\
     && echo 'Defaults  !requiretty' >> /etc/sudoers.d/pbs \\
@@ -88,7 +90,7 @@ FROM base AS genrpm
 COPY . /pbssrc
 RUN set -ex \\
     && cd /pbssrc \\
-    && ONLY_INSTALL_DEPS=1 /pbssrc/.travis/do.sh \\
+    && ONLY_INSTALL_DEPS=1 /pbssrc/ci/etc/do.sh \\
     && cd /pbssrc \\
     && git clean -ffdx \\
     && ./autogen.sh \\

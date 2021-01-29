@@ -92,13 +92,18 @@ def cleanup_system(host, nocon):
 
 
 def setup_pbs_con(host, c, svrs, sips, moms, ncpus, asyncdb, vnodes, firstsvr):
-    _e = os.path.join(MYDIR, 'entrypoint')
     _c = ['podman', 'run', '--privileged', '--network', 'host', '-itd']
     _c += ['--rm', '-l', 'pbs=1', '-v', '%s:%s' % (MYDIR, MYDIR)]
     _c += ['-v', '/tmp/pbs:/var/spool/pbs']
-    _c += ['--entrypoint', _e, '--name', c[0]]
+    _c += ['--name', c[0]]
     _c += ['--add-host=%s' % x for x in sips]
     _c += ['pbs:latest']
+    p = run_cmd(host, _c)
+    if not p:
+        print("Failed to launch %s" % c[0])
+        return p
+    _e = os.path.join(MYDIR, 'entrypoint')
+    _c = ['podman', 'exec', c[0], _e]
     _c += c[1:]
     if c[2] == 'server':
         if asyncdb:

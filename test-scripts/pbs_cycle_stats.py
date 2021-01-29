@@ -53,7 +53,7 @@ def cvt_sec_to_str(sec):
     if rest:
         str_time += '%ds ' % (rest)
     if microseconds:
-        ms_str = u'\u00B5' + 's'
+        ms_str = '\u00B5' + 's'
         str_time += '%d %s' % (microseconds * 1000000, ms_str)
 
     if str_time[-1] == ' ':
@@ -83,8 +83,8 @@ def output_stats(input_arr, perc_list, type_str, is_time=False):
         else:
             strp = str(int(stats[k]))
         # cvt_sec_to_str() can return a unicode character
-        print k + ' ' + type_str + ': ' + strp.encode('utf-8')
-    print ''
+        print(k + ' ' + type_str + ': ' + str(strp))
+    print('')
 
 
 if __name__ == '__main__':
@@ -110,7 +110,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     schedlog_path = args.schedlogs
-    perc = map(int, args.perc)
+    perc = list(map(int, args.perc))
     perc.sort(reverse=True)
     stats = args.stats
     verbose = args.verbose
@@ -119,7 +119,7 @@ if __name__ == '__main__':
     end_date = int(args.end)
 
     if not os.path.isdir(schedlog_path):
-        print 'Schedlog path is not a directory'
+        print('Schedlog path is not a directory')
         exit(1)
 
     cycle_times = []
@@ -137,7 +137,7 @@ if __name__ == '__main__':
         # Remove all non PBS log files and sort them to make sure we go through
         # the logs in chronological order
         files = [x for x in files if x.isdigit()]
-        files = map(int, files)
+        files = list(map(int, files))
         files = [x for x in files if x >= start_date and x <= end_date]
         files.sort()
 
@@ -183,15 +183,15 @@ if __name__ == '__main__':
                         if start_time == 0:
                             continue
                         elif end_time < start_time:
-                            print 'File: %s, line: %s, end time %s < ' \
+                            print('File: %s, line: %s, end time %s < ' \
                                 'start time %s, ignoring cycle' % (
-                                    filename, line, end_time, start_time)
+                                    filename, line, end_time, start_time))
                             continue
                         ct = end_time - start_time
                         cycle_times.append(ct)
                         if ct > long_time:
-                            print 'Long Cycle: %s Start: %s End: %s' % \
-                                (cvt_sec_to_str(ct), start_time_str, timestamp)
+                            print('Long Cycle: %s Start: %s End: %s' % \
+                                (cvt_sec_to_str(ct), start_time_str, timestamp))
                         if stats is True:
                             num_consider_jobs.append(consider)
                             num_preempt_jobs.append(preempt)
@@ -212,17 +212,17 @@ if __name__ == '__main__':
                         elif 'Job is a top job' in line:
                             top += 1
 
-    print 'Total cycles: ' + str(len(cycle_times))
+    print('Total cycles: ' + str(len(cycle_times)))
     cycle_times_arr = np.array(cycle_times)
     output_stats(cycle_times_arr, perc, 'cycle time', True)
 
     if stats is True:
-        print 'Total Jobs Considered: %d' % (len(consider_jobs))
-        print 'Total jobs run %d' % sum(num_run_jobs)
+        print('Total Jobs Considered: %d' % (len(consider_jobs)))
+        print('Total jobs run %d' % sum(num_run_jobs))
         not_imm_run = [x for x in consider_jobs if consider_jobs[x] > 1]
-        print 'Jobs not run immediately: %d' % (len(not_imm_run))
+        print('Jobs not run immediately: %d' % (len(not_imm_run)))
 
-        print 'Average scheduler stats per cycle:'
+        print('Average scheduler stats per cycle:')
 
         consider_jobs_arr = np.array(num_consider_jobs)
         preempt_jobs_arr = np.array(num_preempt_jobs)
@@ -237,14 +237,14 @@ if __name__ == '__main__':
 
         else:
             m = int(np.mean(consider_jobs_arr) + .5)
-            print 'Jobs considered: %d' % (m)
+            print('Jobs considered: %d' % (m))
 
             m = int(np.mean(preempt_jobs_arr) + .5)
-            print 'Jobs preempted: %d' % (m)
+            print('Jobs preempted: %d' % (m))
 
             m = int(np.mean(top_jobs_arr) + .5)
-            print 'Top jobs: %d' % (m)
+            print('Top jobs: %d' % (m))
 
             m = int(np.mean(run_jobs_arr) + .5)
-            print 'Jobs run: %d' % (m)
+            print('Jobs run: %d' % (m))
 

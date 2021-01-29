@@ -2,9 +2,9 @@
   "setups": {
     "25m0v200cpu_sync_j": {
       "total_num_svrs": 2,
-      "total_num_moms": 25,
+      "total_num_moms": 4,
       "num_moms_per_host": 0,
-      "num_cpus_per_mom": 200,
+      "num_cpus_per_mom": 20,
       "num_vnodes_per_mom": 0,
       "async_db": false,
       "job_type": "j",
