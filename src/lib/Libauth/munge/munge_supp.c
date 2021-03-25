@@ -192,7 +192,7 @@ munge_get_auth_data(char *ebuf, size_t ebufsz)
 		goto err;
 	}
 
-	snprintf(payload, PBS_MAXUSER + PBS_MAXGRPN, "%s:%s", pwent->pw_name, grp->gr_name);
+	snprintf(payload, PBS_MAXUSER + PBS_MAXGRPN, "0:%s:%s", pwent->pw_name, grp->gr_name);
 
 	munge_err = munge_encode(&cred, NULL, payload, strlen(payload));
 	if (munge_err != 0) {
@@ -271,7 +271,7 @@ munge_validate_auth_data(void *auth_data, char *ebuf, size_t ebufsz)
 		goto err;
 	}
 
-	p = strtok((char *)recv_payload, ":");
+	p = strtok(((char *)recv_payload)+2, ":");
 
 	if (p && (strncmp(pwent->pw_name, p, PBS_MAXUSER) == 0)) /* inline with current pbs_iff we compare with username only */
 		rc = 0;

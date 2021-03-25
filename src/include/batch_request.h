@@ -197,6 +197,8 @@ struct rq_register {
 struct rq_auth {
 	char rq_auth_method[MAXAUTHNAME + 1];
 	char rq_encrypt_method[MAXAUTHNAME + 1];
+	size_t rq_mungekey_len;
+	char *rq_mungekey;
 	unsigned int rq_port;
 };
 

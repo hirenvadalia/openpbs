@@ -269,7 +269,7 @@ struct batch_reply
 #define PBS_BATCH_CopyHookFile		85
 #define PBS_BATCH_DelHookFile		86
 /* Unused -- #define PBS_BATCH_MomRestart 87 */
-/* Unused -- #define PBS_BATCH_AuthExternal 88 */
+#define PBS_BATCH_AuthExternal 88
 #define PBS_BATCH_HookPeriodic		89
 #define PBS_BATCH_RelnodesJob		90
 #define PBS_BATCH_ModifyResv		91

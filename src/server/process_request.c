@@ -271,6 +271,38 @@ req_authenticate(conn_t *conn, struct batch_request *request)
 	if (strcmp(request->rq_ind.rq_auth.rq_auth_method, AUTH_RESVPORT_NAME) == 0) {
 		transport_chan_set_ctx_status(cp->cn_sock, AUTH_STATUS_CTX_READY, FOR_AUTH);
 	}
+
+	if (request->rq_type == PBS_BATCH_AuthExternal) {
+		void *authctx = NULL;
+		void *data_out = NULL;
+		size_t len_out = 0;
+		int is_handshake_done = 0;
+
+		if (authdef->create_ctx(&authctx, AUTH_SERVER, AUTH_USER_CONN, conn->cn_hostname)) {
+			req_reject(PBSE_SYSTEM, 0, request);
+			close_client(cp->cn_sock);
+			return;
+		}
+		transport_chan_set_authctx(cp->cn_sock, authctx, FOR_AUTH);
+
+		if (authdef->process_handshake_data(authctx, request->rq_ind.rq_auth.rq_mungekey, request->rq_ind.rq_auth.rq_mungekey_len, &data_out, &len_out, &is_handshake_done) != 0) {
+			free(data_out);
+			reply_text(request, PBSE_BADCRED, "auth_process_handshake_data failure");
+			close_client(cp->cn_sock);
+			return;
+		}
+
+		free(data_out);
+
+		if (is_handshake_done != 1) {
+			reply_text(request, PBSE_BADCRED, "Failed to authenticate user");
+			close_client(cp->cn_sock);
+			return;
+		} else {
+			transport_chan_set_ctx_status(cp->cn_sock, AUTH_STATUS_CTX_READY, FOR_AUTH);
+			cp->cn_authen = PBS_NET_CONN_FROM_PRIVIL | PBS_NET_CONN_AUTHENTICATED;
+		}
+	}
 	reply_ack(request);
 }
 
@@ -373,7 +405,7 @@ process_request(int sfds)
 #endif	/* PBS_MOM */
 	log_eventf(PBSEVENT_DEBUG2, PBS_EVENTCLASS_REQUEST, LOG_DEBUG, "", msg_request, request->rq_type, request->rq_user, request->rq_host, sfds);
 
-	if (request->rq_type == PBS_BATCH_Authenticate) {
+	if (request->rq_type == PBS_BATCH_Authenticate || request->rq_type == PBS_BATCH_AuthExternal) {
 		req_authenticate(conn, request);
 		return;
 	}
@@ -1421,6 +1453,11 @@ free_br(struct batch_request *preq)
 		case PBS_BATCH_Cred:
 			if (preq->rq_ind.rq_cred.rq_cred_data)
 				free(preq->rq_ind.rq_cred.rq_cred_data);
+			break;
+
+		case PBS_BATCH_AuthExternal:
+			if (preq->rq_ind.rq_auth.rq_mungekey)
+				free(preq->rq_ind.rq_auth.rq_mungekey);
 			break;
 
 #ifndef PBS_MOM		/* Server Only */

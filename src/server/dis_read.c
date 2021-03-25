@@ -444,6 +444,33 @@ decode_DIS_replySvrTPP(int sock, struct batch_reply *reply)
 	return (decode_DIS_replySvr_inner(sock, reply));
 }
 
+int
+decode_DIS_AuthExternal(int sock, struct batch_request *preq)
+{
+	int rc;
+
+	preq->rq_ind.rq_auth.rq_port = 0;
+	memset(preq->rq_ind.rq_auth.rq_encrypt_method, '\0', sizeof(preq->rq_ind.rq_auth.rq_encrypt_method));
+	strcpy(preq->rq_ind.rq_auth.rq_auth_method, "munge");
+
+	(void)disruc(sock, &rc); // old auth_type, ignore it
+	if (rc != DIS_SUCCESS)
+		return (rc);
+
+	preq->rq_ind.rq_auth.rq_mungekey_len = disrsi(sock, &rc);
+	if (rc != DIS_SUCCESS)
+		return (rc);
+
+	preq->rq_ind.rq_auth.rq_mungekey = malloc(preq->rq_ind.rq_auth.rq_mungekey_len + 1);
+	rc = disrfst(sock, preq->rq_ind.rq_auth.rq_mungekey_len, preq->rq_ind.rq_auth.rq_mungekey);
+	if (rc != DIS_SUCCESS)
+		return rc;
+	preq->rq_ind.rq_auth.rq_mungekey[preq->rq_ind.rq_auth.rq_mungekey_len] = '\0';
+	preq->rq_ind.rq_auth.rq_mungekey_len += 1; // include null char in length also
+
+	return DIS_SUCCESS;
+}
+
 /**
  * @brief
  * 	Read in an DIS encoded request from the network
@@ -560,6 +587,10 @@ dis_request_read(int sfds, struct batch_request *request)
 
 		case PBS_BATCH_Authenticate:
 			rc = decode_DIS_Authenticate(sfds, request);
+			break;
+
+		case PBS_BATCH_AuthExternal:
+			rc = decode_DIS_AuthExternal(sfds, request);
 			break;
 
 #ifndef PBS_MOM
